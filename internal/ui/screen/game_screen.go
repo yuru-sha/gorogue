@@ -7,40 +7,13 @@ import (
 	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/examples/resources/fonts"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
+	"github.com/yuru-sha/gorogue/internal/core/state"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
+	"github.com/yuru-sha/gorogue/internal/ui/input"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
-	"golang.org/x/image/font"
-	"golang.org/x/image/font/opentype"
 )
-
-var (
-	gameFont font.Face
-)
-
-func init() {
-	tt, err := opentype.Parse(fonts.MPlus1pRegular_ttf)
-	if err != nil {
-		logger.Error("Failed to parse font", "error", err.Error())
-		panic(err)
-	}
-
-	const dpi = 72
-	gameFont, err = opentype.NewFace(tt, &opentype.FaceOptions{
-		Size:    24,
-		DPI:     dpi,
-		Hinting: font.HintingFull,
-	})
-	if err != nil {
-		logger.Error("Failed to create font face", "error", err.Error())
-		panic(err)
-	}
-	logger.Debug("Font initialized",
-		"size", 24,
-		"dpi", dpi,
-	)
-}
 
 // GameScreen handles the main game display
 type GameScreen struct {
@@ -59,11 +32,37 @@ func NewGameScreen(width, height int, player *actor.Player) *GameScreen {
 		messages:  make([]string, 0, 3), // 3行分のメッセージを保持
 		lastStats: make(map[string]interface{}),
 	}
-	logger.Debug("Created game screen", map[string]interface{}{
-		"width":  width,
-		"height": height,
-	})
+	logger.Debug("Created game screen",
+		"width", width,
+		"height", height,
+	)
 	return screen
+}
+
+// Update updates the game screen state
+func (s *GameScreen) Update() state.GameState {
+	// ESCキーでメニューに戻る
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+		logger.Info("Returning to menu")
+		return state.StateMenu
+	}
+
+	// 移動処理
+	dx, dy := input.GetMovementDirection()
+	if dx != 0 || dy != 0 {
+		newX := s.player.Position.X + dx
+		newY := s.player.Position.Y + dy
+		// TODO: 移動の有効性チェックを実装
+		s.player.Position.Move(dx, dy)
+		logger.Debug("Player moved",
+			"from_x", newX-dx,
+			"from_y", newY-dy,
+			"to_x", newX,
+			"to_y", newY,
+		)
+	}
+
+	return state.StateGame
 }
 
 // AddMessage adds a message to the message log
@@ -72,10 +71,10 @@ func (s *GameScreen) AddMessage(msg string) {
 	if len(s.messages) > 3 {
 		s.messages = s.messages[len(s.messages)-3:]
 	}
-	logger.Debug("Added message to log", map[string]interface{}{
-		"message":        msg,
-		"messages_count": len(s.messages),
-	})
+	logger.Debug("Added message to log",
+		"message", msg,
+		"messages_count", len(s.messages),
+	)
 }
 
 // Draw draws the game screen
@@ -122,22 +121,22 @@ func (s *GameScreen) Draw(screen *ebiten.Image) {
 		s.player.Exp,
 		s.player.Gold,
 	)
-	text.Draw(screen, statusLine1, gameFont, 1, 24, color.White)
+	text.Draw(screen, statusLine1, GetFont(), 1, 24, color.White)
 
 	// TODO: 装備情報の描画
 	statusLine2 := fmt.Sprintf(
 		"Weap:None Armor:None Ring(L):None Ring(R):None",
 	)
-	text.Draw(screen, statusLine2, gameFont, 1, 48, color.White)
+	text.Draw(screen, statusLine2, GetFont(), 1, 48, color.White)
 
 	// 上部区切り線
 	separator := strings.Repeat("━", s.width)
-	text.Draw(screen, separator, gameFont, 0, 72, color.White)
+	text.Draw(screen, separator, GetFont(), 0, 72, color.White)
 
 	// メッセージログの描画（下部3行）
 	messageY := s.height*24 - 72 // 3行分上
-	text.Draw(screen, separator, gameFont, 0, messageY, color.White)
+	text.Draw(screen, separator, GetFont(), 0, messageY, color.White)
 	for i, msg := range s.messages {
-		text.Draw(screen, msg, gameFont, 1, messageY+24*(i+1), color.White)
+		text.Draw(screen, msg, GetFont(), 1, messageY+24*(i+1), color.White)
 	}
 }

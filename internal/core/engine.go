@@ -7,15 +7,12 @@ import (
 	"runtime/debug"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/examples/resources/fonts"
 	"github.com/hajimehoshi/ebiten/v2/text"
+	"github.com/yuru-sha/gorogue/internal/core/state"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
-	"github.com/yuru-sha/gorogue/internal/ui/input"
-	"github.com/yuru-sha/gorogue/internal/ui/screen"
+	uiscreen "github.com/yuru-sha/gorogue/internal/ui/screen"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
-	"golang.org/x/image/font"
-	"golang.org/x/image/font/opentype"
 )
 
 const (
@@ -26,10 +23,11 @@ const (
 
 // Engine represents the game engine and implements ebiten.Game interface
 type Engine struct {
-	level      *dungeon.Level
-	player     *actor.Player
-	gameScreen *screen.GameScreen
-	gameFont   font.Face
+	stateManager *state.StateManager
+	level        *dungeon.Level
+	player       *actor.Player
+	gameScreen   *uiscreen.GameScreen
+	menuScreen   *uiscreen.MenuScreen
 }
 
 // NewEngine creates and initializes a new game engine
@@ -40,19 +38,8 @@ func NewEngine() *Engine {
 	}
 
 	// フォントの初期化
-	tt, err := opentype.Parse(fonts.MPlus1pRegular_ttf)
-	if err != nil {
-		logger.Error("Failed to parse font", "error", err.Error())
-		return nil
-	}
-
-	gameFont, err := opentype.NewFace(tt, &opentype.FaceOptions{
-		Size:    24,
-		DPI:     72,
-		Hinting: font.HintingFull,
-	})
-	if err != nil {
-		logger.Error("Failed to create font face", "error", err.Error())
+	if err := uiscreen.InitFont(); err != nil {
+		logger.Error("Failed to initialize font", "error", err.Error())
 		return nil
 	}
 
@@ -70,15 +57,22 @@ func NewEngine() *Engine {
 		"y", player.Position.Y,
 	)
 
-	// ゲーム画面の生成
-	gameScreen := screen.NewGameScreen(screenWidth, screenHeight, player)
-	logger.Debug("Created game screen")
+	// 画面の生成
+	gameScreen := uiscreen.NewGameScreen(screenWidth, screenHeight, player)
+	menuScreen := uiscreen.NewMenuScreen(screenWidth, screenHeight)
+	logger.Debug("Created screens")
+
+	// ステートマネージャーの初期化
+	stateManager := state.NewStateManager()
+	stateManager.RegisterState(state.StateMenu, menuScreen)
+	stateManager.RegisterState(state.StateGame, gameScreen)
 
 	engine := &Engine{
-		level:      level,
-		player:     player,
-		gameScreen: gameScreen,
-		gameFont:   gameFont,
+		stateManager: stateManager,
+		level:        level,
+		player:       player,
+		gameScreen:   gameScreen,
+		menuScreen:   menuScreen,
 	}
 
 	return engine
@@ -99,84 +93,16 @@ func (e *Engine) Update() error {
 		}
 	}()
 
-	// 移動処理
-	dx, dy := input.GetMovementDirection()
-	if dx != 0 || dy != 0 {
-		newX := e.player.Position.X + dx
-		newY := e.player.Position.Y + dy
-		if e.isValidMove(newX, newY) {
-			oldX, oldY := e.player.Position.X, e.player.Position.Y
-			e.player.Position.Move(dx, dy)
-			logger.Debug("Player moved",
-				"from_x", oldX,
-				"from_y", oldY,
-				"to_x", newX,
-				"to_y", newY,
-				"tile", e.level.GetTile(newX, newY).Type.String(),
-			)
-		} else {
-			logger.Debug("Movement blocked",
-				"attempted_x", newX,
-				"attempted_y", newY,
-				"reason", e.getMovementBlockReason(newX, newY),
-			)
-		}
-	}
+	// 現在の状態を更新
+	e.stateManager.Update()
 
-	// 終了判定
-	if input.IsQuitRequested() {
-		logger.Info("Game quit requested", nil)
+	// ゲームオーバー状態の場合は終了
+	if e.stateManager.GetCurrentState() == state.StateGameOver {
+		logger.Info("Game over")
 		os.Exit(0)
 	}
 
 	return nil
-}
-
-// getMovementBlockReason returns the reason why movement was blocked
-func (e *Engine) getMovementBlockReason(x, y int) string {
-	if x < 0 || x >= e.level.Width || y < 0 || y >= e.level.Height {
-		return "out_of_bounds"
-	}
-	tile := e.level.GetTile(x, y)
-	if tile == nil {
-		return "no_tile"
-	}
-	if !tile.Walkable {
-		return "unwalkable_" + tile.Type.String()
-	}
-	return "unknown"
-}
-
-// isValidMove checks if the given position is valid for movement
-func (e *Engine) isValidMove(x, y int) bool {
-	// 画面外チェック
-	if x < 0 || x >= e.level.Width || y < 0 || y >= e.level.Height {
-		logger.Debug("Movement out of bounds",
-			"attempted_x", x,
-			"attempted_y", y,
-			"bounds_width", e.level.Width,
-			"bounds_height", e.level.Height,
-		)
-		return false
-	}
-
-	// タイルの歩行可能判定
-	tile := e.level.GetTile(x, y)
-	if tile == nil {
-		logger.Debug("No tile at position",
-			"position_x", x,
-			"position_y", y,
-		)
-		return false
-	}
-	if !tile.Walkable {
-		logger.Debug("Tile not walkable",
-			"position_x", x,
-			"position_y", y,
-			"tile", tile.Type.String(),
-		)
-	}
-	return tile.Walkable
 }
 
 // Draw renders the game state
@@ -194,30 +120,35 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 	// 背景を黒で塗りつぶす
 	screen.Fill(color.Black)
 
-	// ダンジョンの描画
-	for y := 0; y < e.level.Height; y++ {
-		for x := 0; x < e.level.Width; x++ {
-			tile := e.level.GetTile(x, y)
-			if tile != nil {
-				// タイルの文字を描画
-				text.Draw(screen, string(tile.Symbol), e.gameFont, x*tileSize, (y+2)*tileSize, color.RGBA{
-					R: tile.Color[0],
-					G: tile.Color[1],
-					B: tile.Color[2],
-					A: 255,
-				})
+	// 現在の状態を描画
+	switch e.stateManager.GetCurrentState() {
+	case state.StateMenu:
+		e.menuScreen.Draw(screen)
+	case state.StateGame:
+		// ダンジョンの描画
+		for y := 0; y < e.level.Height; y++ {
+			for x := 0; x < e.level.Width; x++ {
+				tile := e.level.GetTile(x, y)
+				if tile != nil {
+					text.Draw(screen, string(tile.Symbol), uiscreen.GetFont(), x*tileSize, (y+2)*tileSize, color.RGBA{
+						R: tile.Color[0],
+						G: tile.Color[1],
+						B: tile.Color[2],
+						A: 255,
+					})
+				}
 			}
 		}
+
+		// プレイヤーの描画
+		text.Draw(screen, string(e.player.Symbol), uiscreen.GetFont(),
+			e.player.Position.X*tileSize,
+			(e.player.Position.Y+2)*tileSize,
+			color.White)
+
+		// ゲーム画面の描画
+		e.gameScreen.Draw(screen)
 	}
-
-	// プレイヤーの描画
-	text.Draw(screen, string(e.player.Symbol), e.gameFont,
-		e.player.Position.X*tileSize,
-		(e.player.Position.Y+2)*tileSize,
-		color.White)
-
-	// ゲーム画面（ステータスバーなど）の描画
-	e.gameScreen.Draw(screen)
 }
 
 // Layout returns the game's screen dimensions
