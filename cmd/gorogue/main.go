@@ -1,10 +1,11 @@
 package main
 
 import (
+	"context"
 	"os"
-	"runtime"
 
-	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/anaseto/gruid"
+	tcell "github.com/anaseto/gruid-tcell"
 	"github.com/yuru-sha/gorogue/internal/core"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
@@ -16,11 +17,6 @@ func main() {
 	}
 	defer logger.Cleanup()
 
-	// macOSでのEbitenの初期化問題を回避
-	if runtime.GOOS == "darwin" {
-		runtime.LockOSThread()
-	}
-
 	// ゲームエンジンの初期化
 	engine := core.NewEngine()
 	if engine == nil {
@@ -28,8 +24,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	// ゲームの実行
-	if err := ebiten.RunGame(engine); err != nil {
+	// ドライバーの設定
+	driver := tcell.NewDriver(tcell.Config{})
+
+	// アプリケーションの作成と実行
+	app := gruid.NewApp(gruid.AppConfig{
+		Driver: driver,
+		Model:  engine,
+	})
+
+	// アプリケーションの実行
+	if err := app.Start(context.Background()); err != nil {
 		logger.Fatal("Game terminated with error", "error", err.Error())
 		os.Exit(1)
 	}

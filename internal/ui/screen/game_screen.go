@@ -2,16 +2,12 @@ package screen
 
 import (
 	"fmt"
-	"image/color"
 	"reflect"
 	"strings"
 
-	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/hajimehoshi/ebiten/v2/text"
+	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/state"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
-	"github.com/yuru-sha/gorogue/internal/ui/input"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
@@ -21,6 +17,7 @@ type GameScreen struct {
 	player        *actor.Player
 	messages      []string
 	lastStats     map[string]interface{} // 前回のステータス情報
+	grid          gruid.Grid             // 画面全体のグリッド
 }
 
 // NewGameScreen creates a new game screen
@@ -31,6 +28,7 @@ func NewGameScreen(width, height int, player *actor.Player) *GameScreen {
 		player:    player,
 		messages:  make([]string, 0, 3), // 3行分のメッセージを保持
 		lastStats: make(map[string]interface{}),
+		grid:      gruid.NewGrid(width, height),
 	}
 	logger.Debug("Created game screen",
 		"width", width,
@@ -39,27 +37,31 @@ func NewGameScreen(width, height int, player *actor.Player) *GameScreen {
 	return screen
 }
 
-// Update updates the game screen state
-func (s *GameScreen) Update() state.GameState {
-	// ESCキーでメニューに戻る
-	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		logger.Info("Returning to menu")
-		return state.StateMenu
-	}
-
-	// 移動処理
-	dx, dy := input.GetMovementDirection()
-	if dx != 0 || dy != 0 {
-		newX := s.player.Position.X + dx
-		newY := s.player.Position.Y + dy
-		// TODO: 移動の有効性チェックを実装
-		s.player.Position.Move(dx, dy)
-		logger.Debug("Player moved",
-			"from_x", newX-dx,
-			"from_y", newY-dy,
-			"to_x", newX,
-			"to_y", newY,
-		)
+// HandleInput handles input events
+func (s *GameScreen) HandleInput(msg gruid.Msg) state.GameState {
+	switch msg := msg.(type) {
+	case gruid.MsgKeyDown:
+		switch msg.Key {
+		case gruid.KeyEscape:
+			logger.Info("Returning to menu")
+			return state.StateMenu
+		case "Left", "h":
+			s.player.Position.Move(-1, 0)
+		case "Right", "l":
+			s.player.Position.Move(1, 0)
+		case "Up", "k":
+			s.player.Position.Move(0, -1)
+		case "Down", "j":
+			s.player.Position.Move(0, 1)
+		case "y":
+			s.player.Position.Move(-1, -1)
+		case "u":
+			s.player.Position.Move(1, -1)
+		case "b":
+			s.player.Position.Move(-1, 1)
+		case "n":
+			s.player.Position.Move(1, 1)
+		}
 	}
 
 	return state.StateGame
@@ -78,7 +80,7 @@ func (s *GameScreen) AddMessage(msg string) {
 }
 
 // Draw draws the game screen
-func (s *GameScreen) Draw(screen *ebiten.Image) {
+func (s *GameScreen) Draw(grid *gruid.Grid) {
 	// 現在のステータス情報を収集
 	currentStats := map[string]interface{}{
 		"level":   s.player.Level,
@@ -109,6 +111,9 @@ func (s *GameScreen) Draw(screen *ebiten.Image) {
 	// 画面描画の詳細ログはTRACEレベルで出力
 	logger.Trace("Drawing game screen")
 
+	// グリッドをクリア
+	grid.Fill(gruid.Cell{Rune: ' '})
+
 	// ステータス行の描画（上部2行）
 	statusLine1 := fmt.Sprintf(
 		"Lv:%d HP:%d/%d Atk:%d Def:%d Hunger:%d%% Exp:%d Gold:%d",
@@ -121,22 +126,28 @@ func (s *GameScreen) Draw(screen *ebiten.Image) {
 		s.player.Exp,
 		s.player.Gold,
 	)
-	text.Draw(screen, statusLine1, GetFont(), 1, 24, color.White)
+	drawText(grid, 1, 0, statusLine1, gruid.Style{})
 
 	// TODO: 装備情報の描画
 	statusLine2 := fmt.Sprintf(
 		"Weap:None Armor:None Ring(L):None Ring(R):None",
 	)
-	text.Draw(screen, statusLine2, GetFont(), 1, 48, color.White)
+	drawText(grid, 1, 1, statusLine2, gruid.Style{})
 
 	// 上部区切り線
 	separator := strings.Repeat("━", s.width)
-	text.Draw(screen, separator, GetFont(), 0, 72, color.White)
+	drawText(grid, 0, 2, separator, gruid.Style{})
+
+	// プレイヤーの描画
+	grid.Set(gruid.Point{X: s.player.Position.X, Y: s.player.Position.Y + 3}, gruid.Cell{
+		Rune:  '@',
+		Style: gruid.Style{},
+	})
 
 	// メッセージログの描画（下部3行）
-	messageY := s.height*24 - 72 // 3行分上
-	text.Draw(screen, separator, GetFont(), 0, messageY, color.White)
+	messageY := s.height - 4 // 3行分上
+	drawText(grid, 0, messageY, separator, gruid.Style{})
 	for i, msg := range s.messages {
-		text.Draw(screen, msg, GetFont(), 1, messageY+24*(i+1), color.White)
+		drawText(grid, 1, messageY+1+i, msg, gruid.Style{})
 	}
 }

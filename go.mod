@@ -3,15 +3,24 @@ module github.com/yuru-sha/gorogue
 go 1.22.0
 
 require (
-	github.com/hajimehoshi/ebiten/v2 v2.1.7
-	golang.org/x/image v0.0.0-20210220032944-ac19c3e999fb
+	github.com/anaseto/gruid v0.21.1
+	github.com/anaseto/gruid-tcell v0.2.0
+	github.com/hajimehoshi/ebiten/v2 v2.8.6
+	golang.org/x/image v0.20.0
 )
 
 require (
-	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20210727001814-0db043d8d5be // indirect
-	golang.org/x/exp v0.0.0-20190731235908-ec7cb31e5a56 // indirect
-	golang.org/x/mobile v0.0.0-20210220033013-bdb1ca9a1e08 // indirect
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20210415045647-66c3f260301c // indirect
-	golang.org/x/text v0.3.3 // indirect
+	github.com/ebitengine/gomobile v0.0.0-20240911145611-4856209ac325 // indirect
+	github.com/ebitengine/hideconsole v1.0.0 // indirect
+	github.com/ebitengine/purego v0.8.0 // indirect
+	github.com/gdamore/encoding v1.0.0 // indirect
+	github.com/gdamore/tcell/v2 v2.4.0 // indirect
+	github.com/jezek/xgb v1.1.1 // indirect
+	github.com/lucasb-eyer/go-colorful v1.0.3 // indirect
+	github.com/mattn/go-runewidth v0.0.10 // indirect
+	github.com/rivo/uniseg v0.1.0 // indirect
+	golang.org/x/sync v0.8.0 // indirect
+	golang.org/x/sys v0.25.0 // indirect
+	golang.org/x/term v0.0.0-20201210144234-2321bbc49cbf // indirect
+	golang.org/x/text v0.18.0 // indirect
 )

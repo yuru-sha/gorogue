@@ -1,5 +1,7 @@
 package dungeon
 
+import "github.com/anaseto/gruid"
+
 // TileType represents different types of tiles in the dungeon
 type TileType int
 
@@ -34,57 +36,64 @@ func (t TileType) String() string {
 // Tile represents a single tile in the dungeon
 type Tile struct {
 	Type     TileType
-	Symbol   rune
-	Color    [3]uint8
+	Cell     gruid.Cell
 	Visible  bool
 	Walkable bool
 }
 
-// GetTileSymbol returns the symbol for a given tile type
-func GetTileSymbol(t TileType) rune {
+// GetTileCell returns the cell configuration for a given tile type
+func GetTileCell(t TileType) gruid.Cell {
 	switch t {
 	case TileWall:
-		return '#'
+		return gruid.Cell{
+			Rune:  '#',
+			Style: gruid.Style{Fg: 8}, // Gray
+		}
 	case TileFloor:
-		return '.'
+		return gruid.Cell{
+			Rune:  '.',
+			Style: gruid.Style{Fg: 8}, // Gray
+		}
 	case TileDoorClosed:
-		return '+'
+		return gruid.Cell{
+			Rune:  '+',
+			Style: gruid.Style{Fg: 3}, // Brown
+		}
 	case TileDoorOpen:
-		return '/'
+		return gruid.Cell{
+			Rune:  '/',
+			Style: gruid.Style{Fg: 3}, // Brown
+		}
 	case TileStairsUp:
-		return '<'
+		return gruid.Cell{
+			Rune:  '<',
+			Style: gruid.Style{Fg: 15}, // White
+		}
 	case TileStairsDown:
-		return '>'
+		return gruid.Cell{
+			Rune:  '>',
+			Style: gruid.Style{Fg: 15}, // White
+		}
 	case TileWater:
-		return '~'
+		return gruid.Cell{
+			Rune:  '~',
+			Style: gruid.Style{Fg: 4}, // Blue
+		}
 	case TileLava:
-		return '^'
+		return gruid.Cell{
+			Rune:  '^',
+			Style: gruid.Style{Fg: 1}, // Red
+		}
 	case TileSecretDoor:
-		return '#' // 未発見時は壁と同じ
+		return gruid.Cell{
+			Rune:  '#',
+			Style: gruid.Style{Fg: 8}, // Gray (同じく壁と同じ)
+		}
 	default:
-		return ' '
-	}
-}
-
-// GetTileColor returns the color for a given tile type
-func GetTileColor(t TileType) [3]uint8 {
-	switch t {
-	case TileWall:
-		return [3]uint8{128, 128, 128} // Gray
-	case TileFloor:
-		return [3]uint8{128, 128, 128} // Gray
-	case TileDoorClosed, TileDoorOpen:
-		return [3]uint8{139, 69, 19} // Brown
-	case TileStairsUp, TileStairsDown:
-		return [3]uint8{255, 255, 255} // White
-	case TileWater:
-		return [3]uint8{0, 0, 255} // Blue
-	case TileLava:
-		return [3]uint8{255, 0, 0} // Red
-	case TileSecretDoor:
-		return [3]uint8{128, 128, 128} // Gray (同じく壁と同じ)
-	default:
-		return [3]uint8{0, 0, 0} // Black
+		return gruid.Cell{
+			Rune:  ' ',
+			Style: gruid.Style{},
+		}
 	}
 }
 
@@ -102,8 +111,7 @@ func IsWalkable(t TileType) bool {
 func NewTile(tileType TileType) *Tile {
 	return &Tile{
 		Type:     tileType,
-		Symbol:   GetTileSymbol(tileType),
-		Color:    GetTileColor(tileType),
+		Cell:     GetTileCell(tileType),
 		Visible:  false,
 		Walkable: IsWalkable(tileType),
 	}
