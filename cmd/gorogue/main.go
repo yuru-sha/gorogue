@@ -5,10 +5,26 @@ import (
 	"os"
 
 	"github.com/anaseto/gruid"
-	tcell "github.com/anaseto/gruid-tcell"
+	gtcell "github.com/anaseto/gruid-tcell"
+	"github.com/gdamore/tcell/v2"
 	"github.com/yuru-sha/gorogue/internal/core"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
+
+// DefaultStyleManager implements tcell.StyleManager interface
+type DefaultStyleManager struct{}
+
+// GetStyle implements tcell.StyleManager.GetStyle
+func (sm DefaultStyleManager) GetStyle(st gruid.Style) tcell.Style {
+	style := tcell.StyleDefault
+	if st.Fg != 0 {
+		style = style.Foreground(tcell.Color(st.Fg))
+	}
+	if st.Bg != 0 {
+		style = style.Background(tcell.Color(st.Bg))
+	}
+	return style
+}
 
 func main() {
 	// ロガーの初期化
@@ -25,7 +41,9 @@ func main() {
 	}
 
 	// ドライバーの設定
-	driver := tcell.NewDriver(tcell.Config{})
+	driver := gtcell.NewDriver(gtcell.Config{
+		StyleManager: DefaultStyleManager{},
+	})
 
 	// アプリケーションの作成と実行
 	app := gruid.NewApp(gruid.AppConfig{

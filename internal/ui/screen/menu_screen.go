@@ -79,7 +79,7 @@ func (s *MenuScreen) Draw(grid *gruid.Grid) {
 	titleY := s.height/4 - len(titleArt)/2
 	for i, line := range titleArt {
 		titleX := (s.width - len(line)) / 2
-		drawText(grid, titleX, titleY+i, line, colorYellow)
+		s.drawText(grid, titleX, titleY+i, line, colorYellow)
 	}
 
 	// メニューの描画
@@ -93,20 +93,31 @@ func (s *MenuScreen) Draw(grid *gruid.Grid) {
 			style = colorWhite
 		}
 
-		drawText(grid, menuX, menuY+i, line, style)
+		s.drawText(grid, menuX, menuY+i, line, style)
 	}
 
 	// バージョン情報の描画
 	versionText := "Version " + version
 	versionX := 1
 	versionY := s.height - 1
-	drawText(grid, versionX, versionY, versionText, colorDarkGray)
+	s.drawText(grid, versionX, versionY, versionText, colorDarkGray)
 
 	// 操作説明の描画
 	controlsText := "↑↓:Select  Enter:Decide"
 	controlsX := (s.width - len(controlsText)) / 2
 	controlsY := menuY + len(menuBox) + 2
-	drawText(grid, controlsX, controlsY, controlsText, colorGray)
+	s.drawText(grid, controlsX, controlsY, controlsText, colorGray)
 
 	logger.Trace("Menu screen drawn")
+}
+
+// drawText draws text at the specified position with the given style
+func (s *MenuScreen) drawText(grid *gruid.Grid, x, y int, text string, style gruid.Style) {
+	for i, r := range text {
+		pos := gruid.Point{X: x + i, Y: y}
+		if pos.X >= grid.Size().X {
+			break
+		}
+		grid.Set(pos, gruid.Cell{Rune: r, Style: style})
+	}
 }

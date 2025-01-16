@@ -3,11 +3,11 @@ package screen
 import (
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/state"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
+	"github.com/yuru-sha/gorogue/internal/game/dungeon"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
@@ -15,6 +15,7 @@ import (
 type GameScreen struct {
 	width, height int
 	player        *actor.Player
+	level         *dungeon.Level
 	messages      []string
 	lastStats     map[string]interface{} // 前回のステータス情報
 	grid          gruid.Grid             // 画面全体のグリッド
@@ -116,7 +117,7 @@ func (s *GameScreen) Draw(grid *gruid.Grid) {
 
 	// ステータス行の描画（上部2行）
 	statusLine1 := fmt.Sprintf(
-		"Lv:%d HP:%d/%d Atk:%d Def:%d Hunger:%d%% Exp:%d Gold:%d",
+		" Lv:%2d  HP:%3d/%3d  Atk:%2d  Def:%2d  Hunger:%3d%%  Exp:%4d  Gold:%4d",
 		s.player.Level,
 		s.player.HP,
 		s.player.MaxHP,
@@ -126,28 +127,54 @@ func (s *GameScreen) Draw(grid *gruid.Grid) {
 		s.player.Exp,
 		s.player.Gold,
 	)
-	drawText(grid, 1, 0, statusLine1, gruid.Style{})
+	s.drawText(grid, 0, 0, statusLine1, gruid.Style{})
 
-	// TODO: 装備情報の描画
+	// 装備情報の描画
 	statusLine2 := fmt.Sprintf(
-		"Weap:None Armor:None Ring(L):None Ring(R):None",
+		" Weap:%-12s  Armor:%-12s  Ring(L):%-12s  Ring(R):%-12s",
+		"None",
+		"None",
+		"None",
+		"None",
 	)
-	drawText(grid, 1, 1, statusLine2, gruid.Style{})
+	s.drawText(grid, 0, 1, statusLine2, gruid.Style{})
 
-	// 上部区切り線
-	separator := strings.Repeat("━", s.width)
-	drawText(grid, 0, 2, separator, gruid.Style{})
+	// ダンジョンの描画
+	for y := 0; y < s.level.Height; y++ {
+		for x := 0; x < s.level.Width; x++ {
+			tile := s.level.GetTile(x, y)
+			grid.Set(gruid.Point{X: x, Y: y + 2}, tile.Cell)
+		}
+	}
 
 	// プレイヤーの描画
-	grid.Set(gruid.Point{X: s.player.Position.X, Y: s.player.Position.Y + 3}, gruid.Cell{
+	grid.Set(gruid.Point{X: s.player.Position.X, Y: s.player.Position.Y + 2}, gruid.Cell{
 		Rune:  '@',
 		Style: gruid.Style{},
 	})
 
 	// メッセージログの描画（下部3行）
-	messageY := s.height - 4 // 3行分上
-	drawText(grid, 0, messageY, separator, gruid.Style{})
 	for i, msg := range s.messages {
-		drawText(grid, 1, messageY+1+i, msg, gruid.Style{})
+		s.drawText(grid, 1, s.height-3+i, fmt.Sprintf(" %s", msg), gruid.Style{})
 	}
+}
+
+// drawText draws text at the specified position with the given style
+func (s *GameScreen) drawText(grid *gruid.Grid, x, y int, text string, style gruid.Style) {
+	for i, r := range text {
+		pos := gruid.Point{X: x + i, Y: y}
+		if pos.X >= grid.Size().X {
+			break
+		}
+		grid.Set(pos, gruid.Cell{Rune: r, Style: style})
+	}
+}
+
+// SetLevel sets the dungeon level for the game screen
+func (s *GameScreen) SetLevel(level *dungeon.Level) {
+	s.level = level
+	logger.Debug("Set dungeon level for game screen",
+		"width", level.Width,
+		"height", level.Height,
+	)
 }

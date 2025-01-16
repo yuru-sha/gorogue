@@ -1,6 +1,10 @@
 github.com/anaseto/gruid v0.21.0/go.mod h1:csCeg/kLRFAAF4gdrx9EYrQbKBBprmWmEdmR0QMmBc4=
 github.com/anaseto/gruid v0.21.1 h1:52ZxW2MLzXlGfydPMWB+4auI9ilvh8PvVH0SscxZjaE=
 github.com/anaseto/gruid v0.21.1/go.mod h1:csCeg/kLRFAAF4gdrx9EYrQbKBBprmWmEdmR0QMmBc4=
+github.com/anaseto/gruid v0.22.0 h1:iOPJBC5pb5gS1zQlufszDjiVzFwmx0Kxte2ZopHNRqw=
+github.com/anaseto/gruid v0.22.0/go.mod h1:Fq0geNwxJ9PHxqIVRP/M6mFxkm/bhSwEiAFJeVAcjCQ=
+github.com/anaseto/gruid-sdl v0.4.0 h1:36zaGFSqY6eAyTx1gi+DKc2l8hwzNOOpp1d3ez4gd0g=
+github.com/anaseto/gruid-sdl v0.4.0/go.mod h1:ypsNaeFzmvoORKFR4Y1W67kbjEX86LGDj/i8I4Od55E=
 github.com/anaseto/gruid-tcell v0.2.0 h1:Jc+tk87FYKMGBtV0N5SFbYmqyIPMnXHMzZ57EGga0Ac=
 github.com/anaseto/gruid-tcell v0.2.0/go.mod h1:LXaeUb2hBKtZXwMSQfb+kw+VOjkTXtY/kASsOWMgXUk=
 github.com/ebitengine/gomobile v0.0.0-20240911145611-4856209ac325 h1:Gk1XUEttOk0/hb6Tq3WkmutWa0ZLhNn/6fc6XZpM7tM=
@@ -27,7 +31,10 @@ github.com/pierrec/lz4/v4 v4.1.21 h1:yOVMLb6qSIDP67pl/5F7RepeKYu/VmTyEXvuMI5d9mQ
 github.com/pierrec/lz4/v4 v4.1.21/go.mod h1:gZWDp/Ze/IJXGXf23ltt2EXimqmTUXEy0GFuRQyBid4=
 github.com/rivo/uniseg v0.1.0 h1:+2KBaVoUmb9XzDsrx/Ct0W/EYOSFf/nWTauy++DprtY=
 github.com/rivo/uniseg v0.1.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
+github.com/veandco/go-sdl2 v0.4.5 h1:GFIjMabK7y2XWpr9sGvN7RDKHt7vrA7XPTUW60eOw+Y=
+github.com/veandco/go-sdl2 v0.4.5/go.mod h1:OROqMhHD43nT4/i9crJukyVecjPNYYuCofep6SNiAjY=
 golang.org/x/image v0.0.0-20201208152932-35266b937fa6/go.mod h1:FeLwcggjj3mMvU+oOTbSwawSJRM1uh48EjtB4UJZlP0=
+golang.org/x/image v0.0.0-20210216034530-4410531fe030/go.mod h1:FeLwcggjj3mMvU+oOTbSwawSJRM1uh48EjtB4UJZlP0=
 golang.org/x/image v0.20.0 h1:7cVCUjQwfL18gyBJOmYvptfSHS8Fb3YUDtfLIZ7Nbpw=
 golang.org/x/image v0.20.0/go.mod h1:0a88To4CYVBAHp5FXJm8o7QbUl37Vd85ply1vyD8auM=
 golang.org/x/sync v0.8.0 h1:3NFvSEYkUoMifnESzZl15y791HH1qU2xm6eCJU5ZPXQ=

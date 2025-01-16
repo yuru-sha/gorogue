@@ -31,7 +31,8 @@ func NewEngine() *Engine {
 	grid := gruid.NewGrid(screenWidth, screenHeight)
 
 	// ダンジョンレベルの生成
-	level := dungeon.NewLevel(screenWidth, screenHeight, 1)
+	level := dungeon.NewLevel(screenWidth, screenHeight-7, 1)
+	level.Generate() // ダンジョンを生成
 	logger.Debug("Created new dungeon level",
 		"width", level.Width,
 		"height", level.Height,
@@ -46,6 +47,7 @@ func NewEngine() *Engine {
 
 	// 画面の生成
 	gameScreen := uiscreen.NewGameScreen(screenWidth, screenHeight, player)
+	gameScreen.SetLevel(level) // ダンジョンレベルを設定
 	menuScreen := uiscreen.NewMenuScreen(screenWidth, screenHeight)
 	logger.Debug("Created screens")
 
