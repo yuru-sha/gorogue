@@ -1,6 +1,6 @@
 package state
 
-import "github.com/hajimehoshi/ebiten/v2"
+import "github.com/anaseto/gruid"
 
 // GameState represents the current state of the game
 type GameState int
@@ -15,8 +15,8 @@ const (
 
 // State represents a game state interface
 type State interface {
-	Update() GameState
-	Draw(screen *ebiten.Image)
+	HandleInput(msg gruid.Msg) GameState
+	Draw(grid *gruid.Grid)
 }
 
 // StateManager manages game states
@@ -43,16 +43,25 @@ func (sm *StateManager) GetCurrentState() GameState {
 	return sm.currentState
 }
 
-// Update updates the current state
-func (sm *StateManager) Update() {
+// SetState sets the current state
+func (sm *StateManager) SetState(state GameState) {
+	sm.currentState = state
+}
+
+// HandleInput handles input for the current state
+func (sm *StateManager) HandleInput(msg gruid.Msg) gruid.Effect {
 	if handler, exists := sm.states[sm.currentState]; exists {
-		sm.currentState = handler.Update()
+		sm.currentState = handler.HandleInput(msg)
+		if sm.currentState == StateGameOver {
+			return gruid.End()
+		}
 	}
+	return nil
 }
 
 // Draw draws the current state
-func (sm *StateManager) Draw(screen *ebiten.Image) {
+func (sm *StateManager) Draw(grid *gruid.Grid) {
 	if handler, exists := sm.states[sm.currentState]; exists {
-		handler.Draw(screen)
+		handler.Draw(grid)
 	}
 }

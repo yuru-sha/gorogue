@@ -1,37 +1,34 @@
 package actor
 
 import (
-	"github.com/yuru-sha/gorogue/internal/core/entity"
+	"github.com/yuru-sha/gorogue/internal/game/identification"
+	"github.com/yuru-sha/gorogue/internal/game/inventory"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
 // Player represents the player character
 type Player struct {
-	*entity.Entity
-	Level     int
-	HP        int
-	MaxHP     int
-	Attack    int
-	Defense   int
-	Hunger    int
-	Exp       int
-	Gold      int
-	Inventory []interface{} // TODO: Replace with proper item types
+	*Actor
+	Level       int
+	Hunger      int
+	Exp         int
+	Gold        int
+	Inventory   *inventory.Inventory
+	Equipment   *inventory.Equipment
+	IdentifyMgr *identification.IdentificationManager
 }
 
 // NewPlayer creates a new player at the given position
 func NewPlayer(x, y int) *Player {
 	player := &Player{
-		Entity:    entity.NewEntity(x, y, '@', [3]uint8{255, 255, 255}), // White color
-		Level:     1,
-		HP:        20,
-		MaxHP:     20,
-		Attack:    5,
-		Defense:   2,
-		Hunger:    100,
-		Exp:       0,
-		Gold:      0,
-		Inventory: make([]interface{}, 0),
+		Actor:       NewActor(x, y, '@', 0xFFFFFF, 20, 5, 2), // White color - オリジナルローグ風
+		Level:       1,
+		Hunger:      100,
+		Exp:         0,
+		Gold:        0,
+		Inventory:   inventory.NewInventory(),
+		Equipment:   inventory.NewEquipment(),
+		IdentifyMgr: identification.NewIdentificationManager(),
 	}
 	logger.Debug("Created new player",
 		"position_x", x,
@@ -42,42 +39,6 @@ func NewPlayer(x, y int) *Player {
 		"defense", player.Defense,
 	)
 	return player
-}
-
-// TakeDamage applies damage to the player
-func (p *Player) TakeDamage(damage int) {
-	oldHP := p.HP
-	p.HP -= damage
-	if p.HP < 0 {
-		p.HP = 0
-	}
-	logger.Debug("Player took damage",
-		"damage", damage,
-		"hp_before", oldHP,
-		"hp_after", p.HP,
-	)
-	if p.HP == 0 {
-		logger.Info("Player died")
-	}
-}
-
-// Heal recovers the player's HP
-func (p *Player) Heal(amount int) {
-	oldHP := p.HP
-	p.HP += amount
-	if p.HP > p.MaxHP {
-		p.HP = p.MaxHP
-	}
-	logger.Debug("Player healed",
-		"amount", amount,
-		"hp_before", oldHP,
-		"hp_after", p.HP,
-	)
-}
-
-// IsAlive checks if the player is still alive
-func (p *Player) IsAlive() bool {
-	return p.HP > 0
 }
 
 // AddGold adds gold to the player's inventory
@@ -106,6 +67,27 @@ func (p *Player) AddExp(amount int) {
 	)
 }
 
+// GainExp is an alias for AddExp
+func (p *Player) GainExp(amount int) {
+	p.AddExp(amount)
+}
+
+// CalculateDamage calculates damage dealt to a target
+func (p *Player) CalculateDamage(targetDefense int) int {
+	// Base attack + equipment bonus - enemy defense
+	totalAttack := p.Attack + p.Equipment.GetAttackBonus()
+	damage := totalAttack - targetDefense
+	if damage < 1 {
+		damage = 1
+	}
+	return damage
+}
+
+// GetTotalDefense returns total defense including equipment bonuses
+func (p *Player) GetTotalDefense() int {
+	return p.Defense + p.Equipment.GetDefenseBonus()
+}
+
 // UpdateHunger decreases hunger and handles starvation
 func (p *Player) UpdateHunger() {
 	oldHunger := p.Hunger
@@ -121,4 +103,11 @@ func (p *Player) UpdateHunger() {
 		)
 		p.TakeDamage(1) // Starvation damage
 	}
+}
+
+// GetExpToNextLevel returns experience needed to reach next level
+func (p *Player) GetExpToNextLevel() int {
+	// Simple formula: level * 100 experience per level
+	nextLevelExp := p.Level * 100
+	return nextLevelExp - p.Exp
 }

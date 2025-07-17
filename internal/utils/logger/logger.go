@@ -2,6 +2,7 @@ package logger
 
 import (
 	"fmt"
+	"log"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -15,7 +16,7 @@ const (
 
 var (
 	// ログファイルのパス
-	logDir    = filepath.Join("data", "logs")
+	logDir    = "logs"
 	gameLog   = filepath.Join(logDir, "game.log")
 	errorLog  = filepath.Join(logDir, "error.log")
 	gameFile  *os.File
@@ -36,7 +37,10 @@ func rotateLogFile(basePath string) error {
 	for i := maxGenerations - 1; i >= 1; i-- {
 		oldPath := fmt.Sprintf("%s.%d", basePath, i)
 		newPath := fmt.Sprintf("%s.%d", basePath, i+1)
-		os.Rename(oldPath, newPath)
+		// ファイルローテーションのエラーは致命的でないため、ログ出力のみ
+		if err := os.Rename(oldPath, newPath); err != nil && !os.IsNotExist(err) {
+			log.Printf("Failed to rotate log file %s: %v", oldPath, err)
+		}
 	}
 
 	// Rotate current log file
@@ -53,7 +57,7 @@ func rotateLogFile(basePath string) error {
 // Setup initializes the logger
 func Setup() error {
 	// ログディレクトリの作成
-	if err := os.MkdirAll(logDir, 0755); err != nil {
+	if err := os.MkdirAll(logDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create log directory: %v", err)
 	}
 
@@ -67,13 +71,13 @@ func Setup() error {
 
 	// ゲームログファイルの作成
 	var err error
-	gameFile, err = os.OpenFile(gameLog, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	gameFile, err = os.OpenFile(gameLog, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to create game log file: %v", err)
 	}
 
 	// エラーログファイルの作成
-	errorFile, err = os.OpenFile(errorLog, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	errorFile, err = os.OpenFile(errorLog, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to create error log file: %v", err)
 	}

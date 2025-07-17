@@ -1,13 +1,7 @@
 package core
 
 import (
-	"image/color"
-	"os"
-	"runtime"
-	"runtime/debug"
-
-	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/text"
+	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/state"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
@@ -18,47 +12,52 @@ import (
 const (
 	screenWidth  = 80
 	screenHeight = 50
-	tileSize     = 24
 )
 
-// Engine represents the game engine and implements ebiten.Game interface
+// Engine represents the game engine and implements gruid.Model interface
 type Engine struct {
-	stateManager *state.StateManager
-	level        *dungeon.Level
-	player       *actor.Player
-	gameScreen   *uiscreen.GameScreen
-	menuScreen   *uiscreen.MenuScreen
+	grid           gruid.Grid
+	stateManager   *state.StateManager
+	dungeonManager *dungeon.DungeonManager
+	player         *actor.Player
+	gameScreen     *uiscreen.GameScreen
+	menuScreen     *uiscreen.MenuScreen
+	msgs           []gruid.Msg
 }
 
 // NewEngine creates and initializes a new game engine
 func NewEngine() *Engine {
-	// macOSでのEbitenの初期化問題を回避
-	if runtime.GOOS == "darwin" {
-		runtime.LockOSThread()
-	}
+	// グリッドの初期化
+	grid := gruid.NewGrid(screenWidth, screenHeight)
 
-	// フォントの初期化
-	if err := uiscreen.InitFont(); err != nil {
-		logger.Error("Failed to initialize font", "error", err.Error())
-		return nil
-	}
-
-	// ダンジョンレベルの生成
-	level := dungeon.NewLevel(screenWidth, screenHeight, 1)
-	logger.Debug("Created new dungeon level",
-		"width", level.Width,
-		"height", level.Height,
-	)
-
-	// プレイヤーの生成
-	player := actor.NewPlayer(screenWidth/2, screenHeight/2)
+	// プレイヤーの生成（仮位置、後でダンジョンマネージャーが適切な位置に配置）
+	player := actor.NewPlayer(0, 0)
 	logger.Debug("Created player",
 		"x", player.Position.X,
 		"y", player.Position.Y,
 	)
 
+	// ダンジョンマネージャーの生成
+	dungeonManager := dungeon.NewDungeonManager(player)
+
+	// プレイヤーを最初の部屋の中央に配置
+	level := dungeonManager.GetCurrentLevel()
+	if len(level.Rooms) > 0 {
+		firstRoom := level.Rooms[0]
+		player.Position.X = firstRoom.X + firstRoom.Width/2
+		player.Position.Y = firstRoom.Y + firstRoom.Height/2
+		logger.Debug("Placed player in first room",
+			"x", player.Position.X,
+			"y", player.Position.Y,
+			"room_x", firstRoom.X,
+			"room_y", firstRoom.Y,
+		)
+	}
+
 	// 画面の生成
 	gameScreen := uiscreen.NewGameScreen(screenWidth, screenHeight, player)
+	gameScreen.SetLevel(level)                   // ダンジョンレベルを設定
+	gameScreen.SetDungeonManager(dungeonManager) // ダンジョンマネージャーを設定
 	menuScreen := uiscreen.NewMenuScreen(screenWidth, screenHeight)
 	logger.Debug("Created screens")
 
@@ -67,91 +66,58 @@ func NewEngine() *Engine {
 	stateManager.RegisterState(state.StateMenu, menuScreen)
 	stateManager.RegisterState(state.StateGame, gameScreen)
 
+	// ゲーム状態で開始
+	stateManager.SetState(state.StateGame)
+
 	engine := &Engine{
-		stateManager: stateManager,
-		level:        level,
-		player:       player,
-		gameScreen:   gameScreen,
-		menuScreen:   menuScreen,
+		grid:           grid,
+		stateManager:   stateManager,
+		dungeonManager: dungeonManager,
+		player:         player,
+		gameScreen:     gameScreen,
+		menuScreen:     menuScreen,
+		msgs:           make([]gruid.Msg, 0),
 	}
 
 	return engine
 }
 
-// Update handles the game logic updates
-func (e *Engine) Update() error {
-	defer func() {
-		if r := recover(); r != nil {
-			stack := debug.Stack()
-			logger.Error("Panic recovered in Update",
-				"panic", r,
-				"stack", string(stack),
-				"player_x", e.player.Position.X,
-				"player_y", e.player.Position.Y,
-				"level", e.level.FloorNumber,
-			)
-		}
-	}()
+// Update implements gruid.Model.Update
+func (e *Engine) Update(msg gruid.Msg) gruid.Effect {
+	e.msgs = append(e.msgs, msg)
 
-	// 現在の状態を更新
-	e.stateManager.Update()
-
-	// ゲームオーバー状態の場合は終了
-	if e.stateManager.GetCurrentState() == state.StateGameOver {
-		logger.Info("Game over")
-		os.Exit(0)
+	switch msg := msg.(type) {
+	case gruid.MsgInit:
+		// 初期化時の処理
+		return nil
+	case gruid.MsgKeyDown:
+		// キー入力の処理
+		return e.stateManager.HandleInput(msg)
+	case gruid.MsgQuit:
+		// 終了処理
+		return gruid.End()
 	}
 
 	return nil
 }
 
-// Draw renders the game state
-func (e *Engine) Draw(screen *ebiten.Image) {
-	defer func() {
-		if r := recover(); r != nil {
-			stack := debug.Stack()
-			logger.Error("Panic recovered in Draw",
-				"panic", r,
-				"stack", string(stack),
-			)
-		}
-	}()
-
-	// 背景を黒で塗りつぶす
-	screen.Fill(color.Black)
+// Draw implements gruid.Model.Draw
+func (e *Engine) Draw() gruid.Grid {
+	// グリッドをクリア
+	e.grid.Fill(gruid.Cell{Rune: ' '})
 
 	// 現在の状態を描画
 	switch e.stateManager.GetCurrentState() {
 	case state.StateMenu:
-		e.menuScreen.Draw(screen)
+		e.menuScreen.Draw(&e.grid)
 	case state.StateGame:
-		// ダンジョンの描画
-		for y := 0; y < e.level.Height; y++ {
-			for x := 0; x < e.level.Width; x++ {
-				tile := e.level.GetTile(x, y)
-				if tile != nil {
-					text.Draw(screen, string(tile.Symbol), uiscreen.GetFont(), x*tileSize, (y+2)*tileSize, color.RGBA{
-						R: tile.Color[0],
-						G: tile.Color[1],
-						B: tile.Color[2],
-						A: 255,
-					})
-				}
-			}
-		}
-
-		// プレイヤーの描画
-		text.Draw(screen, string(e.player.Symbol), uiscreen.GetFont(),
-			e.player.Position.X*tileSize,
-			(e.player.Position.Y+2)*tileSize,
-			color.White)
-
-		// ゲーム画面の描画
-		e.gameScreen.Draw(screen)
+		e.gameScreen.Draw(&e.grid)
 	}
+
+	return e.grid
 }
 
-// Layout returns the game's screen dimensions
-func (e *Engine) Layout(outsideWidth, outsideHeight int) (int, int) {
-	return screenWidth * tileSize, screenHeight * tileSize
+// Model returns the game's model configuration
+func (e *Engine) Model() gruid.Model {
+	return e
 }
