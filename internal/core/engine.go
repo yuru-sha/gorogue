@@ -22,6 +22,7 @@ type Engine struct {
 	player         *actor.Player
 	gameScreen     *uiscreen.GameScreen
 	menuScreen     *uiscreen.MenuScreen
+	helpScreen     *uiscreen.HelpScreen
 	msgs           []gruid.Msg
 }
 
@@ -59,12 +60,14 @@ func NewEngine() *Engine {
 	gameScreen.SetLevel(level)                   // ダンジョンレベルを設定
 	gameScreen.SetDungeonManager(dungeonManager) // ダンジョンマネージャーを設定
 	menuScreen := uiscreen.NewMenuScreen(screenWidth, screenHeight)
+	helpScreen := uiscreen.NewHelpScreen(screenWidth, screenHeight)
 	logger.Debug("Created screens")
 
 	// ステートマネージャーの初期化
 	stateManager := state.NewStateManager()
 	stateManager.RegisterState(state.StateMenu, menuScreen)
 	stateManager.RegisterState(state.StateGame, gameScreen)
+	stateManager.RegisterState(state.StateHelp, helpScreen)
 
 	// ゲーム状態で開始
 	stateManager.SetState(state.StateGame)
@@ -76,6 +79,7 @@ func NewEngine() *Engine {
 		player:         player,
 		gameScreen:     gameScreen,
 		menuScreen:     menuScreen,
+		helpScreen:     helpScreen,
 		msgs:           make([]gruid.Msg, 0),
 	}
 
@@ -106,13 +110,8 @@ func (e *Engine) Draw() gruid.Grid {
 	// グリッドをクリア
 	e.grid.Fill(gruid.Cell{Rune: ' '})
 
-	// 現在の状態を描画
-	switch e.stateManager.GetCurrentState() {
-	case state.StateMenu:
-		e.menuScreen.Draw(&e.grid)
-	case state.StateGame:
-		e.gameScreen.Draw(&e.grid)
-	}
+	// 現在の状態を描画 - state managerを使用
+	e.stateManager.Draw(&e.grid)
 
 	return e.grid
 }
