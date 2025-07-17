@@ -35,10 +35,15 @@ func (t TileType) String() string {
 
 // Tile represents a single tile in the dungeon
 type Tile struct {
-	Type     TileType
-	Cell     gruid.Cell
-	Visible  bool
-	Walkable bool
+	Type        TileType
+	Cell        gruid.Cell
+	Visible     bool
+	IsWalkable  bool
+}
+
+// Walkable returns whether the tile can be walked on
+func (t *Tile) Walkable() bool {
+	return t.IsWalkable
 }
 
 // GetTileCell returns the cell configuration for a given tile type
@@ -47,47 +52,47 @@ func GetTileCell(t TileType) gruid.Cell {
 	case TileWall:
 		return gruid.Cell{
 			Rune:  '#',
-			Style: gruid.Style{Fg: 8}, // Gray
+			Style: gruid.Style{Fg: 0x808080}, // Gray (RGB値)
 		}
 	case TileFloor:
 		return gruid.Cell{
 			Rune:  '.',
-			Style: gruid.Style{Fg: 8}, // Gray
+			Style: gruid.Style{Fg: 0xFFFFFF}, // White (床は見やすくする)
 		}
 	case TileDoorClosed:
 		return gruid.Cell{
 			Rune:  '+',
-			Style: gruid.Style{Fg: 3}, // Brown
+			Style: gruid.Style{Fg: 0x8B4513}, // Brown (RGB値)
 		}
 	case TileDoorOpen:
 		return gruid.Cell{
 			Rune:  '/',
-			Style: gruid.Style{Fg: 3}, // Brown
+			Style: gruid.Style{Fg: 0x8B4513}, // Brown (RGB値)
 		}
 	case TileStairsUp:
 		return gruid.Cell{
 			Rune:  '<',
-			Style: gruid.Style{Fg: 15}, // White
+			Style: gruid.Style{Fg: 0xFFFFFF}, // White (RGB値)
 		}
 	case TileStairsDown:
 		return gruid.Cell{
 			Rune:  '>',
-			Style: gruid.Style{Fg: 15}, // White
+			Style: gruid.Style{Fg: 0xFFFFFF}, // White (RGB値)
 		}
 	case TileWater:
 		return gruid.Cell{
 			Rune:  '~',
-			Style: gruid.Style{Fg: 4}, // Blue
+			Style: gruid.Style{Fg: 0x0000FF}, // Blue (RGB値)
 		}
 	case TileLava:
 		return gruid.Cell{
 			Rune:  '^',
-			Style: gruid.Style{Fg: 1}, // Red
+			Style: gruid.Style{Fg: 0xFF0000}, // Red (RGB値)
 		}
 	case TileSecretDoor:
 		return gruid.Cell{
 			Rune:  '#',
-			Style: gruid.Style{Fg: 8}, // Gray (同じく壁と同じ)
+			Style: gruid.Style{Fg: 0x808080}, // Gray (RGB値、壁と同じ)
 		}
 	default:
 		return gruid.Cell{
@@ -110,9 +115,9 @@ func IsWalkable(t TileType) bool {
 // NewTile creates a new tile of the given type
 func NewTile(tileType TileType) *Tile {
 	return &Tile{
-		Type:     tileType,
-		Cell:     GetTileCell(tileType),
-		Visible:  false,
-		Walkable: IsWalkable(tileType),
+		Type:       tileType,
+		Cell:       GetTileCell(tileType),
+		Visible:    true, // すべてのタイルを可視化（簡素化のため）
+		IsWalkable: IsWalkable(tileType),
 	}
 }

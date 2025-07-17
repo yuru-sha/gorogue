@@ -30,20 +30,35 @@ func NewEngine() *Engine {
 	// グリッドの初期化
 	grid := gruid.NewGrid(screenWidth, screenHeight)
 
-	// ダンジョンレベルの生成
-	level := dungeon.NewLevel(screenWidth, screenHeight-7, 1)
+	// ダンジョンレベルの生成（上部2行のステータス + 下部7行のメッセージ = 9行を除く）
+	level := dungeon.NewLevel(screenWidth, screenHeight-9, 1)
 	level.Generate() // ダンジョンを生成
 	logger.Debug("Created new dungeon level",
 		"width", level.Width,
 		"height", level.Height,
 	)
 
-	// プレイヤーの生成
-	player := actor.NewPlayer(screenWidth/2, screenHeight/2)
-	logger.Debug("Created player",
-		"x", player.Position.X,
-		"y", player.Position.Y,
-	)
+	// プレイヤーの生成（最初の部屋の中央に配置）
+	var player *actor.Player
+	if len(level.Rooms) > 0 {
+		firstRoom := level.Rooms[0]
+		playerX := firstRoom.X + firstRoom.Width/2
+		playerY := firstRoom.Y + firstRoom.Height/2
+		player = actor.NewPlayer(playerX, playerY)
+		logger.Debug("Created player in first room",
+			"x", player.Position.X,
+			"y", player.Position.Y,
+			"room_x", firstRoom.X,
+			"room_y", firstRoom.Y,
+		)
+	} else {
+		// フォールバック：画面中央
+		player = actor.NewPlayer(screenWidth/2, screenHeight/2)
+		logger.Debug("Created player at screen center",
+			"x", player.Position.X,
+			"y", player.Position.Y,
+		)
+	}
 
 	// 画面の生成
 	gameScreen := uiscreen.NewGameScreen(screenWidth, screenHeight, player)
@@ -55,6 +70,9 @@ func NewEngine() *Engine {
 	stateManager := state.NewStateManager()
 	stateManager.RegisterState(state.StateMenu, menuScreen)
 	stateManager.RegisterState(state.StateGame, gameScreen)
+	
+	// ゲーム状態で開始
+	stateManager.SetState(state.StateGame)
 
 	engine := &Engine{
 		grid:         grid,

@@ -15,7 +15,7 @@ const (
 
 var (
 	// ログファイルのパス
-	logDir    = filepath.Join("data", "logs")
+	logDir    = "logs"
 	gameLog   = filepath.Join(logDir, "game.log")
 	errorLog  = filepath.Join(logDir, "error.log")
 	gameFile  *os.File

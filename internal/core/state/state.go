@@ -43,6 +43,11 @@ func (sm *StateManager) GetCurrentState() GameState {
 	return sm.currentState
 }
 
+// SetState sets the current state
+func (sm *StateManager) SetState(state GameState) {
+	sm.currentState = state
+}
+
 // HandleInput handles input for the current state
 func (sm *StateManager) HandleInput(msg gruid.Msg) gruid.Effect {
 	if handler, exists := sm.states[sm.currentState]; exists {

@@ -56,8 +56,22 @@ func GetItemSymbol(t ItemType) rune {
 // GetItemColor returns the color for a given item type
 func GetItemColor(t ItemType) [3]uint8 {
 	switch t {
+	case ItemWeapon:
+		return [3]uint8{192, 192, 192} // Silver
+	case ItemArmor:
+		return [3]uint8{139, 69, 19} // SaddleBrown
+	case ItemRing:
+		return [3]uint8{255, 215, 0} // Gold
+	case ItemScroll:
+		return [3]uint8{255, 255, 224} // LightYellow
+	case ItemPotion:
+		return [3]uint8{255, 20, 147} // DeepPink
+	case ItemFood:
+		return [3]uint8{255, 165, 0} // Orange
+	case ItemGold:
+		return [3]uint8{255, 215, 0} // Gold
 	case ItemAmulet:
-		return [3]uint8{255, 215, 0} // Gold color
+		return [3]uint8{255, 215, 0} // Gold
 	default:
 		return [3]uint8{255, 255, 255} // White
 	}
@@ -88,4 +102,9 @@ func NewGold(x, y int, isSpecialRoom bool) *Item {
 // NewAmulet creates Yendor's amulet
 func NewAmulet(x, y int) *Item {
 	return NewItem(x, y, ItemAmulet, "イェンダーの魔除け", 1000)
+}
+
+// GetColor returns the color of the item
+func (i *Item) GetColor() [3]uint8 {
+	return i.Color
 }

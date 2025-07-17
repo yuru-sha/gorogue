@@ -106,6 +106,21 @@ func (p *Player) AddExp(amount int) {
 	)
 }
 
+// GainExp is an alias for AddExp
+func (p *Player) GainExp(amount int) {
+	p.AddExp(amount)
+}
+
+// CalculateDamage calculates damage dealt to a target
+func (p *Player) CalculateDamage(targetDefense int) int {
+	// 基本攻撃力から防御力を引く
+	damage := p.Attack - targetDefense
+	if damage < 1 {
+		damage = 1
+	}
+	return damage
+}
+
 // UpdateHunger decreases hunger and handles starvation
 func (p *Player) UpdateHunger() {
 	oldHunger := p.Hunger
@@ -121,4 +136,11 @@ func (p *Player) UpdateHunger() {
 		)
 		p.TakeDamage(1) // Starvation damage
 	}
+}
+
+// GetExpToNextLevel returns experience needed to reach next level
+func (p *Player) GetExpToNextLevel() int {
+	// Simple formula: level * 100 experience per level
+	nextLevelExp := p.Level * 100
+	return nextLevelExp - p.Exp
 }

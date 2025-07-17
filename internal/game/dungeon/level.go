@@ -3,6 +3,8 @@ package dungeon
 import (
 	"math/rand"
 
+	"github.com/yuru-sha/gorogue/internal/game/actor"
+	"github.com/yuru-sha/gorogue/internal/game/item"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
@@ -27,6 +29,8 @@ type Level struct {
 	Tiles         [][]*Tile
 	Rooms         []*Room
 	FloorNumber   int
+	Monsters      []*actor.Monster
+	Items         []*item.Item
 }
 
 // NewLevel creates a new dungeon level
@@ -36,6 +40,8 @@ func NewLevel(width, height, floorNum int) *Level {
 		Height:      height,
 		FloorNumber: floorNum,
 		Rooms:       make([]*Room, 0),
+		Monsters:    make([]*actor.Monster, 0),
+		Items:       make([]*item.Item, 0),
 	}
 
 	// Initialize tiles with walls
@@ -75,10 +81,18 @@ func (l *Level) Generate() {
 
 	// 階段の配置
 	l.PlaceStairs()
+	
+	// モンスターの配置
+	l.SpawnMonsters()
+	
+	// アイテムの配置
+	l.SpawnItems()
 
 	logger.Info("Generated dungeon level",
 		"floor", l.FloorNumber,
 		"rooms", len(l.Rooms),
+		"monsters", len(l.Monsters),
+		"items", len(l.Items),
 	)
 }
 
@@ -229,6 +243,12 @@ func (l *Level) GetTile(x, y int) *Tile {
 	return l.Tiles[y][x]
 }
 
+// IsWalkable checks if a position is walkable
+func (l *Level) IsWalkable(x, y int) bool {
+	tile := l.GetTile(x, y)
+	return tile != nil && tile.Walkable()
+}
+
 // SetTile sets the tile at the given coordinates
 func (l *Level) SetTile(x, y int, tileType TileType) {
 	if l.IsInBounds(x, y) {
@@ -296,8 +316,136 @@ func max(a, b int) int {
 	return b
 }
 
+// SpawnMonsters spawns monsters in the dungeon
+func (l *Level) SpawnMonsters() {
+	if len(l.Rooms) == 0 {
+		return
+	}
+	
+	// 階層に応じたモンスター数を計算
+	numMonsters := 5 + l.FloorNumber/2
+	if numMonsters > 15 {
+		numMonsters = 15
+	}
+	
+	// 各部屋にモンスターを配置
+	for i := 0; i < numMonsters; i++ {
+		// ランダムな部屋を選択
+		room := l.Rooms[rand.Intn(len(l.Rooms))]
+		
+		// 部屋内のランダムな位置を選択
+		x := room.X + 1 + rand.Intn(room.Width-2)
+		y := room.Y + 1 + rand.Intn(room.Height-2)
+		
+		// その位置が床タイルかチェック
+		if l.GetTile(x, y).Type != TileFloor {
+			i-- // 無効な位置の場合は再試行
+			continue
+		}
+		
+		// 既にモンスターがいないかチェック
+		if l.GetMonsterAt(x, y) != nil {
+			i-- // 既にモンスターがいる場合は再試行
+			continue
+		}
+		
+		// 階層に応じたモンスターを選択
+		monsterType := l.selectMonsterType()
+		monster := actor.NewMonster(x, y, monsterType)
+		l.Monsters = append(l.Monsters, monster)
+		
+		logger.Debug("Spawned monster",
+			"type", monster.Type.Name,
+			"x", x,
+			"y", y,
+			"floor", l.FloorNumber,
+		)
+	}
+	
+	logger.Info("Finished spawning monsters",
+		"total_monsters", len(l.Monsters),
+		"floor", l.FloorNumber,
+	)
+}
+
+// selectMonsterType selects a monster type based on the floor level
+func (l *Level) selectMonsterType() rune {
+	// 階層に応じたモンスター選択
+	switch {
+	case l.FloorNumber <= 3:
+		// 浅い階層：弱いモンスター
+		monsters := []rune{'B', 'F', 'G'}
+		return monsters[rand.Intn(len(monsters))]
+	case l.FloorNumber <= 8:
+		// 中間階層：中程度のモンスター
+		monsters := []rune{'B', 'E', 'G', 'O', 'S'}
+		return monsters[rand.Intn(len(monsters))]
+	case l.FloorNumber <= 15:
+		// 深い階層：強いモンスター
+		monsters := []rune{'E', 'G', 'O', 'S', 'T'}
+		return monsters[rand.Intn(len(monsters))]
+	default:
+		// 最深階層：最強のモンスター
+		monsters := []rune{'O', 'S', 'T', 'D'}
+		return monsters[rand.Intn(len(monsters))]
+	}
+}
+
+// GetMonsterAt returns the monster at the given coordinates
+func (l *Level) GetMonsterAt(x, y int) *actor.Monster {
+	for _, monster := range l.Monsters {
+		if monster.Position.X == x && monster.Position.Y == y && monster.IsAlive() {
+			return monster
+		}
+	}
+	return nil
+}
+
+// RemoveMonster removes a monster from the level
+func (l *Level) RemoveMonster(monster *actor.Monster) {
+	for i, m := range l.Monsters {
+		if m == monster {
+			l.Monsters = append(l.Monsters[:i], l.Monsters[i+1:]...)
+			logger.Debug("Removed monster",
+				"type", monster.Type.Name,
+				"x", monster.Position.X,
+				"y", monster.Position.Y,
+			)
+			break
+		}
+	}
+}
+
+// UpdateMonsters updates all monsters in the level
+func (l *Level) UpdateMonsters(player *actor.Player) {
+	for _, monster := range l.Monsters {
+		if monster.IsAlive() {
+			monster.Update(player, l)
+		}
+	}
+	
+	// 死んだモンスターを削除
+	l.RemoveDeadMonsters()
+}
+
+// RemoveDeadMonsters removes all dead monsters from the level
+func (l *Level) RemoveDeadMonsters() {
+	aliveMonsters := make([]*actor.Monster, 0)
+	for _, monster := range l.Monsters {
+		if monster.IsAlive() {
+			aliveMonsters = append(aliveMonsters, monster)
+		}
+	}
+	l.Monsters = aliveMonsters
+}
+
 // GenerateSpecialRoom generates a special room
 func (l *Level) GenerateSpecialRoom() {
+	// 1階では特別な部屋を生成しない
+	if l.FloorNumber <= 1 {
+		return
+	}
+	
 	// 5階ごとに1つの特別な部屋を生成
 	if l.FloorNumber%5 != 0 {
 		return
@@ -306,6 +454,13 @@ func (l *Level) GenerateSpecialRoom() {
 	// 10%の確率で特別な部屋を生成
 	if rand.Float64() > 0.1 {
 		return
+	}
+	
+	// 既に特別な部屋が存在する場合は生成しない
+	for _, room := range l.Rooms {
+		if room.IsSpecial {
+			return
+		}
 	}
 
 	// 5x5の特別な部屋を生成
@@ -393,5 +548,181 @@ func (l *Level) PopulateSpecialRoom(room *Room) {
 	case 5: // 図書室
 		logger.Info("Generating library")
 		// TODO: 巻物を配置
+	}
+}
+
+// SpawnItems spawns items in the level
+func (l *Level) SpawnItems() {
+	logger.Debug("Starting item spawning", "floor", l.FloorNumber)
+	
+	// 各部屋にアイテムを配置
+	for _, room := range l.Rooms {
+		// 通常の部屋: 30%の確率でアイテムを配置
+		if rand.Float64() < 0.3 {
+			l.spawnItemInRoom(room)
+		}
+		
+		// 特別な部屋: 必ずアイテムを配置
+		if room.IsSpecial {
+			l.spawnItemInRoom(room)
+		}
+	}
+	
+	logger.Info("Finished spawning items",
+		"total_items", len(l.Items),
+		"floor", l.FloorNumber,
+	)
+}
+
+// spawnItemInRoom spawns an item in a specific room
+func (l *Level) spawnItemInRoom(room *Room) {
+	maxAttempts := 20
+	for attempts := 0; attempts < maxAttempts; attempts++ {
+		// 部屋内のランダムな位置を選択
+		x := room.X + rand.Intn(room.Width)
+		y := room.Y + rand.Intn(room.Height)
+		
+		// その位置が有効かチェック
+		if !l.IsValidItemPosition(x, y) {
+			continue
+		}
+		
+		// アイテムタイプを選択
+		itemType := l.selectItemType()
+		
+		// アイテムを生成
+		var newItem *item.Item
+		switch itemType {
+		case item.ItemGold:
+			newItem = item.NewGold(x, y, room.IsSpecial)
+		case item.ItemAmulet:
+			if l.FloorNumber >= 20 { // 深い階層でのみ魔除けを生成
+				newItem = item.NewAmulet(x, y)
+			} else {
+				continue // 深い階層でない場合は別のアイテムを試す
+			}
+		default:
+			newItem = l.createRandomItem(x, y, itemType)
+		}
+		
+		if newItem != nil {
+			l.Items = append(l.Items, newItem)
+			logger.Debug("Spawned item",
+				"type", newItem.Name,
+				"x", x,
+				"y", y,
+				"floor", l.FloorNumber,
+			)
+		}
+		break
+	}
+}
+
+// selectItemType selects an item type based on the floor level
+func (l *Level) selectItemType() item.ItemType {
+	// 階層に応じたアイテム選択
+	switch {
+	case l.FloorNumber <= 5:
+		// 浅い階層: 基本的なアイテム
+		items := []item.ItemType{item.ItemGold, item.ItemFood, item.ItemPotion}
+		return items[rand.Intn(len(items))]
+	case l.FloorNumber <= 10:
+		// 中間階層: より多様なアイテム
+		items := []item.ItemType{item.ItemGold, item.ItemFood, item.ItemPotion, item.ItemScroll, item.ItemWeapon}
+		return items[rand.Intn(len(items))]
+	case l.FloorNumber <= 15:
+		// 深い階層: 高価なアイテム
+		items := []item.ItemType{item.ItemGold, item.ItemWeapon, item.ItemArmor, item.ItemRing, item.ItemScroll}
+		return items[rand.Intn(len(items))]
+	default:
+		// 最深階層: 最高のアイテム
+		items := []item.ItemType{item.ItemGold, item.ItemWeapon, item.ItemArmor, item.ItemRing, item.ItemAmulet}
+		return items[rand.Intn(len(items))]
+	}
+}
+
+// createRandomItem creates a random item of the specified type
+func (l *Level) createRandomItem(x, y int, itemType item.ItemType) *item.Item {
+	switch itemType {
+	case item.ItemWeapon:
+		weapons := []string{"短剣", "剣", "メイス", "斧", "弓"}
+		name := weapons[rand.Intn(len(weapons))]
+		value := 10 + rand.Intn(50)
+		return item.NewItem(x, y, itemType, name, value)
+	case item.ItemArmor:
+		armors := []string{"革鎧", "鎖帷子", "板金鎧", "ローブ", "盾"}
+		name := armors[rand.Intn(len(armors))]
+		value := 20 + rand.Intn(80)
+		return item.NewItem(x, y, itemType, name, value)
+	case item.ItemRing:
+		rings := []string{"力の指輪", "知恵の指輪", "体力の指輪", "敏捷の指輪"}
+		name := rings[rand.Intn(len(rings))]
+		value := 50 + rand.Intn(100)
+		return item.NewItem(x, y, itemType, name, value)
+	case item.ItemScroll:
+		scrolls := []string{"テレポートの巻物", "識別の巻物", "治療の巻物", "魔法の巻物"}
+		name := scrolls[rand.Intn(len(scrolls))]
+		value := 15 + rand.Intn(35)
+		return item.NewItem(x, y, itemType, name, value)
+	case item.ItemPotion:
+		potions := []string{"体力回復薬", "魔力回復薬", "力強化薬", "敏捷強化薬"}
+		name := potions[rand.Intn(len(potions))]
+		value := 10 + rand.Intn(30)
+		return item.NewItem(x, y, itemType, name, value)
+	case item.ItemFood:
+		foods := []string{"パン", "肉", "果物", "チーズ", "干し肉"}
+		name := foods[rand.Intn(len(foods))]
+		value := 5 + rand.Intn(15)
+		return item.NewItem(x, y, itemType, name, value)
+	default:
+		return nil
+	}
+}
+
+// IsValidItemPosition checks if an item can be placed at the given position
+func (l *Level) IsValidItemPosition(x, y int) bool {
+	// 境界チェック
+	if !l.IsInBounds(x, y) {
+		return false
+	}
+	
+	// 歩行可能タイルかチェック
+	tile := l.GetTile(x, y)
+	if tile == nil || !tile.Walkable() {
+		return false
+	}
+	
+	// 既にアイテムがある位置かチェック
+	for _, existingItem := range l.Items {
+		if existingItem.Position.X == x && existingItem.Position.Y == y {
+			return false
+		}
+	}
+	
+	return true
+}
+
+// GetItemAt returns the item at the given coordinates
+func (l *Level) GetItemAt(x, y int) *item.Item {
+	for _, item := range l.Items {
+		if item.Position.X == x && item.Position.Y == y {
+			return item
+		}
+	}
+	return nil
+}
+
+// RemoveItem removes an item from the level
+func (l *Level) RemoveItem(item *item.Item) {
+	for i, it := range l.Items {
+		if it == item {
+			l.Items = append(l.Items[:i], l.Items[i+1:]...)
+			logger.Debug("Removed item",
+				"type", item.Name,
+				"x", item.Position.X,
+				"y", item.Position.Y,
+			)
+			break
+		}
 	}
 }
