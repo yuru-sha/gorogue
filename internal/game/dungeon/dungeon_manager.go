@@ -50,6 +50,16 @@ func (dm *DungeonManager) GetCurrentFloor() int {
 	return dm.currentFloor
 }
 
+// GetFloorLevel returns the level for a specific floor number
+func (dm *DungeonManager) GetFloorLevel(floor int) *Level {
+	return dm.levels[floor]
+}
+
+// SetLevel sets a level for a specific floor number
+func (dm *DungeonManager) SetLevel(floor int, level *Level) {
+	dm.levels[floor] = level
+}
+
 // generateLevel generates a new level for the given floor
 func (dm *DungeonManager) generateLevel(floor int) *Level {
 	level := NewLevel(DungeonWidth, DungeonHeight, floor)
