@@ -1,4 +1,4 @@
-// GoRogue - SDL2グラフィックス版メイン
+// GoRogue - SDL2 ASCII文字表示版メイン
 
 package main
 
@@ -6,167 +6,88 @@ import (
 	"context"
 	"image"
 	"image/color"
+	"image/draw"
 	"os"
 
 	"github.com/anaseto/gruid"
 	"github.com/anaseto/gruid-sdl"
 	"github.com/yuru-sha/gorogue/internal/core"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/math/fixed"
 )
 
-// SimpleTileManager implements a basic tile manager for SDL2
-type SimpleTileManager struct{}
-
-// TileSize returns the size of individual tiles
-func (tm SimpleTileManager) TileSize() gruid.Point {
-	return gruid.Point{X: 16, Y: 16}
+// ASCIITileManager implements a simple ASCII font-based tile manager
+type ASCIITileManager struct {
+	cellWidth  int
+	cellHeight int
 }
 
-// GetImage returns an image for a specific cell
-func (tm SimpleTileManager) GetImage(cell gruid.Cell) image.Image {
-	// シンプルなASCII文字のレンダリング
-	tileSize := tm.TileSize()
-	img := image.NewRGBA(image.Rect(0, 0, tileSize.X, tileSize.Y))
-	
-	// 背景色の設定
-	bg := color.RGBA{0, 0, 0, 255} // 黒背景
+// NewASCIITileManager creates a new ASCII tile manager
+func NewASCIITileManager(cellWidth, cellHeight int) *ASCIITileManager {
+	return &ASCIITileManager{
+		cellWidth:  cellWidth,
+		cellHeight: cellHeight,
+	}
+}
+
+// TileSize returns the size of tiles
+func (tm *ASCIITileManager) TileSize() gruid.Point {
+	return gruid.Point{X: tm.cellWidth, Y: tm.cellHeight}
+}
+
+// GetImage returns an image for a given cell
+func (tm *ASCIITileManager) GetImage(cell gruid.Cell) image.Image {
+	// Create a new image for the cell
+	img := image.NewRGBA(image.Rect(0, 0, tm.cellWidth, tm.cellHeight))
+
+	// Background color
+	bgColor := color.RGBA{0, 0, 0, 255} // Black background
 	if cell.Style.Bg != 0 {
-		bg = convertGruidColor(cell.Style.Bg)
+		bgColor = tm.gruidColorToRGBA(cell.Style.Bg)
 	}
-	
-	// 文字色の設定
-	fg := color.RGBA{255, 255, 255, 255} // 白文字
+
+	// Fill background
+	draw.Draw(img, img.Bounds(), &image.Uniform{bgColor}, image.Point{}, draw.Src)
+
+	// Text color
+	textColor := color.RGBA{255, 255, 255, 255} // White text
 	if cell.Style.Fg != 0 {
-		fg = convertGruidColor(cell.Style.Fg)
+		textColor = tm.gruidColorToRGBA(cell.Style.Fg)
 	}
-	
-	// 背景を塗りつぶす
-	for y := 0; y < tileSize.Y; y++ {
-		for x := 0; x < tileSize.X; x++ {
-			img.Set(x, y, bg)
-		}
+
+	// Draw the character
+	if cell.Rune != 0 && cell.Rune != ' ' {
+		tm.drawCharacter(img, cell.Rune, textColor)
 	}
-	
-	// 文字に応じた簡単な図形を描画
-	switch cell.Rune {
-	case '@': // プレイヤー
-		drawCircle(img, tileSize.X/2, tileSize.Y/2, 6, fg)
-	case '#': // 壁
-		drawRectangle(img, 0, 0, tileSize.X, tileSize.Y, fg)
-	case '.': // 床
-		drawPixel(img, tileSize.X/2, tileSize.Y/2, fg)
-	case '+': // 扉
-		drawRectangle(img, 2, 2, tileSize.X-4, tileSize.Y-4, fg)
-	case '<': // 上り階段
-		drawTriangle(img, fg, true)
-	case '>': // 下り階段
-		drawTriangle(img, fg, false)
-	case 'B', 'D', 'E', 'F', 'G', 'O', 'S', 'T': // モンスター
-		drawMonster(img, cell.Rune, fg)
-	default: // その他の文字
-		drawChar(img, cell.Rune, fg)
-	}
-	
+
 	return img
 }
 
-// convertGruidColor converts a gruid color to RGBA
-func convertGruidColor(c gruid.Color) color.RGBA {
-	// GruidのColorは数値なので、RGB値に変換
+// gruidColorToRGBA converts gruid.Color to color.RGBA
+func (tm *ASCIITileManager) gruidColorToRGBA(c gruid.Color) color.RGBA {
 	r := uint8((c >> 16) & 0xFF)
 	g := uint8((c >> 8) & 0xFF)
 	b := uint8(c & 0xFF)
-	
-	// 色が0の場合はデフォルト色を使用
-	if c == 0 {
-		return color.RGBA{128, 128, 128, 255}
-	}
-	
 	return color.RGBA{r, g, b, 255}
 }
 
-// drawCircle draws a simple circle
-func drawCircle(img *image.RGBA, cx, cy, radius int, c color.RGBA) {
-	for y := cy - radius; y <= cy + radius; y++ {
-		for x := cx - radius; x <= cx + radius; x++ {
-			if x >= 0 && x < img.Bounds().Max.X && y >= 0 && y < img.Bounds().Max.Y {
-				dx := x - cx
-				dy := y - cy
-				if dx*dx + dy*dy <= radius*radius {
-					img.Set(x, y, c)
-				}
-			}
-		}
-	}
-}
+// drawCharacter draws a character on the image
+func (tm *ASCIITileManager) drawCharacter(img *image.RGBA, r rune, textColor color.RGBA) {
+	// Use a font optimized for PyRogue-style display
+	face := basicfont.Face7x13
 
-// drawRectangle draws a rectangle
-func drawRectangle(img *image.RGBA, x, y, width, height int, c color.RGBA) {
-	for py := y; py < y + height; py++ {
-		for px := x; px < x + width; px++ {
-			if px >= 0 && px < img.Bounds().Max.X && py >= 0 && py < img.Bounds().Max.Y {
-				img.Set(px, py, c)
-			}
-		}
+	// Create a font drawer with PyRogue-style positioning
+	drawer := &font.Drawer{
+		Dst:  img,
+		Src:  &image.Uniform{textColor},
+		Face: face,
+		Dot:  fixed.Point26_6{X: fixed.Int26_6(1 << 6), Y: fixed.Int26_6(tm.cellHeight-2) << 6},
 	}
-}
 
-// drawPixel draws a single pixel
-func drawPixel(img *image.RGBA, x, y int, c color.RGBA) {
-	if x >= 0 && x < img.Bounds().Max.X && y >= 0 && y < img.Bounds().Max.Y {
-		img.Set(x, y, c)
-	}
-}
-
-// drawTriangle draws a simple triangle
-func drawTriangle(img *image.RGBA, c color.RGBA, up bool) {
-	width := img.Bounds().Max.X
-	height := img.Bounds().Max.Y
-	
-	if up {
-		// 上向きの三角形
-		for y := height/4; y < 3*height/4; y++ {
-			lineWidth := (y - height/4) * width / height
-			for x := width/2 - lineWidth/2; x < width/2 + lineWidth/2; x++ {
-				if x >= 0 && x < width && y >= 0 && y < height {
-					img.Set(x, y, c)
-				}
-			}
-		}
-	} else {
-		// 下向きの三角形
-		for y := height/4; y < 3*height/4; y++ {
-			lineWidth := (3*height/4 - y) * width / height
-			for x := width/2 - lineWidth/2; x < width/2 + lineWidth/2; x++ {
-				if x >= 0 && x < width && y >= 0 && y < height {
-					img.Set(x, y, c)
-				}
-			}
-		}
-	}
-}
-
-// drawMonster draws a simple monster representation
-func drawMonster(img *image.RGBA, monster rune, c color.RGBA) {
-	width := img.Bounds().Max.X
-	height := img.Bounds().Max.Y
-	
-	switch monster {
-	case 'B': // バット - 小さな円
-		drawCircle(img, width/2, height/2, 3, c)
-	case 'D': // ドラゴン - 大きな四角
-		drawRectangle(img, 2, 2, width-4, height-4, c)
-	case 'G': // ゴブリン - 中程度の円
-		drawCircle(img, width/2, height/2, 5, c)
-	default: // その他のモンスター
-		drawCircle(img, width/2, height/2, 4, c)
-	}
-}
-
-// drawChar draws a simple character representation
-func drawChar(img *image.RGBA, char rune, c color.RGBA) {
-	// 文字の簡単な表現（中央に点）
-	drawPixel(img, img.Bounds().Max.X/2, img.Bounds().Max.Y/2, c)
+	// Draw the character
+	drawer.DrawString(string(r))
 }
 
 func main() {
@@ -176,7 +97,7 @@ func main() {
 	}
 	defer logger.Cleanup()
 
-	logger.Info("Starting GoRogue", "render_mode", "sdl2")
+	logger.Info("Starting GoRogue", "render_mode", "sdl2_ascii")
 
 	// ゲームエンジンの初期化
 	engine := core.NewEngine()
@@ -185,12 +106,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	// SDL2ドライバーの設定
+	// SDL2ドライバーの設定 - ASCII文字表示用（PyRogue風）
 	config := sdl.Config{
-		TileManager: SimpleTileManager{},
+		TileManager: NewASCIITileManager(10, 14), // 10x14のPyRogue風サイズ
 		Width:       80,
 		Height:      50,
-		WindowTitle: "GoRogue - A Roguelike Game",
+		WindowTitle: "GoRogue - ASCII Roguelike",
 		Fullscreen:  false,
 	}
 

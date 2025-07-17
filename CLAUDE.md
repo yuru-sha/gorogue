@@ -94,6 +94,12 @@ go install golang.org/x/tools/cmd/goimports@latest
 
 # より高度なリンター
 go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+# コード品質チェック（全体）
+make lint
+
+# golangci-lintのみ実行
+golangci-lint run
 ```
 
 ## アーキテクチャ概要

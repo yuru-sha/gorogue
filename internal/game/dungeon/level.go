@@ -81,10 +81,10 @@ func (l *Level) Generate() {
 
 	// 階段の配置
 	l.PlaceStairs()
-	
+
 	// モンスターの配置
 	l.SpawnMonsters()
-	
+
 	// アイテムの配置
 	l.SpawnItems()
 
@@ -213,21 +213,31 @@ func (l *Level) CreateVerticalCorridor(y1, y2, x int) {
 
 // PlaceStairs places the stairs in the dungeon
 func (l *Level) PlaceStairs() {
-	// 下り階段は最後の部屋に配置
-	lastRoom := l.Rooms[len(l.Rooms)-1]
-	l.SetTile(
-		lastRoom.X+lastRoom.Width/2,
-		lastRoom.Y+lastRoom.Height/2,
-		TileStairsDown,
-	)
+	if len(l.Rooms) == 0 {
+		return
+	}
 
-	// 上り階段は最初の部屋に配置
-	firstRoom := l.Rooms[0]
-	l.SetTile(
-		firstRoom.X+firstRoom.Width/2,
-		firstRoom.Y+firstRoom.Height/2,
-		TileStairsUp,
-	)
+	// 最初の階層では上り階段を配置しない
+	if l.FloorNumber > 1 {
+		// 上り階段は最初の部屋に配置
+		firstRoom := l.Rooms[0]
+		l.SetTile(
+			firstRoom.X+firstRoom.Width/2,
+			firstRoom.Y+firstRoom.Height/2,
+			TileStairsUp,
+		)
+	}
+
+	// 最終階層では下り階段を配置しない
+	if l.FloorNumber < 26 {
+		// 下り階段は最後の部屋に配置
+		lastRoom := l.Rooms[len(l.Rooms)-1]
+		l.SetTile(
+			lastRoom.X+lastRoom.Width/2,
+			lastRoom.Y+lastRoom.Height/2,
+			TileStairsDown,
+		)
+	}
 }
 
 // IsInBounds checks if the given coordinates are within the level bounds
@@ -321,39 +331,43 @@ func (l *Level) SpawnMonsters() {
 	if len(l.Rooms) == 0 {
 		return
 	}
-	
+
 	// 階層に応じたモンスター数を計算
 	numMonsters := 5 + l.FloorNumber/2
 	if numMonsters > 15 {
 		numMonsters = 15
 	}
-	
+
 	// 各部屋にモンスターを配置
 	for i := 0; i < numMonsters; i++ {
 		// ランダムな部屋を選択
 		room := l.Rooms[rand.Intn(len(l.Rooms))]
-		
+
 		// 部屋内のランダムな位置を選択
 		x := room.X + 1 + rand.Intn(room.Width-2)
 		y := room.Y + 1 + rand.Intn(room.Height-2)
-		
+
 		// その位置が床タイルかチェック
 		if l.GetTile(x, y).Type != TileFloor {
 			i-- // 無効な位置の場合は再試行
 			continue
 		}
-		
+
 		// 既にモンスターがいないかチェック
 		if l.GetMonsterAt(x, y) != nil {
 			i-- // 既にモンスターがいる場合は再試行
 			continue
 		}
-		
+
 		// 階層に応じたモンスターを選択
 		monsterType := l.selectMonsterType()
 		monster := actor.NewMonster(x, y, monsterType)
+
+		// 階層に応じた難易度スケーリング
+		l.scaleMonsterForFloor(monster)
+
 		l.Monsters = append(l.Monsters, monster)
-		
+
 		logger.Debug("Spawned monster",
 			"type", monster.Type.Name,
 			"x", x,
@@ -361,7 +375,7 @@ func (l *Level) SpawnMonsters() {
 			"floor", l.FloorNumber,
 		)
 	}
-	
+
 	logger.Info("Finished spawning monsters",
 		"total_monsters", len(l.Monsters),
 		"floor", l.FloorNumber,
@@ -389,6 +403,36 @@ func (l *Level) selectMonsterType() rune {
 		monsters := []rune{'O', 'S', 'T', 'D'}
 		return monsters[rand.Intn(len(monsters))]
 	}
+}
+
+// scaleMonsterForFloor scales monster stats based on the floor level
+func (l *Level) scaleMonsterForFloor(monster *actor.Monster) {
+	// 基本的な階層スケーリング係数
+	scaleFactor := 1.0 + float64(l.FloorNumber-1)*0.1
+
+	// HP, 攻撃力, 防御力を階層に応じて強化
+	monster.MaxHP = int(float64(monster.MaxHP) * scaleFactor)
+	monster.HP = monster.MaxHP
+	monster.Attack = int(float64(monster.Attack) * scaleFactor)
+	monster.Defense = int(float64(monster.Defense) * scaleFactor)
+
+	// 深い階層では追加のボーナス
+	if l.FloorNumber > 15 {
+		extraBonus := float64(l.FloorNumber-15) * 0.05
+		monster.MaxHP = int(float64(monster.MaxHP) * (1.0 + extraBonus))
+		monster.HP = monster.MaxHP
+		monster.Attack = int(float64(monster.Attack) * (1.0 + extraBonus))
+		monster.Defense = int(float64(monster.Defense) * (1.0 + extraBonus))
+	}
+
+	logger.Debug("Scaled monster for floor",
+		"floor", l.FloorNumber,
+		"type", monster.Type.Name,
+		"hp", monster.HP,
+		"attack", monster.Attack,
+		"defense", monster.Defense,
+		"scale_factor", scaleFactor,
+	)
 }
 
 // GetMonsterAt returns the monster at the given coordinates
@@ -423,7 +467,7 @@ func (l *Level) UpdateMonsters(player *actor.Player) {
 			monster.Update(player, l)
 		}
 	}
-	
+
 	// 死んだモンスターを削除
 	l.RemoveDeadMonsters()
 }
@@ -445,7 +489,7 @@ func (l *Level) GenerateSpecialRoom() {
 	if l.FloorNumber <= 1 {
 		return
 	}
-	
+
 	// 5階ごとに1つの特別な部屋を生成
 	if l.FloorNumber%5 != 0 {
 		return
@@ -455,7 +499,7 @@ func (l *Level) GenerateSpecialRoom() {
 	if rand.Float64() > 0.1 {
 		return
 	}
-	
+
 	// 既に特別な部屋が存在する場合は生成しない
 	for _, room := range l.Rooms {
 		if room.IsSpecial {
@@ -554,20 +598,20 @@ func (l *Level) PopulateSpecialRoom(room *Room) {
 // SpawnItems spawns items in the level
 func (l *Level) SpawnItems() {
 	logger.Debug("Starting item spawning", "floor", l.FloorNumber)
-	
+
 	// 各部屋にアイテムを配置
 	for _, room := range l.Rooms {
 		// 通常の部屋: 30%の確率でアイテムを配置
 		if rand.Float64() < 0.3 {
 			l.spawnItemInRoom(room)
 		}
-		
+
 		// 特別な部屋: 必ずアイテムを配置
 		if room.IsSpecial {
 			l.spawnItemInRoom(room)
 		}
 	}
-	
+
 	logger.Info("Finished spawning items",
 		"total_items", len(l.Items),
 		"floor", l.FloorNumber,
@@ -581,20 +625,24 @@ func (l *Level) spawnItemInRoom(room *Room) {
 		// 部屋内のランダムな位置を選択
 		x := room.X + rand.Intn(room.Width)
 		y := room.Y + rand.Intn(room.Height)
-		
+
 		// その位置が有効かチェック
 		if !l.IsValidItemPosition(x, y) {
 			continue
 		}
-		
+
 		// アイテムタイプを選択
 		itemType := l.selectItemType()
-		
+
 		// アイテムを生成
 		var newItem *item.Item
 		switch itemType {
 		case item.ItemGold:
 			newItem = item.NewGold(x, y, room.IsSpecial)
+			// 階層に応じてゴールドの価値を調整
+			if newItem != nil {
+				newItem.Value = int(float64(newItem.Value) * (1.0 + float64(l.FloorNumber-1)*0.1))
+			}
 		case item.ItemAmulet:
 			if l.FloorNumber >= 20 { // 深い階層でのみ魔除けを生成
 				newItem = item.NewAmulet(x, y)
@@ -603,8 +651,12 @@ func (l *Level) spawnItemInRoom(room *Room) {
 			}
 		default:
 			newItem = l.createRandomItem(x, y, itemType)
+			// 階層に応じてアイテムの価値を調整
+			if newItem != nil {
+				newItem.Value = int(float64(newItem.Value) * (1.0 + float64(l.FloorNumber-1)*0.05))
+			}
 		}
-		
+
 		if newItem != nil {
 			l.Items = append(l.Items, newItem)
 			logger.Debug("Spawned item",
@@ -685,20 +737,20 @@ func (l *Level) IsValidItemPosition(x, y int) bool {
 	if !l.IsInBounds(x, y) {
 		return false
 	}
-	
+
 	// 歩行可能タイルかチェック
 	tile := l.GetTile(x, y)
 	if tile == nil || !tile.Walkable() {
 		return false
 	}
-	
+
 	// 既にアイテムがある位置かチェック
 	for _, existingItem := range l.Items {
 		if existingItem.Position.X == x && existingItem.Position.Y == y {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
@@ -725,4 +777,16 @@ func (l *Level) RemoveItem(item *item.Item) {
 			break
 		}
 	}
+}
+
+// AddItem アイテムを指定位置に追加
+func (l *Level) AddItem(item *item.Item, x, y int) {
+	item.Position.X = x
+	item.Position.Y = y
+	l.Items = append(l.Items, item)
+	logger.Debug("Item added to level",
+		"type", item.Name,
+		"x", x,
+		"y", y,
+	)
 }

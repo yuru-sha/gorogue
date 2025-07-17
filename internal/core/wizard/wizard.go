@@ -2,7 +2,7 @@ package wizard
 
 import (
 	"fmt"
-	
+
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
 	"github.com/yuru-sha/gorogue/internal/game/item"
@@ -33,6 +33,12 @@ func (w *WizardMode) Toggle() {
 		status = "ON"
 	}
 	logger.Info("Wizard mode toggled", "status", status)
+}
+
+// SetLevel updates the level reference for wizard mode
+func (w *WizardMode) SetLevel(level *dungeon.Level) {
+	w.Level = level
+	logger.Debug("Wizard mode level updated")
 }
 
 // ExecuteCommand executes a wizard command
@@ -130,10 +136,10 @@ func (w *WizardMode) createItem() string {
 		item.ItemScroll, item.ItemPotion, item.ItemFood,
 		item.ItemGold, item.ItemAmulet,
 	}
-	
+
 	itemType := items[len(items)-1] // Create amulet for testing
 	var newItem *item.Item
-	
+
 	switch itemType {
 	case item.ItemGold:
 		newItem = item.NewGold(w.Player.Position.X, w.Player.Position.Y, false)
@@ -142,7 +148,7 @@ func (w *WizardMode) createItem() string {
 	default:
 		newItem = item.NewItem(w.Player.Position.X, w.Player.Position.Y, itemType, "ウィザードアイテム", 100)
 	}
-	
+
 	w.Level.Items = append(w.Level.Items, newItem)
 	logger.Info("Wizard: Created item", "type", newItem.Name, "x", newItem.Position.X, "y", newItem.Position.Y)
 	return fmt.Sprintf("%sを作成しました", newItem.Name)
@@ -153,14 +159,14 @@ func (w *WizardMode) teleport() string {
 	if len(w.Level.Rooms) == 0 {
 		return "テレポート先がありません"
 	}
-	
+
 	room := w.Level.Rooms[len(w.Level.Rooms)-1] // Last room
 	newX := room.X + room.Width/2
 	newY := room.Y + room.Height/2
-	
+
 	w.Player.Position.X = newX
 	w.Player.Position.Y = newY
-	
+
 	logger.Info("Wizard: Player teleported", "x", newX, "y", newY)
 	return "テレポートしました"
 }

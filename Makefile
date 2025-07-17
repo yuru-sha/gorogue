@@ -92,10 +92,24 @@ build: check-setup
 	@go build -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/gorogue
 	@echo "✅ Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
 
-# 実行
+# CLIモードビルド
+build-cli: check-setup
+	@echo "🔨 Building $(BINARY_NAME)-cli..."
+	@go build -o $(BUILD_DIR)/$(BINARY_NAME)-cli ./cmd/gorogue-cli
+	@echo "✅ CLI build complete: $(BUILD_DIR)/$(BINARY_NAME)-cli"
+
+# 両方ビルド
+build-all: build build-cli
+
+# 実行（GUI版）
 run: build
 	@echo "🎮 Starting $(BINARY_NAME)..."
 	@./$(BUILD_DIR)/$(BINARY_NAME)
+
+# CLI版実行
+run-cli: build-cli
+	@echo "💻 Starting $(BINARY_NAME) CLI mode..."
+	@./$(BUILD_DIR)/$(BINARY_NAME)-cli
 
 
 # 開発用実行（デバッグ情報付き）
@@ -204,7 +218,10 @@ help:
 	@echo ""
 	@echo "🎮 Game Commands:"
 	@echo "  make build       - Build the game (SDL2 graphics)"
+	@echo "  make build-cli   - Build CLI version"
+	@echo "  make build-all   - Build both GUI and CLI versions"
 	@echo "  make run         - Build and run the game (SDL2 graphics)"
+	@echo "  make run-cli     - Build and run CLI version"
 	@echo "  make dev         - Build with debug info and run"
 	@echo ""
 	@echo "🧪 Development Commands:"

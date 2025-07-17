@@ -9,5 +9,5 @@ require (
 
 require (
 	github.com/veandco/go-sdl2 v0.4.5 // indirect
-	golang.org/x/image v0.0.0-20210216034530-4410531fe030 // indirect
+	golang.org/x/image v0.29.0 // indirect
 )
