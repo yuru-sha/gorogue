@@ -188,8 +188,8 @@ func TestGetConfig(t *testing.T) {
 	// Clean environment
 	os.Unsetenv(EnvDebugMode)
 	os.Unsetenv(EnvLogLevel)
-	os.Unsetenv(EnvWindowWidth)
-	os.Unsetenv(EnvWindowHeight)
+	os.Unsetenv(EnvSaveDirectory)
+	os.Unsetenv(EnvAutoSaveEnabled)
 
 	config := GetConfig()
 	if config == nil {
@@ -203,18 +203,18 @@ func TestGetConfig(t *testing.T) {
 	if config.LogLevel != DefaultLogLevel {
 		t.Errorf("config.LogLevel = %q, expected %q", config.LogLevel, DefaultLogLevel)
 	}
-	if config.WindowWidth != DefaultWindowWidth {
-		t.Errorf("config.WindowWidth = %d, expected %d", config.WindowWidth, DefaultWindowWidth)
+	if config.SaveDirectory != DefaultSaveDirectory {
+		t.Errorf("config.SaveDirectory = %q, expected %q", config.SaveDirectory, DefaultSaveDirectory)
 	}
-	if config.WindowHeight != DefaultWindowHeight {
-		t.Errorf("config.WindowHeight = %d, expected %d", config.WindowHeight, DefaultWindowHeight)
+	if config.AutoSaveEnabled != DefaultAutoSaveEnabled {
+		t.Errorf("config.AutoSaveEnabled = %v, expected %v", config.AutoSaveEnabled, DefaultAutoSaveEnabled)
 	}
 
 	// Test with environment variables
 	os.Setenv(EnvDebugMode, "true")
 	os.Setenv(EnvLogLevel, "DEBUG")
-	os.Setenv(EnvWindowWidth, "1024")
-	os.Setenv(EnvWindowHeight, "768")
+	os.Setenv(EnvSaveDirectory, "custom_saves")
+	os.Setenv(EnvAutoSaveEnabled, "false")
 
 	config = GetConfig()
 	if config.DebugMode != true {
@@ -223,18 +223,18 @@ func TestGetConfig(t *testing.T) {
 	if config.LogLevel != "DEBUG" {
 		t.Errorf("config.LogLevel = %q, expected DEBUG", config.LogLevel)
 	}
-	if config.WindowWidth != 1024 {
-		t.Errorf("config.WindowWidth = %d, expected 1024", config.WindowWidth)
+	if config.SaveDirectory != "custom_saves" {
+		t.Errorf("config.SaveDirectory = %q, expected custom_saves", config.SaveDirectory)
 	}
-	if config.WindowHeight != 768 {
-		t.Errorf("config.WindowHeight = %d, expected 768", config.WindowHeight)
+	if config.AutoSaveEnabled != false {
+		t.Errorf("config.AutoSaveEnabled = %v, expected false", config.AutoSaveEnabled)
 	}
 
 	// Cleanup
 	os.Unsetenv(EnvDebugMode)
 	os.Unsetenv(EnvLogLevel)
-	os.Unsetenv(EnvWindowWidth)
-	os.Unsetenv(EnvWindowHeight)
+	os.Unsetenv(EnvSaveDirectory)
+	os.Unsetenv(EnvAutoSaveEnabled)
 }
 
 func TestSetUnsetEnv(t *testing.T) {
@@ -261,14 +261,6 @@ func TestEnvironmentVariableKeys(t *testing.T) {
 		EnvLogLevel,
 		EnvSaveDirectory,
 		EnvAutoSaveEnabled,
-		EnvSaveInterval,
-		EnvWindowWidth,
-		EnvWindowHeight,
-		EnvFontSize,
-		EnvShowTips,
-		EnvConfirmQuit,
-		EnvAutoPickup,
-		EnvWizardMode,
 	}
 
 	for _, key := range expectedKeys {
@@ -280,18 +272,6 @@ func TestEnvironmentVariableKeys(t *testing.T) {
 
 func TestDefaultValues(t *testing.T) {
 	// Test that default values are reasonable
-	if DefaultWindowWidth <= 0 {
-		t.Errorf("DefaultWindowWidth = %d, expected > 0", DefaultWindowWidth)
-	}
-	if DefaultWindowHeight <= 0 {
-		t.Errorf("DefaultWindowHeight = %d, expected > 0", DefaultWindowHeight)
-	}
-	if DefaultFontSize <= 0 {
-		t.Errorf("DefaultFontSize = %d, expected > 0", DefaultFontSize)
-	}
-	if DefaultSaveInterval <= 0 {
-		t.Errorf("DefaultSaveInterval = %d, expected > 0", DefaultSaveInterval)
-	}
 	if DefaultLogLevel == "" {
 		t.Error("DefaultLogLevel is empty")
 	}
@@ -338,13 +318,13 @@ func BenchmarkGetConfig(b *testing.B) {
 	// Set up some environment variables
 	os.Setenv(EnvDebugMode, "true")
 	os.Setenv(EnvLogLevel, "DEBUG")
-	os.Setenv(EnvWindowWidth, "800")
-	os.Setenv(EnvWindowHeight, "600")
+	os.Setenv(EnvSaveDirectory, "saves")
+	os.Setenv(EnvAutoSaveEnabled, "true")
 	defer func() {
 		os.Unsetenv(EnvDebugMode)
 		os.Unsetenv(EnvLogLevel)
-		os.Unsetenv(EnvWindowWidth)
-		os.Unsetenv(EnvWindowHeight)
+		os.Unsetenv(EnvSaveDirectory)
+		os.Unsetenv(EnvAutoSaveEnabled)
 	}()
 
 	b.ResetTimer()

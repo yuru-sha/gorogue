@@ -44,8 +44,6 @@ func main() {
 		logger.Info("Starting GoRogue CLI in debug mode",
 			"env_debug", config.GetDebugMode(),
 			"flag_debug", *debugMode,
-			"save_directory", config.GetSaveDirectory(),
-			"auto_save", config.GetAutoSaveEnabled(),
 		)
 		if config.GetDebugMode() {
 			config.PrintConfig()

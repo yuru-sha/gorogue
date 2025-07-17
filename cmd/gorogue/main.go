@@ -117,8 +117,6 @@ func main() {
 		"render_mode", "sdl2_ascii",
 		"debug_mode", config.GetDebugMode(),
 		"log_level", config.GetLogLevel(),
-		"window_width", config.GetWindowWidth(),
-		"window_height", config.GetWindowHeight(),
 	)
 
 	// ゲームエンジンの初期化
@@ -128,20 +126,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 環境変数から設定を取得
-	windowWidth := config.GetWindowWidth()
-	windowHeight := config.GetWindowHeight()
-	fontSize := config.GetFontSize()
-	
-	// フォントサイズに基づいてセルサイズを計算
-	cellWidth := fontSize * 5 / 8   // 比例調整
-	cellHeight := fontSize
-
-	// SDL2ドライバーの設定 - 環境変数対応
+	// SDL2ドライバーの設定 - 固定サイズ
 	sdlConfig := sdl.Config{
-		TileManager: NewASCIITileManager(cellWidth, cellHeight),
-		Width:       int32(windowWidth / cellWidth),
-		Height:      int32(windowHeight / cellHeight),
+		TileManager: NewASCIITileManager(10, 16), // 10x16のInconsolataフォント用サイズ
+		Width:       80,
+		Height:      50,
 		WindowTitle: "GoRogue - ASCII Roguelike",
 		Fullscreen:  false,
 	}

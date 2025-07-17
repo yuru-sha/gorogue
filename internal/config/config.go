@@ -17,14 +17,6 @@ const (
 	DefaultLogLevel        = "INFO"
 	DefaultSaveDirectory   = "saves"
 	DefaultAutoSaveEnabled = true
-	DefaultSaveInterval    = 400 // ターン数
-	DefaultWindowWidth     = 800
-	DefaultWindowHeight    = 600
-	DefaultFontSize        = 16
-	DefaultShowTips        = true
-	DefaultConfirmQuit     = true
-	DefaultAutoPickup      = true
-	DefaultWizardMode      = false
 )
 
 // 環境変数のキー名
@@ -33,14 +25,6 @@ const (
 	EnvLogLevel        = "LOG_LEVEL"
 	EnvSaveDirectory   = "SAVE_DIRECTORY"
 	EnvAutoSaveEnabled = "AUTO_SAVE_ENABLED"
-	EnvSaveInterval    = "SAVE_INTERVAL"
-	EnvWindowWidth     = "WINDOW_WIDTH"
-	EnvWindowHeight    = "WINDOW_HEIGHT"
-	EnvFontSize        = "FONT_SIZE"
-	EnvShowTips        = "SHOW_TIPS"
-	EnvConfirmQuit     = "CONFIRM_QUIT"
-	EnvAutoPickup      = "AUTO_PICKUP"
-	EnvWizardMode      = "WIZARD_MODE"
 )
 
 // 初期化時に.envファイルを読み込む
@@ -133,45 +117,8 @@ func GetAutoSaveEnabled() bool {
 	return GetBool(EnvAutoSaveEnabled, DefaultAutoSaveEnabled)
 }
 
-// GetSaveInterval はセーブ間隔の設定を取得する
-func GetSaveInterval() int {
-	return GetInt(EnvSaveInterval, DefaultSaveInterval)
-}
 
-// GetWindowWidth はウィンドウ幅の設定を取得する
-func GetWindowWidth() int {
-	return GetInt(EnvWindowWidth, DefaultWindowWidth)
-}
 
-// GetWindowHeight はウィンドウ高さの設定を取得する
-func GetWindowHeight() int {
-	return GetInt(EnvWindowHeight, DefaultWindowHeight)
-}
-
-// GetFontSize はフォントサイズの設定を取得する
-func GetFontSize() int {
-	return GetInt(EnvFontSize, DefaultFontSize)
-}
-
-// GetShowTips はヒント表示の設定を取得する
-func GetShowTips() bool {
-	return GetBool(EnvShowTips, DefaultShowTips)
-}
-
-// GetConfirmQuit は終了確認の設定を取得する
-func GetConfirmQuit() bool {
-	return GetBool(EnvConfirmQuit, DefaultConfirmQuit)
-}
-
-// GetAutoPickup は自動拾得の設定を取得する
-func GetAutoPickup() bool {
-	return GetBool(EnvAutoPickup, DefaultAutoPickup)
-}
-
-// GetWizardMode はウィザードモードの設定を取得する
-func GetWizardMode() bool {
-	return GetBool(EnvWizardMode, DefaultWizardMode)
-}
 
 // Config 設定値を構造体として提供する
 type Config struct {
@@ -179,14 +126,6 @@ type Config struct {
 	LogLevel        string `json:"log_level"`
 	SaveDirectory   string `json:"save_directory"`
 	AutoSaveEnabled bool   `json:"auto_save_enabled"`
-	SaveInterval    int    `json:"save_interval"`
-	WindowWidth     int    `json:"window_width"`
-	WindowHeight    int    `json:"window_height"`
-	FontSize        int    `json:"font_size"`
-	ShowTips        bool   `json:"show_tips"`
-	ConfirmQuit     bool   `json:"confirm_quit"`
-	AutoPickup      bool   `json:"auto_pickup"`
-	WizardMode      bool   `json:"wizard_mode"`
 }
 
 // GetConfig は現在の設定を構造体として取得する
@@ -196,14 +135,6 @@ func GetConfig() *Config {
 		LogLevel:        GetLogLevel(),
 		SaveDirectory:   GetSaveDirectory(),
 		AutoSaveEnabled: GetAutoSaveEnabled(),
-		SaveInterval:    GetSaveInterval(),
-		WindowWidth:     GetWindowWidth(),
-		WindowHeight:    GetWindowHeight(),
-		FontSize:        GetFontSize(),
-		ShowTips:        GetShowTips(),
-		ConfirmQuit:     GetConfirmQuit(),
-		AutoPickup:      GetAutoPickup(),
-		WizardMode:      GetWizardMode(),
 	}
 }
 
@@ -230,12 +161,4 @@ func PrintConfig() {
 	log.Printf("  LogLevel: %s", config.LogLevel)
 	log.Printf("  SaveDirectory: %s", config.SaveDirectory)
 	log.Printf("  AutoSaveEnabled: %v", config.AutoSaveEnabled)
-	log.Printf("  SaveInterval: %d", config.SaveInterval)
-	log.Printf("  WindowWidth: %d", config.WindowWidth)
-	log.Printf("  WindowHeight: %d", config.WindowHeight)
-	log.Printf("  FontSize: %d", config.FontSize)
-	log.Printf("  ShowTips: %v", config.ShowTips)
-	log.Printf("  ConfirmQuit: %v", config.ConfirmQuit)
-	log.Printf("  AutoPickup: %v", config.AutoPickup)
-	log.Printf("  WizardMode: %v", config.WizardMode)
 }
