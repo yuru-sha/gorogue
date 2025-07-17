@@ -1,7 +1,7 @@
 # GoRogue
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/yuru-sha/gorogue)
 
-Go言語とGruidライブラリを使用して実装された本格的なローグライクゲームです。PyRogueを参考にしたオリジナルのRogue実装です。
+Go言語とGruidライブラリを使用して実装された本格的なローグライクゲームです。[PyRogue](https://github.com/yuru-sha/pyrogue)を参考にしたオリジナルのRogue実装です。
 
 ## 特徴
 
@@ -120,4 +120,4 @@ MITライセンス
 
 ---
 
-PyRogueを参考にしたGo言語によるローグライクゲーム実装プロジェクトです。
+[PyRogue](https://github.com/yuru-sha/pyrogue)を参考にしたGo言語によるローグライクゲーム実装プロジェクトです。
