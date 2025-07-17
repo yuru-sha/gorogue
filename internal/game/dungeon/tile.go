@@ -1,13 +1,17 @@
 package dungeon
 
+import "github.com/anaseto/gruid"
+
 // TileType represents different types of tiles in the dungeon
 type TileType int
 
 const (
 	TileWall TileType = iota
 	TileFloor
+	TileDoor
 	TileDoorClosed
 	TileDoorOpen
+	TileOpenDoor
 	TileStairsUp
 	TileStairsDown
 	TileWater
@@ -33,78 +37,65 @@ func (t TileType) String() string {
 
 // Tile represents a single tile in the dungeon
 type Tile struct {
-	Type     TileType
-	Symbol   rune
-	Color    [3]uint8
-	Visible  bool
-	Walkable bool
+	Type       TileType
+	Rune       rune
+	Color      gruid.Color
+	Visible    bool
+	IsWalkable bool
 }
 
-// GetTileSymbol returns the symbol for a given tile type
-func GetTileSymbol(t TileType) rune {
-	switch t {
+// Walkable returns whether the tile can be walked on
+func (t *Tile) Walkable() bool {
+	return t.IsWalkable
+}
+
+// NewTile creates a new tile of the given type
+func NewTile(tileType TileType) *Tile {
+	t := &Tile{
+		Type:       tileType,
+		Visible:    true, // すべてのタイルを可視化（簡素化のため）
+		IsWalkable: IsWalkable(tileType),
+	}
+	switch tileType {
 	case TileWall:
-		return '#'
+		t.Rune = '#'
+		t.Color = 0x826E32 // RGB(130, 110, 50) - PyRogue仕様
 	case TileFloor:
-		return '.'
-	case TileDoorClosed:
-		return '+'
-	case TileDoorOpen:
-		return '/'
+		t.Rune = '.'
+		t.Color = 0x808080 // Gray - PyRogue風
+	case TileDoor, TileDoorClosed:
+		t.Rune = '+'
+		t.Color = 0x8B4513 // Brown - PyRogue風
+	case TileDoorOpen, TileOpenDoor:
+		t.Rune = '/'
+		t.Color = 0x8B4513 // Brown - PyRogue風
 	case TileStairsUp:
-		return '<'
+		t.Rune = '<'
+		t.Color = 0xFFFFFF // White - PyRogue風
 	case TileStairsDown:
-		return '>'
+		t.Rune = '>'
+		t.Color = 0xFFFFFF // White - PyRogue風
 	case TileWater:
-		return '~'
+		t.Rune = '~'
+		t.Color = 0x00FFFF // Cyan - PyRogue風
 	case TileLava:
-		return '^'
+		t.Rune = '^'
+		t.Color = 0xFF0000 // Red - PyRogue風
 	case TileSecretDoor:
-		return '#' // 未発見時は壁と同じ
+		t.Rune = '#'
+		t.Color = 0x826E32 // RGB(130, 110, 50) - PyRogue仕様
 	default:
-		return ' '
+		t.Rune = ' '
 	}
-}
-
-// GetTileColor returns the color for a given tile type
-func GetTileColor(t TileType) [3]uint8 {
-	switch t {
-	case TileWall:
-		return [3]uint8{128, 128, 128} // Gray
-	case TileFloor:
-		return [3]uint8{128, 128, 128} // Gray
-	case TileDoorClosed, TileDoorOpen:
-		return [3]uint8{139, 69, 19} // Brown
-	case TileStairsUp, TileStairsDown:
-		return [3]uint8{255, 255, 255} // White
-	case TileWater:
-		return [3]uint8{0, 0, 255} // Blue
-	case TileLava:
-		return [3]uint8{255, 0, 0} // Red
-	case TileSecretDoor:
-		return [3]uint8{128, 128, 128} // Gray (同じく壁と同じ)
-	default:
-		return [3]uint8{0, 0, 0} // Black
-	}
+	return t
 }
 
 // IsWalkable returns whether the tile can be walked on
 func IsWalkable(t TileType) bool {
 	switch t {
-	case TileFloor, TileDoorOpen, TileStairsUp, TileStairsDown:
+	case TileFloor, TileDoorOpen, TileOpenDoor, TileStairsUp, TileStairsDown:
 		return true
 	default:
 		return false
-	}
-}
-
-// NewTile creates a new tile of the given type
-func NewTile(tileType TileType) *Tile {
-	return &Tile{
-		Type:     tileType,
-		Symbol:   GetTileSymbol(tileType),
-		Color:    GetTileColor(tileType),
-		Visible:  false,
-		Walkable: IsWalkable(tileType),
 	}
 }

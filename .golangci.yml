@@ -1,0 +1,117 @@
+# golangci-lint設定ファイル
+# GoRogueプロジェクト用のリンター設定
+
+run:
+  timeout: 10m
+  tests: true
+
+issues:
+  exclude-dirs:
+    - vendor
+    - .git
+  exclude-files:
+    - ".*_test.go"
+  exclude-rules:
+    # ゲームメッセージの日本語文字列は許可
+    - path: ".*\\.go"
+      text: "string `.*[あ-んア-ンー一-龯].*` has.*"
+      linters:
+        - goconst
+    # テストファイルでのprintln使用を許可  
+    - path: "_test\\.go"
+      linters:
+        - forbidigo
+    # ゲームでの乱数使用は許可（暗号用途ではない）
+    - text: "G404.*weak random number generator"
+      linters:
+        - gosec
+    # 一時的に未実装パラメータを許可
+    - text: "is unused"
+      linters:
+        - unparam
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  uniq-by-line: true
+
+linters:
+  enable:
+    - errcheck        # エラー処理チェック
+    - gosimple        # コード簡素化
+    - govet           # Go vetチェック
+    - ineffassign     # 無効な代入チェック
+    - staticcheck     # 静的解析
+    - typecheck       # 型チェック
+    - unused          # 未使用コードチェック
+    - gofmt           # フォーマットチェック
+    - goimports       # インポート整理チェック
+    - misspell        # スペルミスチェック
+    - unconvert       # 不要な型変換チェック
+    - gosec           # セキュリティチェック
+    - goconst         # 定数化可能な文字列チェック
+    - gocyclo         # 循環複雑度チェック
+    - dupl            # 重複コードチェック
+    - gocritic        # Go批評チェック
+    - revive          # Golintの後継
+    - bodyclose       # HTTPレスポンスbodyのcloseチェック
+    - nolintlint      # nolintコメントのチェック
+    - copyloopvar     # ループ変数コピーチェック（exportloopreの代替）
+    - gomoddirectives # go.modディレクティブチェック
+    - gomodguard      # goモジュールガードチェック
+    - goprintffuncname # printf関数名チェック
+    - importas        # インポートエイリアスチェック
+    - noctx           # コンテキスト未使用チェック
+    - rowserrcheck    # database/sqlのRowsエラーチェック
+    - sqlclosecheck   # database/sqlのCloseチェック
+    - tparallel       # テスト並列実行チェック
+    - wastedassign    # 無駄な代入チェック
+
+linters-settings:
+  gocyclo:
+    min-complexity: 15  # 循環複雑度の閾値（デフォルトより少し緩く）
+  
+  goconst:
+    min-len: 3          # 定数化する文字列の最小長
+    min-occurrences: 3  # 定数化する文字列の最小出現回数
+    ignore-tests: true  # テストファイルは除外
+  
+  dupl:
+    threshold: 150      # 重複コードの閾値（行数）
+  
+  misspell:
+    locale: US          # 米国英語でのスペルチェック
+  
+  revive:
+    rules:
+      - name: package-comments
+        disabled: true  # パッケージコメントは既に追加済み
+      - name: comment-spacings
+        disabled: true  # 日本語コメントのため無効化
+  
+  gosec:
+    severity: medium
+    excludes:
+      - G104  # エラー処理の監査（別途errcheckで対応）
+      - G301  # ファイル権限（ゲームでは必要な場合あり）
+      - G302  # ファイル権限（ゲームでは必要な場合あり）
+  
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+    disabled-checks:
+      - commentedOutCode  # コメントアウトされたコード（TODOなどで使用）
+      - sloppyReassign    # 再代入（ゲームロジックで必要）
+  
+  nolintlint:
+    allow-leading-space: true    # コメント前のスペースを許可
+    allow-unused: false          # 未使用のnolintを禁止
+    require-explanation: true    # nolintの理由説明を必須
+    require-specific: true       # 具体的なリンター名を必須
+
+# 出力設定
+output:
+  formats:
+    - format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true

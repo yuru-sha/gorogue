@@ -1,17 +1,11 @@
 module github.com/yuru-sha/gorogue
 
-go 1.22.0
+go 1.24.5
 
 require (
-	github.com/hajimehoshi/ebiten/v2 v2.1.7
-	golang.org/x/image v0.0.0-20210220032944-ac19c3e999fb
+	github.com/anaseto/gruid v0.22.0
+	github.com/anaseto/gruid-sdl v0.4.0
+	golang.org/x/image v0.29.0
 )
 
-require (
-	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20210727001814-0db043d8d5be // indirect
-	golang.org/x/exp v0.0.0-20190731235908-ec7cb31e5a56 // indirect
-	golang.org/x/mobile v0.0.0-20210220033013-bdb1ca9a1e08 // indirect
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20210415045647-66c3f260301c // indirect
-	golang.org/x/text v0.3.3 // indirect
-)
+require github.com/veandco/go-sdl2 v0.4.5 // indirect
