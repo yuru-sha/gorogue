@@ -366,23 +366,31 @@ func (l *Level) SpawnMonsters() {
 
 // selectMonsterType selects a monster type based on the floor level
 func (l *Level) selectMonsterType() rune {
-	// 階層に応じたモンスター選択
+	// 階層に応じたモンスター選択 (A-Z全26種類対応)
 	switch {
 	case l.FloorNumber <= 3:
 		// 浅い階層：弱いモンスター
-		monsters := []rune{'B', 'F', 'G'}
+		monsters := []rune{'A', 'B', 'F', 'G', 'K', 'N'}
 		return monsters[rand.Intn(len(monsters))]
-	case l.FloorNumber <= 8:
+	case l.FloorNumber <= 6:
+		// 初期中間階層：基本的なモンスター
+		monsters := []rune{'A', 'B', 'E', 'F', 'G', 'I', 'K', 'L', 'N', 'R'}
+		return monsters[rand.Intn(len(monsters))]
+	case l.FloorNumber <= 10:
 		// 中間階層：中程度のモンスター
-		monsters := []rune{'B', 'E', 'G', 'O', 'S'}
+		monsters := []rune{'B', 'C', 'E', 'G', 'H', 'I', 'J', 'L', 'O', 'R', 'S', 'W'}
 		return monsters[rand.Intn(len(monsters))]
 	case l.FloorNumber <= 15:
 		// 深い階層：強いモンスター
-		monsters := []rune{'E', 'G', 'O', 'S', 'T'}
+		monsters := []rune{'C', 'E', 'G', 'H', 'J', 'M', 'O', 'P', 'S', 'T', 'U', 'W', 'Z'}
+		return monsters[rand.Intn(len(monsters))]
+	case l.FloorNumber <= 20:
+		// 深層：非常に強いモンスター
+		monsters := []rune{'C', 'H', 'M', 'O', 'P', 'Q', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'}
 		return monsters[rand.Intn(len(monsters))]
 	default:
 		// 最深階層：最強のモンスター
-		monsters := []rune{'O', 'S', 'T', 'D'}
+		monsters := []rune{'D', 'M', 'P', 'Q', 'T', 'U', 'V', 'X', 'Y', 'Z'}
 		return monsters[rand.Intn(len(monsters))]
 	}
 }

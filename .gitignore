@@ -8,6 +8,10 @@
 *.so
 *.dylib
 
+# Project binaries in root directory
+gorogue
+gorogue-cli
+
 # Test binary, built with `go test -c`
 *.test
 
