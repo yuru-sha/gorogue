@@ -35,15 +35,31 @@ type Level struct {
 
 // NewLevel creates a new dungeon level using the builder pattern
 func NewLevel(width, height, floorNum int) *Level {
-	builder := NewDungeonBuilder(width, height, floorNum)
-	level := builder.Build()
+	var level *Level
 
-	logger.Debug("Created level",
-		"width", width,
-		"height", height,
-		"floor", floorNum,
-		"total_tiles", width*height,
-	)
+	// 特別な階層（迷路階層）のチェック
+	if floorNum == 7 || floorNum == 13 || floorNum == 19 {
+		// 迷路階層を生成
+		mazeBuilder := NewMazeBuilder(width, height, floorNum)
+		level = mazeBuilder.Build()
+		logger.Info("Created maze level",
+			"width", width,
+			"height", height,
+			"floor", floorNum,
+			"type", "maze",
+		)
+	} else {
+		// 通常の階層を生成
+		builder := NewDungeonBuilder(width, height, floorNum)
+		level = builder.Build()
+		logger.Debug("Created normal level",
+			"width", width,
+			"height", height,
+			"floor", floorNum,
+			"type", "normal",
+		)
+	}
+
 	return level
 }
 
@@ -314,11 +330,8 @@ func (l *Level) SpawnMonsters() {
 		return
 	}
 
-	// 階層に応じたモンスター数を計算
-	numMonsters := 5 + l.FloorNumber/2
-	if numMonsters > 15 {
-		numMonsters = 15
-	}
+	// 階層に応じたモンスター数を計算（DungeonManagerの計算を使用）
+	numMonsters := l.getMonsterSpawnCount()
 
 	// 各部屋にモンスターを配置
 	for i := 0; i < numMonsters; i++ {
@@ -365,40 +378,84 @@ func (l *Level) SpawnMonsters() {
 }
 
 // selectMonsterType selects a monster type based on the floor level
+// Following original Rogue's monster distribution system
 func (l *Level) selectMonsterType() rune {
 	// 階層に応じたモンスター選択 (A-Z全26種類対応)
+	// より詳細な階層分布を実装
 	switch {
-	case l.FloorNumber <= 3:
+	case l.FloorNumber <= 2:
+		// 最浅階層：超弱いモンスター
+		monsters := []rune{'A', 'B', 'F', 'G', 'K'} // Aquator, Bat, Flyting, Griffin, Kobold
+		return monsters[rand.Intn(len(monsters))]
+	case l.FloorNumber <= 5:
 		// 浅い階層：弱いモンスター
-		monsters := []rune{'A', 'B', 'F', 'G', 'K', 'N'}
+		monsters := []rune{'A', 'B', 'E', 'F', 'G', 'I', 'K', 'N'} // + Emu, Ice monster, Nymph
 		return monsters[rand.Intn(len(monsters))]
-	case l.FloorNumber <= 6:
+	case l.FloorNumber <= 8:
 		// 初期中間階層：基本的なモンスター
-		monsters := []rune{'A', 'B', 'E', 'F', 'G', 'I', 'K', 'L', 'N', 'R'}
+		monsters := []rune{'A', 'B', 'E', 'F', 'G', 'I', 'K', 'L', 'N', 'R', 'S'} // + Leprechaun, Rattlesnake, Snake
 		return monsters[rand.Intn(len(monsters))]
-	case l.FloorNumber <= 10:
+	case l.FloorNumber <= 12:
 		// 中間階層：中程度のモンスター
-		monsters := []rune{'B', 'C', 'E', 'G', 'H', 'I', 'J', 'L', 'O', 'R', 'S', 'W'}
+		monsters := []rune{'B', 'C', 'E', 'G', 'H', 'I', 'J', 'L', 'O', 'R', 'S', 'W'} // + Centaur, Hobgoblin, Jackal, Orc, Wraith
 		return monsters[rand.Intn(len(monsters))]
-	case l.FloorNumber <= 15:
+	case l.FloorNumber <= 16:
 		// 深い階層：強いモンスター
-		monsters := []rune{'C', 'E', 'G', 'H', 'J', 'M', 'O', 'P', 'S', 'T', 'U', 'W', 'Z'}
+		monsters := []rune{'C', 'E', 'G', 'H', 'J', 'M', 'O', 'P', 'S', 'T', 'U', 'W', 'Z'} // + Minotaur, Phantom, Troll, Ur-vile, Zombie
 		return monsters[rand.Intn(len(monsters))]
 	case l.FloorNumber <= 20:
 		// 深層：非常に強いモンスター
-		monsters := []rune{'C', 'H', 'M', 'O', 'P', 'Q', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'}
+		monsters := []rune{'C', 'H', 'M', 'O', 'P', 'Q', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'} // + Quasit, Vampire, Xorn, Yeti
+		return monsters[rand.Intn(len(monsters))]
+	case l.FloorNumber <= 24:
+		// 最深層：最強のモンスター
+		monsters := []rune{'D', 'M', 'P', 'Q', 'T', 'U', 'V', 'X', 'Y', 'Z'} // + Dragon
 		return monsters[rand.Intn(len(monsters))]
 	default:
-		// 最深階層：最強のモンスター
-		monsters := []rune{'D', 'M', 'P', 'Q', 'T', 'U', 'V', 'X', 'Y', 'Z'}
+		// 最終階層：ドラゴンと最強モンスター
+		monsters := []rune{'D', 'Q', 'T', 'V', 'X', 'Y', 'Z'} // 最強のみ
 		return monsters[rand.Intn(len(monsters))]
+	}
+}
+
+// getMonsterSpawnCount returns the number of monsters to spawn on this floor
+func (l *Level) getMonsterSpawnCount() int {
+	switch {
+	case l.FloorNumber <= 3:
+		return 3 + (l.FloorNumber - 1) // 3-5体
+	case l.FloorNumber <= 8:
+		return 5 + (l.FloorNumber - 4) // 5-9体
+	case l.FloorNumber <= 15:
+		return 8 + (l.FloorNumber-9)/2 // 8-11体
+	case l.FloorNumber <= 22:
+		return 12 + (l.FloorNumber-16)/3 // 12-14体
+	default:
+		return 15 + (l.FloorNumber - 23) // 15-18体
+	}
+}
+
+// getDifficultyScaling returns the difficulty scaling for this floor
+func (l *Level) getDifficultyScaling() float64 {
+	switch {
+	case l.FloorNumber <= 5:
+		return 1.0 + (float64(l.FloorNumber-1) * 0.1) // 1.0 - 1.4
+	case l.FloorNumber <= 10:
+		return 1.5 + (float64(l.FloorNumber-6) * 0.1) // 1.5 - 1.9
+	case l.FloorNumber <= 15:
+		return 2.0 + (float64(l.FloorNumber-11) * 0.1) // 2.0 - 2.4
+	case l.FloorNumber <= 20:
+		return 2.5 + (float64(l.FloorNumber-16) * 0.1) // 2.5 - 2.9
+	case l.FloorNumber <= 26:
+		return 3.0 + (float64(l.FloorNumber-21) * 0.2) // 3.0 - 4.0
+	default:
+		return 4.0 // 最大難易度
 	}
 }
 
 // scaleMonsterForFloor scales monster stats based on the floor level
 func (l *Level) scaleMonsterForFloor(monster *actor.Monster) {
-	// 基本的な階層スケーリング係数
-	scaleFactor := 1.0 + float64(l.FloorNumber-1)*0.1
+	// 新しい階層スケーリング係数を使用
+	scaleFactor := l.getDifficultyScaling()
 
 	// HP, 攻撃力, 防御力を階層に応じて強化
 	monster.MaxHP = int(float64(monster.MaxHP) * scaleFactor)
@@ -406,9 +463,9 @@ func (l *Level) scaleMonsterForFloor(monster *actor.Monster) {
 	monster.Attack = int(float64(monster.Attack) * scaleFactor)
 	monster.Defense = int(float64(monster.Defense) * scaleFactor)
 
-	// 深い階層では追加のボーナス
-	if l.FloorNumber > 15 {
-		extraBonus := float64(l.FloorNumber-15) * 0.05
+	// 深い階層では追加のボーナス（21階以上）
+	if l.FloorNumber > 20 {
+		extraBonus := float64(l.FloorNumber-20) * 0.1
 		monster.MaxHP = int(float64(monster.MaxHP) * (1.0 + extraBonus))
 		monster.HP = monster.MaxHP
 		monster.Attack = int(float64(monster.Attack) * (1.0 + extraBonus))
@@ -589,10 +646,13 @@ func (l *Level) PopulateSpecialRoom(room *Room) {
 func (l *Level) SpawnItems() {
 	logger.Debug("Starting item spawning", "floor", l.FloorNumber)
 
+	// 階層に応じたアイテムスポーン確率を取得
+	itemSpawnChance := l.getItemSpawnChance()
+
 	// 各部屋にアイテムを配置
 	for _, room := range l.Rooms {
-		// 通常の部屋: 30%の確率でアイテムを配置
-		if rand.Float64() < 0.3 {
+		// 通常の部屋: 階層に応じた確率でアイテムを配置
+		if rand.Float64() < itemSpawnChance {
 			l.spawnItemInRoom(room)
 		}
 
@@ -660,27 +720,83 @@ func (l *Level) spawnItemInRoom(room *Room) {
 	}
 }
 
-// selectItemType selects an item type based on the floor level
-func (l *Level) selectItemType() item.ItemType {
-	// 階層に応じたアイテム選択
+// getItemSpawnChance returns the item spawn chance for this floor
+func (l *Level) getItemSpawnChance() float64 {
 	switch {
 	case l.FloorNumber <= 5:
-		// 浅い階層: 基本的なアイテム
-		items := []item.ItemType{item.ItemGold, item.ItemFood, item.ItemPotion}
-		return items[rand.Intn(len(items))]
+		return 0.2 + (float64(l.FloorNumber-1) * 0.02) // 20%-28%
 	case l.FloorNumber <= 10:
+		return 0.3 + (float64(l.FloorNumber-6) * 0.02) // 30%-38%
+	case l.FloorNumber <= 15:
+		return 0.4 + (float64(l.FloorNumber-11) * 0.02) // 40%-48%
+	case l.FloorNumber <= 20:
+		return 0.5 + (float64(l.FloorNumber-16) * 0.02) // 50%-58%
+	default:
+		return 0.6 + (float64(l.FloorNumber-21) * 0.02) // 60%-70%
+	}
+}
+
+// selectItemType selects an item type based on the floor level
+func (l *Level) selectItemType() item.ItemType {
+	// 階層に応じたアイテム選択（より詳細な分布）
+	switch {
+	case l.FloorNumber <= 3:
+		// 最浅階層: 基本的なアイテムのみ
+		items := []item.ItemType{item.ItemGold, item.ItemFood, item.ItemPotion}
+		weights := []float64{0.5, 0.3, 0.2} // ゴールド50%、食料30%、薬20%
+		return l.selectWeightedItem(items, weights)
+	case l.FloorNumber <= 7:
+		// 浅い階層: 基本的なアイテム
+		items := []item.ItemType{item.ItemGold, item.ItemFood, item.ItemPotion, item.ItemScroll}
+		weights := []float64{0.4, 0.25, 0.2, 0.15} // ゴールド40%、食料25%、薬20%、巻物15%
+		return l.selectWeightedItem(items, weights)
+	case l.FloorNumber <= 12:
 		// 中間階層: より多様なアイテム
 		items := []item.ItemType{item.ItemGold, item.ItemFood, item.ItemPotion, item.ItemScroll, item.ItemWeapon}
-		return items[rand.Intn(len(items))]
-	case l.FloorNumber <= 15:
+		weights := []float64{0.3, 0.2, 0.2, 0.15, 0.15} // ゴールド30%、食料20%、薬20%、巻物15%、武器15%
+		return l.selectWeightedItem(items, weights)
+	case l.FloorNumber <= 18:
 		// 深い階層: 高価なアイテム
-		items := []item.ItemType{item.ItemGold, item.ItemWeapon, item.ItemArmor, item.ItemRing, item.ItemScroll}
-		return items[rand.Intn(len(items))]
-	default:
+		items := []item.ItemType{item.ItemGold, item.ItemWeapon, item.ItemArmor, item.ItemRing, item.ItemScroll, item.ItemPotion}
+		weights := []float64{0.25, 0.2, 0.2, 0.15, 0.1, 0.1} // ゴールド25%、武器20%、鎧20%、指輪15%、巻物10%、薬10%
+		return l.selectWeightedItem(items, weights)
+	case l.FloorNumber <= 25:
 		// 最深階層: 最高のアイテム
+		items := []item.ItemType{item.ItemGold, item.ItemWeapon, item.ItemArmor, item.ItemRing, item.ItemScroll}
+		weights := []float64{0.2, 0.25, 0.25, 0.2, 0.1} // ゴールド20%、武器25%、鎧25%、指輪20%、巻物10%
+		return l.selectWeightedItem(items, weights)
+	default:
+		// 最終階層: 最高のアイテム + 魔除け
 		items := []item.ItemType{item.ItemGold, item.ItemWeapon, item.ItemArmor, item.ItemRing, item.ItemAmulet}
-		return items[rand.Intn(len(items))]
+		weights := []float64{0.15, 0.25, 0.25, 0.25, 0.1} // ゴールド15%、武器25%、鎧25%、指輪25%、魔除け10%
+		return l.selectWeightedItem(items, weights)
 	}
+}
+
+// selectWeightedItem selects an item based on weighted probabilities
+func (l *Level) selectWeightedItem(items []item.ItemType, weights []float64) item.ItemType {
+	if len(items) != len(weights) {
+		// フォールバック: 最初のアイテムを返す
+		return items[0]
+	}
+
+	totalWeight := 0.0
+	for _, weight := range weights {
+		totalWeight += weight
+	}
+
+	r := rand.Float64() * totalWeight
+	currentWeight := 0.0
+
+	for i, weight := range weights {
+		currentWeight += weight
+		if r <= currentWeight {
+			return items[i]
+		}
+	}
+
+	// フォールバック: 最後のアイテムを返す
+	return items[len(items)-1]
 }
 
 // createRandomItem creates a random item of the specified type

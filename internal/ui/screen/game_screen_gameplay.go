@@ -123,7 +123,7 @@ func (s *GameScreen) handleLook() {
 func (s *GameScreen) handlePickUp() {
 	x, y := s.player.Position.X, s.player.Position.Y
 	item := s.level.GetItemAt(x, y)
-	
+
 	if item == nil {
 		s.AddMessage("There is nothing here to pick up.")
 		return

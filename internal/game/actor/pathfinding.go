@@ -8,10 +8,10 @@ import (
 
 // Node represents a node in the pathfinding algorithm
 type Node struct {
-	X, Y     int
-	G, H, F  float64
-	Parent   *Node
-	Index    int // For heap operations
+	X, Y    int
+	G, H, F float64
+	Parent  *Node
+	Index   int // For heap operations
 }
 
 // NodeHeap implements a priority queue for A* pathfinding
@@ -44,12 +44,12 @@ func (h *NodeHeap) Pop() interface{} {
 // AStar implements the A* pathfinding algorithm
 func (m *Monster) AStar(targetX, targetY int, level LevelCollisionChecker) []Node {
 	startX, startY := m.Position.X, m.Position.Y
-	
+
 	// Early exit if target is unreachable
 	if !level.IsInBounds(targetX, targetY) || !level.IsWalkable(targetX, targetY) {
 		return nil
 	}
-	
+
 	// Early exit if we're already at the target
 	if startX == targetX && startY == targetY {
 		return []Node{{X: startX, Y: startY}}
@@ -68,7 +68,7 @@ func (m *Monster) AStar(targetX, targetY int, level LevelCollisionChecker) []Nod
 		H: m.heuristic(startX, startY, targetX, targetY),
 	}
 	startNode.F = startNode.G + startNode.H
-	
+
 	heap.Push(openSet, startNode)
 	nodeMap[m.nodeKey(startX, startY)] = startNode
 
@@ -76,39 +76,39 @@ func (m *Monster) AStar(targetX, targetY int, level LevelCollisionChecker) []Nod
 	for openSet.Len() > 0 {
 		current := heap.Pop(openSet).(*Node)
 		currentKey := m.nodeKey(current.X, current.Y)
-		
+
 		// Check if we've reached the target
 		if current.X == targetX && current.Y == targetY {
 			return m.reconstructPath(current)
 		}
-		
+
 		closedSet[currentKey] = true
-		
+
 		// Check all neighbors
 		for _, neighbor := range m.getNeighbors(current.X, current.Y, level) {
 			neighborKey := m.nodeKey(neighbor.X, neighbor.Y)
-			
+
 			// Skip if already processed
 			if closedSet[neighborKey] {
 				continue
 			}
-			
+
 			// Calculate tentative G score
 			tentativeG := current.G + m.moveCost(current.X, current.Y, neighbor.X, neighbor.Y)
-			
+
 			// Check if this path to neighbor is better
 			existingNode, exists := nodeMap[neighborKey]
 			if !exists {
 				existingNode = &Node{X: neighbor.X, Y: neighbor.Y, Index: -1}
 				nodeMap[neighborKey] = existingNode
 			}
-			
+
 			if !exists || tentativeG < existingNode.G {
 				existingNode.G = tentativeG
 				existingNode.H = m.heuristic(neighbor.X, neighbor.Y, targetX, targetY)
 				existingNode.F = existingNode.G + existingNode.H
 				existingNode.Parent = current
-				
+
 				// Add to open set if not already there
 				if existingNode.Index == -1 {
 					heap.Push(openSet, existingNode)
@@ -118,7 +118,7 @@ func (m *Monster) AStar(targetX, targetY int, level LevelCollisionChecker) []Nod
 			}
 		}
 	}
-	
+
 	// No path found
 	return nil
 }
@@ -140,21 +140,21 @@ func (m *Monster) moveCost(x1, y1, x2, y2 int) float64 {
 // getNeighbors returns all valid neighboring positions
 func (m *Monster) getNeighbors(x, y int, level LevelCollisionChecker) []Node {
 	neighbors := []Node{}
-	
+
 	// Check all 8 directions
 	for dx := -1; dx <= 1; dx++ {
 		for dy := -1; dy <= 1; dy++ {
 			if dx == 0 && dy == 0 {
 				continue // Skip current position
 			}
-			
+
 			nx, ny := x+dx, y+dy
 			if m.CanMoveTo(nx, ny, level) {
 				neighbors = append(neighbors, Node{X: nx, Y: ny})
 			}
 		}
 	}
-	
+
 	return neighbors
 }
 
@@ -162,12 +162,12 @@ func (m *Monster) getNeighbors(x, y int, level LevelCollisionChecker) []Node {
 func (m *Monster) reconstructPath(node *Node) []Node {
 	path := []Node{}
 	current := node
-	
+
 	for current != nil {
 		path = append([]Node{{X: current.X, Y: current.Y}}, path...)
 		current = current.Parent
 	}
-	
+
 	return path
 }
 
@@ -186,10 +186,10 @@ func (m *Monster) MoveAlongPath(path []Node, level LevelCollisionChecker) bool {
 	if len(path) < 2 {
 		return false
 	}
-	
+
 	// Get the next position in the path (skip current position)
 	next := path[1]
-	
+
 	// Check if we can move to the next position
 	if m.CanMoveTo(next.X, next.Y, level) {
 		dx := next.X - m.Position.X
@@ -197,6 +197,6 @@ func (m *Monster) MoveAlongPath(path []Node, level LevelCollisionChecker) bool {
 		m.Position.Move(dx, dy)
 		return true
 	}
-	
+
 	return false
 }

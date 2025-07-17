@@ -40,7 +40,7 @@ func (s *GameScreen) HandleInput(msg gruid.Msg) state.GameState {
 func (s *GameScreen) handleNormalInput(key gruid.Key) state.GameState {
 	// Parse the key into a command
 	cmd := s.cmdParser.Parse(key)
-	
+
 	switch cmd.Type {
 	// Movement commands
 	case command.CmdMoveWest, command.CmdMoveEast, command.CmdMoveNorth, command.CmdMoveSouth,

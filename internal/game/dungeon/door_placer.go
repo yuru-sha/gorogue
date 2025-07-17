@@ -33,7 +33,7 @@ func (d *DoorPlacer) PlaceDoors() {
 // placeDoorForRoom places doors for a specific room
 func (d *DoorPlacer) placeDoorForRoom(roomIndex int, room *Room) {
 	doorPositions := d.findDoorPositions(room)
-	
+
 	for _, pos := range doorPositions {
 		// 15%の確率で秘密のドアを作成
 		if rand.Float64() < 0.15 {
@@ -53,7 +53,6 @@ func (d *DoorPlacer) placeDoorForRoom(roomIndex int, room *Room) {
 		}
 	}
 }
-
 
 // findDoorPositions finds positions where doors should be placed
 func (d *DoorPlacer) findDoorPositions(room *Room) []Position {

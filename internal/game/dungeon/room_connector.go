@@ -53,9 +53,9 @@ func (c *RoomConnector) Connect() {
 
 // roomPair represents a pair of rooms to connect
 type roomPair struct {
-	fromIndex int
-	toIndex   int
-	distance  float64
+	fromIndex  int
+	toIndex    int
+	distance   float64
 	isAdjacent bool
 }
 
@@ -187,11 +187,11 @@ func (c *RoomConnector) connectAdjacentRooms(r1, r2 *Room) {
 		// 水平方向に隣接
 		minY := max(r1.Y, r2.Y) + 1
 		maxY := min(r1.Y+r1.Height, r2.Y+r2.Height) - 1
-		
+
 		if minY <= maxY {
 			// ランダムな位置に通路を作成
 			y := minY + rand.Intn(maxY-minY+1)
-			
+
 			if r1.X+r1.Width+1 == r2.X {
 				// r1が左、r2が右
 				c.level.SetTile(r1.X+r1.Width, y, TileFloor)
@@ -206,11 +206,11 @@ func (c *RoomConnector) connectAdjacentRooms(r1, r2 *Room) {
 		// 垂直方向に隣接
 		minX := max(r1.X, r2.X) + 1
 		maxX := min(r1.X+r1.Width, r2.X+r2.Width) - 1
-		
+
 		if minX <= maxX {
 			// ランダムな位置に通路を作成
 			x := minX + rand.Intn(maxX-minX+1)
-			
+
 			if r1.Y+r1.Height+1 == r2.Y {
 				// r1が上、r2が下
 				c.level.SetTile(x, r1.Y+r1.Height, TileFloor)
@@ -236,7 +236,7 @@ func (c *RoomConnector) connectWithCorridor(r1, r2 *Room) {
 	// 距離が大きい方向を先に接続する
 	dx := abs(x2 - x1)
 	dy := abs(y2 - y1)
-	
+
 	if dx > dy {
 		// 水平距離が大きい場合は水平優先
 		c.level.CreateHorizontalCorridor(x1, x2, y1)
@@ -246,7 +246,7 @@ func (c *RoomConnector) connectWithCorridor(r1, r2 *Room) {
 		c.level.CreateVerticalCorridor(y1, y2, x1)
 		c.level.CreateHorizontalCorridor(x1, x2, y2)
 	}
-	
+
 	// 通路と部屋の接続点にドアを配置
 	c.placeDoors(r1, r2, x1, y1, x2, y2)
 }
@@ -282,7 +282,7 @@ func (c *RoomConnector) placeDoorAtRoomBoundary(room *Room, x1, y1, x2, y2 int) 
 			c.level.SetTile(room.X+room.Width, y1, TileDoor)
 		}
 	}
-	
+
 	// 垂直方向のドア配置
 	if y1 < room.Y && y2 >= room.Y {
 		// 上からの接続

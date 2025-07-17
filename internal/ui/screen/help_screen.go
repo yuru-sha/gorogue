@@ -46,10 +46,10 @@ func (s *HelpScreen) Draw(dst *gruid.Grid) {
 
 	// Group commands by category
 	categories := map[string][]string{
-		"Movement":    []string{"h,j,k,l", "y,u,b,n", "Arrow keys"},
-		"Actions":     []string{"x", "i", ",", "d", "a", "q", "r", "w", "t", ".", "s", "o", "c"},
-		"Navigation":  []string{"<", ">"},
-		"System":      []string{"Q", "?", "ESC", "Ctrl+W", ":"},
+		"Movement":   []string{"h,j,k,l", "y,u,b,n", "Arrow keys"},
+		"Actions":    []string{"x", "i", ",", "d", "a", "q", "r", "w", "t", ".", "s", "o", "c"},
+		"Navigation": []string{"<", ">"},
+		"System":     []string{"Q", "?", "ESC", "Ctrl+W", ":"},
 	}
 
 	// Draw commands by category
@@ -69,7 +69,7 @@ func (s *HelpScreen) Draw(dst *gruid.Grid) {
 				// Format the key display
 				keyDisplay := fmt.Sprintf("%-12s", key)
 				s.drawString(7, y, keyDisplay, 0xFFFFFF, 0x000000) // White on black
-				s.drawString(20, y, desc, 0x808080, 0x000000) // Gray on black
+				s.drawString(20, y, desc, 0x808080, 0x000000)      // Gray on black
 				y++
 			}
 		}

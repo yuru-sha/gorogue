@@ -45,11 +45,11 @@ func (s *StairsManager) PlaceStairs() {
 func (s *StairsManager) placeUpStairs() {
 	// 上り階段は最初の部屋（接続済み）に配置
 	firstRoom := s.level.Rooms[0]
-	
+
 	// 部屋の中央に配置を試みる
 	centerX := firstRoom.X + firstRoom.Width/2
 	centerY := firstRoom.Y + firstRoom.Height/2
-	
+
 	if s.isValidStairPosition(centerX, centerY) {
 		s.level.SetTile(centerX, centerY, TileStairsUp)
 		logger.Debug("Placed up stairs in center of first room",
@@ -82,7 +82,7 @@ func (s *StairsManager) placeDownStairs() {
 	// 部屋の中央に配置を試みる
 	centerX := lastConnectedRoom.X + lastConnectedRoom.Width/2
 	centerY := lastConnectedRoom.Y + lastConnectedRoom.Height/2
-	
+
 	if s.isValidStairPosition(centerX, centerY) {
 		s.level.SetTile(centerX, centerY, TileStairsDown)
 		logger.Debug("Placed down stairs in center of last connected room",
@@ -99,12 +99,12 @@ func (s *StairsManager) placeDownStairs() {
 // placeStairsInRoom places stairs in a specific room
 func (s *StairsManager) placeStairsInRoom(room *Room, stairType TileType) {
 	maxAttempts := 20
-	
+
 	for attempts := 0; attempts < maxAttempts; attempts++ {
 		// 部屋の境界から1マス内側の範囲でランダムな位置を選択
 		x := room.X + 1 + rand.Intn(room.Width-2)
 		y := room.Y + 1 + rand.Intn(room.Height-2)
-		
+
 		if s.isValidStairPosition(x, y) {
 			s.level.SetTile(x, y, stairType)
 			logger.Debug("Placed stairs in room",
@@ -121,7 +121,7 @@ func (s *StairsManager) placeStairsInRoom(room *Room, stairType TileType) {
 	// 部屋の左上角に配置
 	x := room.X + 1
 	y := room.Y + 1
-	
+
 	if s.level.IsInBounds(x, y) {
 		s.level.SetTile(x, y, stairType)
 		logger.Warn("Placed stairs at fallback position",

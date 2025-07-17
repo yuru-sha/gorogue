@@ -75,8 +75,11 @@ func (s *GameScreen) logStatsChange() {
 // drawStatusLines draws the status information at the top
 func (s *GameScreen) drawStatusLines(grid *gruid.Grid) {
 	currentFloor := 1
+	floorInfo := map[string]interface{}{}
+
 	if s.dungeonManager != nil {
 		currentFloor = s.dungeonManager.GetCurrentFloor()
+		floorInfo = s.dungeonManager.GetFloorInfo()
 	}
 
 	// 第1行: プレイヤーステータス
@@ -93,12 +96,39 @@ func (s *GameScreen) drawStatusLines(grid *gruid.Grid) {
 	)
 	s.drawText(grid, 0, 0, statusLine1, gruid.Style{Fg: 0xFFFFFF, Bg: 0x000000})
 
-	// 右上に階層表示を追加
-	floorDisplay := fmt.Sprintf("B%dF", currentFloor)
+	// 右上に詳細階層表示を追加
+	floorDisplay := s.formatFloorDisplay(currentFloor, floorInfo)
 	s.drawText(grid, s.width-len(floorDisplay), 0, floorDisplay, gruid.Style{Fg: 0xFFFFFF, Bg: 0x000000})
 
 	// 第2行: 装備情報
 	s.drawEquipmentLine(grid)
+}
+
+// formatFloorDisplay formats the floor display with additional information
+func (s *GameScreen) formatFloorDisplay(currentFloor int, floorInfo map[string]interface{}) string {
+	baseDisplay := fmt.Sprintf("B%dF/26", currentFloor)
+
+	// 特別な階層の場合はマーカーを追加
+	if isSpecial, ok := floorInfo["is_special"].(bool); ok && isSpecial {
+		baseDisplay += " [MAZE]"
+	}
+
+	// 最終階層の場合
+	if isFinal, ok := floorInfo["is_final"].(bool); ok && isFinal {
+		baseDisplay += " [FINAL]"
+	}
+
+	// 魔除けを持っている場合
+	if hasAmulet, ok := floorInfo["player_has_amulet"].(bool); ok && hasAmulet {
+		baseDisplay += " [AMULET]"
+	}
+
+	// 勝利可能な場合
+	if canEscape, ok := floorInfo["can_escape"].(bool); ok && canEscape {
+		baseDisplay += " [ESCAPE!]"
+	}
+
+	return baseDisplay
 }
 
 // drawEquipmentLine draws the equipment status line

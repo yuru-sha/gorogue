@@ -17,7 +17,7 @@ func TestNewBSPGenerator(t *testing.T) {
 		Height: 41,
 		Tiles:  make([][]*Tile, 41),
 	}
-	
+
 	// Initialize tiles
 	for y := range level.Tiles {
 		level.Tiles[y] = make([]*Tile, 80)
@@ -265,6 +265,6 @@ func TestBSPDoorPlacement(t *testing.T) {
 		}
 	}
 
-	t.Logf("Door distribution: %d regular, %d open, %d secret (total: %d)", 
+	t.Logf("Door distribution: %d regular, %d open, %d secret (total: %d)",
 		doorCount, openDoorCount, secretDoorCount, totalDoors)
 }

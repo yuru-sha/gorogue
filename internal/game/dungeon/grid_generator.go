@@ -8,22 +8,22 @@ import (
 
 // GridCell represents a single cell in the 3x3 grid
 type GridCell struct {
-	X, Y      int           // Grid coordinates (0-2)
-	Room      *Room         // The room in this cell (nil if no room)
-	Connected bool          // Whether this cell is connected to the dungeon
-	HasRoom   bool          // Whether this cell has an actual room
-	IsGone    bool          // Whether this is a "gone room" (corridor only)
-	Connections []int       // Connected grid cell indices
+	X, Y        int   // Grid coordinates (0-2)
+	Room        *Room // The room in this cell (nil if no room)
+	Connected   bool  // Whether this cell is connected to the dungeon
+	HasRoom     bool  // Whether this cell has an actual room
+	IsGone      bool  // Whether this is a "gone room" (corridor only)
+	Connections []int // Connected grid cell indices
 }
 
 // GridGenerator implements the original Rogue 3x3 grid system
 type GridGenerator struct {
-	level         *Level
-	gridWidth     int
-	gridHeight    int
-	cellWidth     int
-	cellHeight    int
-	grid          []*GridCell
+	level          *Level
+	gridWidth      int
+	gridHeight     int
+	cellWidth      int
+	cellHeight     int
+	grid           []*GridCell
 	connectedCells map[int]bool
 }
 

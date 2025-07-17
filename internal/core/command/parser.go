@@ -79,14 +79,14 @@ func (p *Parser) initializeKeyMap() {
 	p.keyMap["<"] = Command{Type: CmdGoUpstairs}   // Go up
 	p.keyMap[">"] = Command{Type: CmdGoDownstairs} // Go down
 
-	// System commands - PyRogue style  
-	p.keyMap["Q"] = Command{Type: CmdQuit}          // Quit
-	p.keyMap["S"] = Command{Type: CmdQuit}          // Save and quit (PyRogue)
-	p.keyMap["?"] = Command{Type: CmdHelp}          // Help
-	p.keyMap["/"] = Command{Type: CmdLook}          // Identify object (PyRogue)
+	// System commands - PyRogue style
+	p.keyMap["Q"] = Command{Type: CmdQuit}               // Quit
+	p.keyMap["S"] = Command{Type: CmdQuit}               // Save and quit (PyRogue)
+	p.keyMap["?"] = Command{Type: CmdHelp}               // Help
+	p.keyMap["/"] = Command{Type: CmdLook}               // Identify object (PyRogue)
 	p.keyMap[gruid.KeyEscape] = Command{Type: CmdEscape} // Escape/cancel
-	p.keyMap["^W"] = Command{Type: CmdWizard}       // Ctrl+W for wizard mode
-	p.keyMap[":"] = Command{Type: CmdCLI}           // CLI mode (our addition)
+	p.keyMap["^W"] = Command{Type: CmdWizard}            // Ctrl+W for wizard mode
+	p.keyMap[":"] = Command{Type: CmdCLI}                // CLI mode (our addition)
 }
 
 // Parse converts a key input to a command
@@ -101,14 +101,14 @@ func (p *Parser) Parse(key gruid.Key) Command {
 // GetKeyBindings returns all key bindings for help display - PyRogue style
 func (p *Parser) GetKeyBindings() map[string]string {
 	bindings := make(map[string]string)
-	
+
 	// Movement
 	bindings["h,j,k,l"] = "Move west, south, north, east"
 	bindings["y,u,b,n"] = "Move diagonally (NW, NE, SW, SE)"
 	bindings["H,J,K,L"] = "Run in direction (until wall/object)"
 	bindings["Y,U,B,N"] = "Run diagonally"
 	bindings["Arrow keys"] = "Move in four directions"
-	
+
 	// Actions
 	bindings["i"] = "Inventory - show what you are carrying"
 	bindings["g"] = "Get/pick up object(s)"
@@ -131,11 +131,11 @@ func (p *Parser) GetKeyBindings() map[string]string {
 	bindings["/"] = "Identify object on screen"
 	bindings["Ctrl+L"] = "Redraw the screen"
 	bindings["Ctrl+R"] = "Repeat last message"
-	
+
 	// Stairs
 	bindings["<"] = "Go up a staircase"
 	bindings[">"] = "Go down a staircase"
-	
+
 	// System
 	bindings["Q"] = "Quit the game"
 	bindings["S"] = "Save and quit"
@@ -143,7 +143,7 @@ func (p *Parser) GetKeyBindings() map[string]string {
 	bindings["ESC"] = "Cancel command"
 	bindings["Ctrl+W"] = "Toggle wizard mode"
 	bindings[":"] = "Enter CLI debug mode"
-	
+
 	return bindings
 }
 
