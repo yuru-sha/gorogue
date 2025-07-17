@@ -17,7 +17,7 @@ const (
 	DefaultLogLevel        = "INFO"
 	DefaultSaveDirectory   = "saves"
 	DefaultAutoSaveEnabled = true
-	DefaultSaveInterval    = 100 // ターン数
+	DefaultSaveInterval    = 400 // ターン数
 	DefaultWindowWidth     = 800
 	DefaultWindowHeight    = 600
 	DefaultFontSize        = 16
