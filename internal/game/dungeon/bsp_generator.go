@@ -8,13 +8,13 @@ import (
 
 // BSPNode represents a node in the binary space partitioning tree
 type BSPNode struct {
-	X, Y          int      // Position of the node
-	Width, Height int      // Size of the node
-	Room          *Room    // Room in this node (nil if not a leaf)
-	LeftChild     *BSPNode // Left child node
-	RightChild    *BSPNode // Right child node
-	IsLeaf        bool     // Whether this is a leaf node
-	SplitVertical bool     // Whether this node was split vertically
+	X, Y          int        // Position of the node
+	Width, Height int        // Size of the node
+	Room          *Room      // Room in this node (nil if not a leaf)
+	LeftChild     *BSPNode   // Left child node
+	RightChild    *BSPNode   // Right child node
+	IsLeaf        bool       // Whether this is a leaf node
+	SplitVertical bool       // Whether this node was split vertically
 	Corridor      []Position // Corridor tiles for this node
 }
 
@@ -41,11 +41,11 @@ func (g *BSPGenerator) GenerateRooms() {
 
 	// Create root node covering the entire level (PyRogue style)
 	g.root = &BSPNode{
-		X:        0,
-		Y:        0,
-		Width:    g.level.Width,
-		Height:   g.level.Height,
-		IsLeaf:   true,
+		X:      0,
+		Y:      0,
+		Width:  g.level.Width,
+		Height: g.level.Height,
+		IsLeaf: true,
 	}
 
 	// Recursively split the space
@@ -86,7 +86,7 @@ func (g *BSPGenerator) splitNode(node *BSPNode, depth int) {
 			return // Can't split
 		}
 		splitPos = minSplit + rand.Intn(maxSplit-minSplit)
-		
+
 		// Create left and right children
 		node.LeftChild = &BSPNode{
 			X:      node.X,
@@ -110,7 +110,7 @@ func (g *BSPGenerator) splitNode(node *BSPNode, depth int) {
 			return // Can't split
 		}
 		splitPos = minSplit + rand.Intn(maxSplit-minSplit)
-		
+
 		// Create top and bottom children
 		node.LeftChild = &BSPNode{
 			X:      node.X,
@@ -171,19 +171,19 @@ func (g *BSPGenerator) createRoomInNode(node *BSPNode) *Room {
 	// PyRogue style: fixed 2-tile margin from section boundaries
 	margin := 2
 	minRoomSize := 4
-	
+
 	// Available space after margin
 	availableWidth := node.Width - margin*2
 	availableHeight := node.Height - margin*2
-	
+
 	if availableWidth < minRoomSize || availableHeight < minRoomSize {
 		return nil
 	}
-	
+
 	// PyRogue style: room size within available space (with some randomization)
 	width := minRoomSize + rand.Intn(availableWidth-minRoomSize+1)
 	height := minRoomSize + rand.Intn(availableHeight-minRoomSize+1)
-	
+
 	// Ensure room doesn't exceed available space
 	if width > availableWidth {
 		width = availableWidth
@@ -191,7 +191,7 @@ func (g *BSPGenerator) createRoomInNode(node *BSPNode) *Room {
 	if height > availableHeight {
 		height = availableHeight
 	}
-	
+
 	// PyRogue style: room position with fixed margin (centered within available space)
 	maxXOffset := availableWidth - width
 	maxYOffset := availableHeight - height
@@ -203,7 +203,7 @@ func (g *BSPGenerator) createRoomInNode(node *BSPNode) *Room {
 	}
 	x := node.X + margin + rand.Intn(maxXOffset+1)
 	y := node.Y + margin + rand.Intn(maxYOffset+1)
-	
+
 	room := &Room{
 		X:         x,
 		Y:         y,
@@ -211,7 +211,7 @@ func (g *BSPGenerator) createRoomInNode(node *BSPNode) *Room {
 		Height:    height,
 		Connected: true,
 	}
-	
+
 	// Fill room with floor tiles
 	for dy := 0; dy < height; dy++ {
 		for dx := 0; dx < width; dx++ {
@@ -220,7 +220,7 @@ func (g *BSPGenerator) createRoomInNode(node *BSPNode) *Room {
 			}
 		}
 	}
-	
+
 	logger.Debug("Created room in BSP node",
 		"room_x", x,
 		"room_y", y,
@@ -231,7 +231,7 @@ func (g *BSPGenerator) createRoomInNode(node *BSPNode) *Room {
 		"node_width", node.Width,
 		"node_height", node.Height,
 	)
-	
+
 	return room
 }
 
@@ -266,14 +266,14 @@ func (g *BSPGenerator) connectNodeSubtrees(leftNode, rightNode *BSPNode, splitVe
 		return
 	}
 
-	logger.Debug("Connecting rooms", 
+	logger.Debug("Connecting rooms",
 		"left_room", leftRoom.X, leftRoom.Y, leftRoom.Width, leftRoom.Height,
 		"right_room", rightRoom.X, rightRoom.Y, rightRoom.Width, rightRoom.Height,
 		"split_vertical", splitVertical)
 
 	// Create corridor between the rooms
 	corridor := g.createCorridorBetweenRooms(leftRoom, rightRoom, splitVertical)
-	
+
 	// Store corridor information in the parent node
 	// This will be used for door placement
 	if leftNode.Corridor == nil {
@@ -282,7 +282,7 @@ func (g *BSPGenerator) connectNodeSubtrees(leftNode, rightNode *BSPNode, splitVe
 	if rightNode.Corridor == nil {
 		rightNode.Corridor = make([]Position, 0)
 	}
-	
+
 	leftNode.Corridor = append(leftNode.Corridor, corridor...)
 	rightNode.Corridor = append(rightNode.Corridor, corridor...)
 
@@ -325,7 +325,7 @@ func (g *BSPGenerator) createCorridorBetweenRooms(room1, room2 *Room, splitVerti
 	// PyRogue style: determine L-shape direction based on distance
 	dx := abs(center2X - center1X)
 	dy := abs(center2Y - center1Y)
-	
+
 	if dx > dy {
 		// Horizontal distance is greater: go horizontal first, then vertical
 		corridor = append(corridor, g.createHorizontalCorridor(center1X, center2X, center1Y)...)
@@ -342,10 +342,10 @@ func (g *BSPGenerator) createCorridorBetweenRooms(room1, room2 *Room, splitVerti
 // createHorizontalCorridor creates a horizontal corridor (PyRogue style: place doors while digging)
 func (g *BSPGenerator) createHorizontalCorridor(x1, x2, y int) []Position {
 	var corridor []Position
-	
+
 	minX := min(x1, x2)
 	maxX := max(x1, x2)
-	
+
 	for x := minX; x <= maxX; x++ {
 		if g.level.IsInBounds(x, y) {
 			currentTile := g.level.GetTile(x, y)
@@ -362,17 +362,17 @@ func (g *BSPGenerator) createHorizontalCorridor(x1, x2, y int) []Position {
 			corridor = append(corridor, Position{X: x, Y: y})
 		}
 	}
-	
+
 	return corridor
 }
 
 // createVerticalCorridor creates a vertical corridor (PyRogue style: place doors while digging)
 func (g *BSPGenerator) createVerticalCorridor(y1, y2, x int) []Position {
 	var corridor []Position
-	
+
 	minY := min(y1, y2)
 	maxY := max(y1, y2)
-	
+
 	for y := minY; y <= maxY; y++ {
 		if g.level.IsInBounds(x, y) {
 			currentTile := g.level.GetTile(x, y)
@@ -389,7 +389,7 @@ func (g *BSPGenerator) createVerticalCorridor(y1, y2, x int) []Position {
 			corridor = append(corridor, Position{X: x, Y: y})
 		}
 	}
-	
+
 	return corridor
 }
 
@@ -403,13 +403,13 @@ func (g *BSPGenerator) placeDoors(node *BSPNode) {
 // selectDoorType selects door type based on PyRogue probabilities
 func (g *BSPGenerator) selectDoorType() TileType {
 	rand_val := rand.Float64()
-	
+
 	if rand_val < 0.1 {
 		return TileSecretDoor // 10% secret doors
 	} else if rand_val < 0.4 {
-		return TileOpenDoor   // 30% open doors
+		return TileOpenDoor // 30% open doors
 	} else {
-		return TileDoor       // 60% normal doors
+		return TileDoor // 60% normal doors
 	}
 }
 

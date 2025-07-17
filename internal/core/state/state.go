@@ -11,6 +11,7 @@ const (
 	StateInventory
 	StateHelp
 	StateGameOver
+	StateSaveLoad
 )
 
 // State represents a game state interface

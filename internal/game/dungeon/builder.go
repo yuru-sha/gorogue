@@ -44,7 +44,7 @@ func NewDungeonBuilder(width, height, floorNum int) *DungeonBuilder {
 func (b *DungeonBuilder) Build() *Level {
 	// PyRogue風の階層に応じたダンジョンタイプの決定
 	dungeonType := b.determineDungeonType()
-	
+
 	switch dungeonType {
 	case "maze":
 		b.generateMaze()
@@ -95,7 +95,7 @@ func (b *DungeonBuilder) Build() *Level {
 // determineDungeonType determines the dungeon type based on floor number (PyRogue style)
 func (b *DungeonBuilder) determineDungeonType() string {
 	floor := b.level.FloorNumber
-	
+
 	// PyRogue風の階層別ダンジョンタイプ
 	switch {
 	case floor == 7 || floor == 13 || floor == 19:
@@ -108,7 +108,7 @@ func (b *DungeonBuilder) determineDungeonType() string {
 // shouldGenerateIsolatedRooms determines if isolated rooms should be generated
 func (b *DungeonBuilder) shouldGenerateIsolatedRooms() bool {
 	floor := b.level.FloorNumber
-	
+
 	// PyRogue風の孤立部屋群生成判定
 	switch {
 	case floor <= 3:
@@ -125,7 +125,7 @@ func (b *DungeonBuilder) shouldGenerateIsolatedRooms() bool {
 // shouldGenerateDarkRooms determines if dark rooms should be generated
 func (b *DungeonBuilder) shouldGenerateDarkRooms() bool {
 	floor := b.level.FloorNumber
-	
+
 	// PyRogue風の暗い部屋生成判定
 	switch {
 	case floor <= 5:
@@ -143,7 +143,7 @@ func (b *DungeonBuilder) shouldGenerateDarkRooms() bool {
 func (b *DungeonBuilder) generateMaze() {
 	mazeGenerator := NewMazeGenerator(b.level)
 	mazeGenerator.GenerateMaze()
-	
+
 	// Create a single "room" representing the entire maze for stair placement
 	mazeRoom := &Room{
 		X:         1,
@@ -165,7 +165,7 @@ func (b *DungeonBuilder) generateIsolatedRooms() {
 			height := 4 + rand.Intn(4) // 4-7 tiles high
 			x := 2 + rand.Intn(b.level.Width-width-4)
 			y := 2 + rand.Intn(b.level.Height-height-4)
-			
+
 			if b.canPlaceIsolatedRoom(x, y, width, height) {
 				room := &Room{
 					X:         x,
@@ -176,7 +176,7 @@ func (b *DungeonBuilder) generateIsolatedRooms() {
 					Connected: false, // Isolated rooms start as disconnected
 				}
 				b.level.Rooms = append(b.level.Rooms, room)
-				
+
 				// Create the room
 				for dy := 0; dy < height; dy++ {
 					for dx := 0; dx < width; dx++ {
@@ -185,7 +185,7 @@ func (b *DungeonBuilder) generateIsolatedRooms() {
 						}
 					}
 				}
-				
+
 				// Connect to main dungeon with a secret passage
 				b.createSecretPassage(room)
 				break
@@ -198,18 +198,18 @@ func (b *DungeonBuilder) generateIsolatedRooms() {
 func (b *DungeonBuilder) generateDarkRooms() {
 	// Apply darkness to 30-50% of rooms
 	darkRoomCount := len(b.level.Rooms) * (30 + rand.Intn(21)) / 100
-	
+
 	// Shuffle rooms and make some of them dark
 	shuffledRooms := make([]*Room, len(b.level.Rooms))
 	copy(shuffledRooms, b.level.Rooms)
 	rand.Shuffle(len(shuffledRooms), func(i, j int) {
 		shuffledRooms[i], shuffledRooms[j] = shuffledRooms[j], shuffledRooms[i]
 	})
-	
+
 	for i := 0; i < darkRoomCount && i < len(shuffledRooms); i++ {
 		room := shuffledRooms[i]
 		room.IsSpecial = true // Mark as special to indicate it's dark
-		
+
 		// Place a light source in the room (torch or similar)
 		lightX := room.X + room.Width/2
 		lightY := room.Y + room.Height/2
@@ -227,7 +227,7 @@ func (b *DungeonBuilder) canPlaceIsolatedRoom(x, y, width, height int) bool {
 	if x < 1 || y < 1 || x+width >= b.level.Width-1 || y+height >= b.level.Height-1 {
 		return false
 	}
-	
+
 	// Check for minimum distance from existing rooms
 	minDistance := 3
 	for _, room := range b.level.Rooms {
@@ -235,7 +235,7 @@ func (b *DungeonBuilder) canPlaceIsolatedRoom(x, y, width, height int) bool {
 			return false
 		}
 	}
-	
+
 	// Check that the area is currently walls
 	for dy := -1; dy <= height; dy++ {
 		for dx := -1; dx <= width; dx++ {
@@ -246,7 +246,7 @@ func (b *DungeonBuilder) canPlaceIsolatedRoom(x, y, width, height int) bool {
 			}
 		}
 	}
-	
+
 	return true
 }
 
@@ -255,7 +255,7 @@ func (b *DungeonBuilder) createSecretPassage(room *Room) {
 	// Find the nearest main room
 	var nearestRoom *Room
 	minDistance := float64(b.level.Width + b.level.Height)
-	
+
 	for _, r := range b.level.Rooms {
 		if r != room && r.Connected {
 			distance := float64(abs(r.X-room.X) + abs(r.Y-room.Y))
@@ -265,14 +265,14 @@ func (b *DungeonBuilder) createSecretPassage(room *Room) {
 			}
 		}
 	}
-	
+
 	if nearestRoom != nil {
 		// Create a simple passage
 		startX := room.X + room.Width/2
 		startY := room.Y + room.Height/2
 		endX := nearestRoom.X + nearestRoom.Width/2
 		endY := nearestRoom.Y + nearestRoom.Height/2
-		
+
 		// Create L-shaped passage
 		for x := min(startX, endX); x <= max(startX, endX); x++ {
 			if b.level.IsInBounds(x, startY) {
@@ -284,7 +284,7 @@ func (b *DungeonBuilder) createSecretPassage(room *Room) {
 				b.level.SetTile(endX, y, TileFloor)
 			}
 		}
-		
+
 		room.Connected = true
 	}
 }
@@ -292,7 +292,7 @@ func (b *DungeonBuilder) createSecretPassage(room *Room) {
 // generateRooms generates rooms for the dungeon (PyRogue style)
 func (b *DungeonBuilder) generateRooms() {
 	numRooms := MinRooms + rand.Intn(MaxRooms-MinRooms+1)
-	
+
 	for i := 0; i < numRooms; i++ {
 		for attempts := 0; attempts < 100; attempts++ {
 			width := MinRoomSize + rand.Intn(MaxRoomSize-MinRoomSize+1)
@@ -326,7 +326,7 @@ func (b *DungeonBuilder) generateRooms() {
 func (b *DungeonBuilder) generateRoomsWithGrid() {
 	gridGenerator := NewGridGenerator(b.level)
 	gridGenerator.GenerateRooms()
-	
+
 	logger.Debug("Generated rooms with 3x3 grid system", "count", len(b.level.Rooms))
 }
 
@@ -334,7 +334,7 @@ func (b *DungeonBuilder) generateRoomsWithGrid() {
 func (b *DungeonBuilder) generateRoomsWithBSP() {
 	bspGenerator := NewBSPGenerator(b.level)
 	bspGenerator.GenerateRooms()
-	
+
 	logger.Debug("Generated rooms with BSP system", "count", len(b.level.Rooms))
 }
 
@@ -389,12 +389,12 @@ func (b *DungeonBuilder) createGoneRoom(x, y, width, height int) {
 			}
 		}
 	}
-	
+
 	// Add a few scattered floor tiles around the area for organic feel
 	for attempt := 0; attempt < 5; attempt++ {
 		extraX := x + rand.Intn(width)
 		extraY := y + rand.Intn(height)
-		
+
 		// Extend randomly in one direction
 		direction := rand.Intn(4)
 		switch direction {
@@ -416,7 +416,7 @@ func (b *DungeonBuilder) createGoneRoom(x, y, width, height int) {
 			}
 		}
 	}
-	
+
 	logger.Debug("Created gone room (corridor space)",
 		"x", x,
 		"y", y,
@@ -594,7 +594,7 @@ func (b *DungeonBuilder) populateFoodStorage(room *Room) {
 func (b *DungeonBuilder) populateMonsterLair(room *Room) {
 	// 強力なモンスターを配置
 	cx, cy := room.X+room.Width/2, room.Y+room.Height/2
-	
+
 	// ボスモンスターを中央に配置
 	if b.level.GetMonsterAt(cx, cy) == nil {
 		bossType := b.selectBossMonsterType()
@@ -692,13 +692,13 @@ func (b *DungeonBuilder) selectBossMonsterType() rune {
 func (b *DungeonBuilder) scaleBossMonster(monster *actor.Monster) {
 	// 通常のスケーリングを適用
 	b.level.scaleMonsterForFloor(monster)
-	
+
 	// ボス用の追加スケーリング（2倍）
 	monster.MaxHP *= 2
 	monster.HP = monster.MaxHP
 	monster.Attack = int(float64(monster.Attack) * 1.5)
 	monster.Defense = int(float64(monster.Defense) * 1.5)
-	
+
 	logger.Debug("Scaled boss monster",
 		"type", monster.Type.Name,
 		"hp", monster.HP,

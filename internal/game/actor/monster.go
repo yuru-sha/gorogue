@@ -22,21 +22,21 @@ type MonsterType struct {
 
 // Predefined monster types - PyRogue風の色設定 (A-Z全26種類)
 var MonsterTypes = map[rune]MonsterType{
-	'A': {Symbol: 'A', Name: "アント", HP: 12, Attack: 4, Defense: 2, Color: 0x800000, Speed: 1},        // Maroon
-	'B': {Symbol: 'B', Name: "コウモリ", HP: 10, Attack: 3, Defense: 1, Color: 0x8B4513, Speed: 1},       // Brown
-	'C': {Symbol: 'C', Name: "ケンタウロス", HP: 35, Attack: 10, Defense: 5, Color: 0xCD853F, Speed: 2},   // Peru
-	'D': {Symbol: 'D', Name: "ドラゴン", HP: 100, Attack: 20, Defense: 10, Color: 0xFF0000, Speed: 3},   // Red
-	'E': {Symbol: 'E', Name: "目玉", HP: 15, Attack: 5, Defense: 2, Color: 0x00FF00, Speed: 2},         // Green
+	'A': {Symbol: 'A', Name: "アント", HP: 12, Attack: 4, Defense: 2, Color: 0x800000, Speed: 1},      // Maroon
+	'B': {Symbol: 'B', Name: "コウモリ", HP: 10, Attack: 3, Defense: 1, Color: 0x8B4513, Speed: 1},     // Brown
+	'C': {Symbol: 'C', Name: "ケンタウロス", HP: 35, Attack: 10, Defense: 5, Color: 0xCD853F, Speed: 2},  // Peru
+	'D': {Symbol: 'D', Name: "ドラゴン", HP: 100, Attack: 20, Defense: 10, Color: 0xFF0000, Speed: 3},  // Red
+	'E': {Symbol: 'E', Name: "目玉", HP: 15, Attack: 5, Defense: 2, Color: 0x00FF00, Speed: 2},       // Green
 	'F': {Symbol: 'F', Name: "ファンガス", HP: 8, Attack: 2, Defense: 1, Color: 0x90EE90, Speed: 4},     // LightGreen
 	'G': {Symbol: 'G', Name: "ゴブリン", HP: 20, Attack: 6, Defense: 3, Color: 0x32CD32, Speed: 2},     // LimeGreen
 	'H': {Symbol: 'H', Name: "ホブゴブリン", HP: 30, Attack: 8, Defense: 4, Color: 0xFF8C00, Speed: 2},   // DarkOrange
-	'I': {Symbol: 'I', Name: "インプ", HP: 18, Attack: 7, Defense: 3, Color: 0xFF1493, Speed: 2},       // DeepPink
+	'I': {Symbol: 'I', Name: "インプ", HP: 18, Attack: 7, Defense: 3, Color: 0xFF1493, Speed: 2},      // DeepPink
 	'J': {Symbol: 'J', Name: "ジェリー", HP: 25, Attack: 6, Defense: 2, Color: 0x40E0D0, Speed: 3},     // Turquoise
 	'K': {Symbol: 'K', Name: "コボルト", HP: 14, Attack: 5, Defense: 2, Color: 0x8B008B, Speed: 2},     // DarkMagenta
-	'L': {Symbol: 'L', Name: "レプラコーン", HP: 22, Attack: 6, Defense: 3, Color: 0x9ACD32, Speed: 1},  // YellowGreen
+	'L': {Symbol: 'L', Name: "レプラコーン", HP: 22, Attack: 6, Defense: 3, Color: 0x9ACD32, Speed: 1},   // YellowGreen
 	'M': {Symbol: 'M', Name: "ミノタウロス", HP: 60, Attack: 15, Defense: 8, Color: 0xA0522D, Speed: 3},  // Sienna
-	'N': {Symbol: 'N', Name: "ニンフ", HP: 16, Attack: 4, Defense: 2, Color: 0x98FB98, Speed: 2},       // PaleGreen
-	'O': {Symbol: 'O', Name: "オーク", HP: 25, Attack: 8, Defense: 4, Color: 0x696969, Speed: 2},       // DimGray
+	'N': {Symbol: 'N', Name: "ニンフ", HP: 16, Attack: 4, Defense: 2, Color: 0x98FB98, Speed: 2},      // PaleGreen
+	'O': {Symbol: 'O', Name: "オーク", HP: 25, Attack: 8, Defense: 4, Color: 0x696969, Speed: 2},      // DimGray
 	'P': {Symbol: 'P', Name: "ファントム", HP: 40, Attack: 12, Defense: 6, Color: 0x778899, Speed: 3},   // LightSlateGray
 	'Q': {Symbol: 'Q', Name: "クエーサー", HP: 80, Attack: 18, Defense: 9, Color: 0x4B0082, Speed: 4},   // Indigo
 	'R': {Symbol: 'R', Name: "ラットルスネーク", HP: 28, Attack: 9, Defense: 4, Color: 0x9932CC, Speed: 2}, // DarkOrchid
@@ -44,10 +44,10 @@ var MonsterTypes = map[rune]MonsterType{
 	'T': {Symbol: 'T', Name: "トロル", HP: 50, Attack: 12, Defense: 6, Color: 0x8B4513, Speed: 3},     // Brown
 	'U': {Symbol: 'U', Name: "アンバーハルク", HP: 45, Attack: 11, Defense: 7, Color: 0xFFD700, Speed: 3}, // Gold
 	'V': {Symbol: 'V', Name: "バンパイア", HP: 55, Attack: 13, Defense: 7, Color: 0x8B0000, Speed: 3},   // DarkRed
-	'W': {Symbol: 'W', Name: "ワイト", HP: 32, Attack: 9, Defense: 5, Color: 0xF0E68C, Speed: 2},       // Khaki
+	'W': {Symbol: 'W', Name: "ワイト", HP: 32, Attack: 9, Defense: 5, Color: 0xF0E68C, Speed: 2},      // Khaki
 	'X': {Symbol: 'X', Name: "ゼロックス", HP: 70, Attack: 16, Defense: 8, Color: 0x00CED1, Speed: 4},   // DarkTurquoise
-	'Y': {Symbol: 'Y', Name: "イエティ", HP: 65, Attack: 14, Defense: 7, Color: 0xF0F8FF, Speed: 3},     // AliceBlue
-	'Z': {Symbol: 'Z', Name: "ゾンビ", HP: 35, Attack: 10, Defense: 5, Color: 0x556B2F, Speed: 4},      // DarkOliveGreen
+	'Y': {Symbol: 'Y', Name: "イエティ", HP: 65, Attack: 14, Defense: 7, Color: 0xF0F8FF, Speed: 3},    // AliceBlue
+	'Z': {Symbol: 'Z', Name: "ゾンビ", HP: 35, Attack: 10, Defense: 5, Color: 0x556B2F, Speed: 4},     // DarkOliveGreen
 }
 
 // AIState represents the current AI state of a monster
@@ -65,18 +65,18 @@ const (
 // Monster represents a monster in the game
 type Monster struct {
 	*Actor
-	Type            MonsterType
-	TurnCount       int     // Turn management
-	IsActive        bool    // Active state
-	AIState         AIState // Current AI state
-	LastPlayerPos   entity.Position // Last known player position
-	PatrolPath      []entity.Position // Patrol path
-	PatrolIndex     int     // Current patrol index
-	AlertLevel      int     // How alert the monster is (0-10)
-	SearchTurns     int     // Turns spent searching
-	OriginalPos     entity.Position // Starting position for patrol
-	ViewRange       int     // How far the monster can see
-	DetectionRange  int     // How close player must be to detect
+	Type           MonsterType
+	TurnCount      int               // Turn management
+	IsActive       bool              // Active state
+	AIState        AIState           // Current AI state
+	LastPlayerPos  entity.Position   // Last known player position
+	PatrolPath     []entity.Position // Patrol path
+	PatrolIndex    int               // Current patrol index
+	AlertLevel     int               // How alert the monster is (0-10)
+	SearchTurns    int               // Turns spent searching
+	OriginalPos    entity.Position   // Starting position for patrol
+	ViewRange      int               // How far the monster can see
+	DetectionRange int               // How close player must be to detect
 }
 
 // NewMonster creates a new monster of the given type at the specified position
@@ -185,7 +185,7 @@ func (m *Monster) Update(player *Player, level LevelCollisionChecker) {
 	// Check player visibility and distance
 	playerDistance := m.DistanceToPlayer(player)
 	canSeePlayer := m.CanSeePlayer(player, level)
-	
+
 	// Update AI state based on player detection
 	m.UpdateAIState(player, level, canSeePlayer, playerDistance)
 
@@ -220,7 +220,7 @@ func (m *Monster) DistanceToPlayer(player *Player) float64 {
 func (m *Monster) AttackPlayer(player *Player) {
 	// Calculate hit chance based on monster type and player defense
 	hitChance := m.calculateHitChance(player)
-	
+
 	// Roll for hit
 	if rand.Float64() > hitChance {
 		logger.Info("Monster attack missed",
@@ -232,10 +232,10 @@ func (m *Monster) AttackPlayer(player *Player) {
 
 	// Calculate damage
 	baseDamage := m.CalculateDamage(player.GetTotalDefense())
-	
+
 	// Apply monster-specific damage modifiers
 	finalDamage := m.applyDamageModifiers(baseDamage, player)
-	
+
 	// Apply damage to player
 	player.TakeDamage(finalDamage)
 
@@ -255,7 +255,7 @@ func (m *Monster) AttackPlayer(player *Player) {
 func (m *Monster) calculateHitChance(player *Player) float64 {
 	// Base hit chance is 0.8 (80%)
 	baseHitChance := 0.8
-	
+
 	// Modify based on monster type
 	switch m.Type.Symbol {
 	case 'A', 'B': // Fast monsters have higher hit chance
@@ -265,14 +265,14 @@ func (m *Monster) calculateHitChance(player *Player) float64 {
 	case 'F', 'Z': // Slow monsters have lower hit chance
 		baseHitChance -= 0.1
 	}
-	
+
 	// Modify based on player level (higher level = harder to hit)
 	levelMod := float64(player.Level) * 0.02
 	if levelMod > 0.2 {
 		levelMod = 0.2
 	}
 	baseHitChance -= levelMod
-	
+
 	// Ensure hit chance is between 0.1 and 1.0
 	if baseHitChance < 0.1 {
 		baseHitChance = 0.1
@@ -280,14 +280,14 @@ func (m *Monster) calculateHitChance(player *Player) float64 {
 	if baseHitChance > 1.0 {
 		baseHitChance = 1.0
 	}
-	
+
 	return baseHitChance
 }
 
 // applyDamageModifiers applies monster-specific damage modifiers
 func (m *Monster) applyDamageModifiers(baseDamage int, player *Player) int {
 	finalDamage := baseDamage
-	
+
 	// Apply monster-specific damage modifiers
 	switch m.Type.Symbol {
 	case 'D': // Dragons do extra fire damage
@@ -305,17 +305,17 @@ func (m *Monster) applyDamageModifiers(baseDamage int, player *Player) int {
 	case 'R': // Rattlesnakes do poison damage
 		finalDamage += rand.Intn(2) + 1
 	}
-	
+
 	// Random damage variation (±25%)
 	variation := float64(finalDamage) * 0.25
 	modifier := (rand.Float64() - 0.5) * variation
 	finalDamage += int(modifier)
-	
+
 	// Minimum damage is 1
 	if finalDamage < 1 {
 		finalDamage = 1
 	}
-	
+
 	return finalDamage
 }
 
@@ -414,7 +414,7 @@ func (m *Monster) MoveTowardsPlayer(player *Player, level LevelCollisionChecker)
 // CanSeePlayer checks if the monster can see the player using line of sight
 func (m *Monster) CanSeePlayer(player *Player, level LevelCollisionChecker) bool {
 	distance := m.DistanceToPlayer(player)
-	
+
 	// Check if player is within view range
 	if distance > float64(m.ViewRange) {
 		return false
@@ -434,7 +434,7 @@ func (m *Monster) hasLineOfSight(targetX, targetY int, level LevelCollisionCheck
 	dy := abs(y1 - y0)
 	sx := 1
 	sy := 1
-	
+
 	if x0 > x1 {
 		sx = -1
 	}
@@ -538,7 +538,7 @@ func (m *Monster) behaviorPatrol(player *Player, level LevelCollisionChecker) {
 	}
 
 	target := m.PatrolPath[m.PatrolIndex]
-	
+
 	// Check if we've reached the patrol point
 	if m.Position.X == target.X && m.Position.Y == target.Y {
 		m.PatrolIndex = (m.PatrolIndex + 1) % len(m.PatrolPath)
@@ -560,7 +560,7 @@ func (m *Monster) behaviorChase(player *Player, level LevelCollisionChecker) {
 			}
 		}
 	}
-	
+
 	// Fallback to simple movement
 	m.MoveTowardsPlayer(player, level)
 }
@@ -584,7 +584,7 @@ func (m *Monster) behaviorAttack(player *Player, level LevelCollisionChecker) {
 // behaviorSearch handles search behavior
 func (m *Monster) behaviorSearch(player *Player, level LevelCollisionChecker) {
 	m.SearchTurns++
-	
+
 	// Search for a limited number of turns
 	if m.SearchTurns > 10 {
 		m.AlertLevel = 0
@@ -607,7 +607,7 @@ func (m *Monster) behaviorFlee(player *Player, level LevelCollisionChecker) {
 	// Move away from player
 	dx := m.Position.X - player.Position.X
 	dy := m.Position.Y - player.Position.Y
-	
+
 	// Normalize direction
 	if dx > 0 {
 		dx = 1
