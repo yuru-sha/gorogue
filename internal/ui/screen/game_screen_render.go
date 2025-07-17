@@ -22,8 +22,9 @@ func (s *GameScreen) Draw(grid *gruid.Grid) {
 	// Output detailed drawing logs at TRACE level
 	logger.Trace("Drawing game screen")
 
-	// Clear grid - original Rogue-style black background
-	grid.Fill(gruid.Cell{Rune: ' ', Style: gruid.Style{Bg: 0x000000}})
+	// Clear grid - consistent black background with proper alpha
+	blackCell := gruid.Cell{Rune: ' ', Style: gruid.Style{Fg: 0x000000, Bg: 0x000000}}
+	grid.Fill(blackCell)
 
 	// Draw status lines (top 2 rows)
 	s.drawStatusLines(grid)

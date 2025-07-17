@@ -33,28 +33,10 @@ type Level struct {
 	Items         []*item.Item
 }
 
-// NewLevel creates a new dungeon level
+// NewLevel creates a new dungeon level using the builder pattern
 func NewLevel(width, height, floorNum int) *Level {
-	level := &Level{
-		Width:       width,
-		Height:      height,
-		FloorNumber: floorNum,
-		Rooms:       make([]*Room, 0),
-		Monsters:    make([]*actor.Monster, 0),
-		Items:       make([]*item.Item, 0),
-	}
-
-	// Initialize tiles with walls
-	level.Tiles = make([][]*Tile, height)
-	for y := range level.Tiles {
-		level.Tiles[y] = make([]*Tile, width)
-		for x := range level.Tiles[y] {
-			level.Tiles[y][x] = NewTile(TileWall)
-		}
-	}
-
-	// ダンジョンの生成
-	level.Generate()
+	builder := NewDungeonBuilder(width, height, floorNum)
+	level := builder.Build()
 
 	logger.Debug("Created level",
 		"width", width,

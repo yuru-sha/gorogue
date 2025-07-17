@@ -24,6 +24,15 @@ go.work.sum
 # env file
 .env
 
-# 
-logs/
+# APP directory and files
 bin/
+data/
+logs/
+scores.json
+saves/
+
+# macOS
+.DS_Store
+
+# Claude Code settings
+.claude/settings.local.json

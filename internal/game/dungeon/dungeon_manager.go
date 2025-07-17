@@ -198,7 +198,3 @@ func (dm *DungeonManager) PlaceAmuletOfYendor() {
 	)
 }
 
-// Position represents a position in the dungeon
-type Position struct {
-	X, Y int
-}

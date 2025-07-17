@@ -8,8 +8,10 @@ type TileType int
 const (
 	TileWall TileType = iota
 	TileFloor
+	TileDoor
 	TileDoorClosed
 	TileDoorOpen
+	TileOpenDoor
 	TileStairsUp
 	TileStairsDown
 	TileWater
@@ -61,10 +63,10 @@ func NewTile(tileType TileType) *Tile {
 	case TileFloor:
 		t.Rune = '.'
 		t.Color = 0x808080 // Gray - PyRogue風
-	case TileDoorClosed:
+	case TileDoor, TileDoorClosed:
 		t.Rune = '+'
 		t.Color = 0x8B4513 // Brown - PyRogue風
-	case TileDoorOpen:
+	case TileDoorOpen, TileOpenDoor:
 		t.Rune = '/'
 		t.Color = 0x8B4513 // Brown - PyRogue風
 	case TileStairsUp:
@@ -91,7 +93,7 @@ func NewTile(tileType TileType) *Tile {
 // IsWalkable returns whether the tile can be walked on
 func IsWalkable(t TileType) bool {
 	switch t {
-	case TileFloor, TileDoorOpen, TileStairsUp, TileStairsDown:
+	case TileFloor, TileDoorOpen, TileOpenDoor, TileStairsUp, TileStairsDown:
 		return true
 	default:
 		return false
