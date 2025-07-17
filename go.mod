@@ -8,4 +8,7 @@ require (
 	golang.org/x/image v0.29.0
 )
 
-require github.com/veandco/go-sdl2 v0.4.5 // indirect
+require (
+	github.com/joho/godotenv v1.5.1 // indirect
+	github.com/veandco/go-sdl2 v0.4.5 // indirect
+)

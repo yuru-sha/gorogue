@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/yuru-sha/gorogue/internal/config"
 	"github.com/yuru-sha/gorogue/internal/core"
 	"github.com/yuru-sha/gorogue/internal/core/cli"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
@@ -36,8 +37,19 @@ func main() {
 	}
 	defer logger.Cleanup()
 
-	if *debugMode {
-		logger.Info("Starting GoRogue CLI in debug mode")
+	// 環境変数で設定されていればそれを使用、フラグで上書き
+	debugEnabled := config.GetDebugMode() || *debugMode
+	
+	if debugEnabled {
+		logger.Info("Starting GoRogue CLI in debug mode",
+			"env_debug", config.GetDebugMode(),
+			"flag_debug", *debugMode,
+			"save_directory", config.GetSaveDirectory(),
+			"auto_save", config.GetAutoSaveEnabled(),
+		)
+		if config.GetDebugMode() {
+			config.PrintConfig()
+		}
 	} else {
 		logger.Info("Starting GoRogue CLI")
 	}
