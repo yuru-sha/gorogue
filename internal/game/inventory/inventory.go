@@ -125,6 +125,16 @@ func (inv *Inventory) Size() int {
 	return len(inv.Items)
 }
 
+// HasItemType checks if the inventory contains an item of the specified type
+func (inv *Inventory) HasItemType(itemType item.ItemType) bool {
+	for _, itm := range inv.Items {
+		if itm.Type == itemType {
+			return true
+		}
+	}
+	return false
+}
+
 // GetInventoryListing returns a formatted inventory listing
 func (inv *Inventory) GetInventoryListing(identifyMgr *identification.IdentificationManager) []string {
 	if inv.IsEmpty() {

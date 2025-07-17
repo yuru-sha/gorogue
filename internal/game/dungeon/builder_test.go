@@ -130,7 +130,7 @@ func TestDungeonBuilderRoomGeneration(t *testing.T) {
 func TestDungeonBuilderSpecialRoomGeneration(t *testing.T) {
 	// 特別な部屋が生成される条件をテスト（5階）
 	builder := NewDungeonBuilder(80, 41, 5)
-	
+
 	// 特別な部屋を強制的に生成
 	builder.generateRooms()
 	builder.generateSpecialRoom()
@@ -142,7 +142,7 @@ func TestDungeonBuilderSpecialRoomGeneration(t *testing.T) {
 			if room.Width != 5 || room.Height != 5 {
 				t.Errorf("Special room size is %dx%d, expected 5x5", room.Width, room.Height)
 			}
-			
+
 			break
 		}
 	}

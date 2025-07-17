@@ -16,19 +16,19 @@ const (
 	CmdMoveSouthEast
 
 	// Action commands
-	CmdLook          // Look around (l or x)
-	CmdInventory     // Show inventory (i)
-	CmdPickUp        // Pick up item (,)
-	CmdDrop          // Drop item (d)
-	CmdUse           // Use/Apply item (a)
-	CmdQuaff         // Quaff potion (q)
-	CmdRead          // Read scroll (r)
-	CmdWield         // Wield/wear item (w)
-	CmdTakeOff       // Take off item (t)
-	CmdWait          // Wait/Rest (.)
-	CmdSearch        // Search (s)
-	CmdOpen          // Open door (o)
-	CmdClose         // Close door (c)
+	CmdLook      // Look around (l or x)
+	CmdInventory // Show inventory (i)
+	CmdPickUp    // Pick up item (,)
+	CmdDrop      // Drop item (d)
+	CmdUse       // Use/Apply item (a)
+	CmdQuaff     // Quaff potion (q)
+	CmdRead      // Read scroll (r)
+	CmdWield     // Wield/wear item (w)
+	CmdTakeOff   // Take off item (t)
+	CmdWait      // Wait/Rest (.)
+	CmdSearch    // Search (s)
+	CmdOpen      // Open door (o)
+	CmdClose     // Close door (c)
 
 	// Stair commands
 	CmdGoUpstairs   // Go up stairs (<)
