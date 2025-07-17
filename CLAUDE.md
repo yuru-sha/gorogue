@@ -68,11 +68,14 @@ gorogue/
 # 依存関係の更新
 go mod tidy
 
-# 開発サーバー実行
-go run main.go
+# 開発サーバー実行（推奨）
+make run
 
-# ビルド
-go build -o gorogue main.go
+# 直接実行（bin/ディレクトリにバイナリ作成）
+go run ./cmd/gorogue
+
+# ビルド（bin/ディレクトリにバイナリ作成）
+make build
 
 # テスト実行
 go test ./...

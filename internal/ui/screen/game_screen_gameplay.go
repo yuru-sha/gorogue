@@ -112,3 +112,82 @@ func (s *GameScreen) pickupItem(x, y int) {
 	// アイテムをレベルから削除
 	s.level.RemoveItem(item)
 }
+
+// handleLook handles the look/examine command
+func (s *GameScreen) handleLook() {
+	s.AddMessage("Looking around... (not fully implemented yet)")
+	// TODO: Implement look functionality - show what's in adjacent squares
+}
+
+// handlePickUp handles picking up items at current position
+func (s *GameScreen) handlePickUp() {
+	x, y := s.player.Position.X, s.player.Position.Y
+	item := s.level.GetItemAt(x, y)
+	
+	if item == nil {
+		s.AddMessage("There is nothing here to pick up.")
+		return
+	}
+
+	// Try to add to inventory
+	if !s.player.Inventory.AddItem(item) {
+		s.AddMessage("Your pack is full!")
+		return
+	}
+
+	// Show pickup message
+	displayName := s.player.IdentifyMgr.GetDisplayName(item)
+	switch item.Type {
+	case gameitem.ItemGold:
+		s.AddMessage(fmt.Sprintf("You found %d gold pieces", item.Value))
+	case gameitem.ItemAmulet:
+		s.AddMessage(fmt.Sprintf("You picked up the %s!", displayName))
+	default:
+		s.AddMessage(fmt.Sprintf("You picked up %s", displayName))
+	}
+
+	// Remove item from level
+	s.level.RemoveItem(item)
+}
+
+// enterUseMode enters the use/apply mode
+func (s *GameScreen) enterUseMode() {
+	// For now, provide a message about what this will do
+	s.AddMessage("Use what? (not fully implemented yet)")
+	// TODO: Implement use mode for rings, wands, etc.
+}
+
+// handleWait handles the wait/rest command
+func (s *GameScreen) handleWait() {
+	s.AddMessage("You rest.")
+	// Let monsters take their turn
+	s.level.UpdateMonsters(s.player)
+}
+
+// handleSearch handles searching for hidden doors and traps
+func (s *GameScreen) handleSearch() {
+	s.AddMessage("You search the area.")
+	// TODO: Implement search functionality for hidden doors/traps
+	// For now, just let monsters take their turn
+	s.level.UpdateMonsters(s.player)
+}
+
+// handleOpenDoor handles opening doors
+func (s *GameScreen) handleOpenDoor() {
+	s.AddMessage("Which direction? (not implemented yet)")
+	// TODO: Implement door opening functionality
+}
+
+// handleCloseDoor handles closing doors
+func (s *GameScreen) handleCloseDoor() {
+	s.AddMessage("Which direction? (not implemented yet)")
+	// TODO: Implement door closing functionality
+}
+
+// canGoDownstairs checks if the player can go down stairs
+func (s *GameScreen) canGoDownstairs() bool {
+	if s.dungeonManager == nil {
+		return false
+	}
+	return s.dungeonManager.CanGoDownstairs()
+}

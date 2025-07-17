@@ -5,6 +5,7 @@ package screen
 import (
 	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/cli"
+	"github.com/yuru-sha/gorogue/internal/core/command"
 	"github.com/yuru-sha/gorogue/internal/core/wizard"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
@@ -40,6 +41,7 @@ type GameScreen struct {
 	equippableItems []*gameitem.Item       // 装備可能アイテムリスト
 	cliBuffer       string                 // CLI入力バッファ
 	cliHistory      []string               // CLIコマンド履歴
+	cmdParser       *command.Parser        // Command parser
 }
 
 // NewGameScreen creates a new game screen
@@ -55,6 +57,7 @@ func NewGameScreen(width, height int, player *actor.Player) *GameScreen {
 		equippableItems: make([]*gameitem.Item, 0),
 		cliBuffer:       "",
 		cliHistory:      make([]string, 0),
+		cmdParser:       command.NewParser(),
 	}
 
 	// PyRogue風の初期メッセージを追加

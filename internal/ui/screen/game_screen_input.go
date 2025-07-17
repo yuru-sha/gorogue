@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/anaseto/gruid"
+	"github.com/yuru-sha/gorogue/internal/core/command"
 	"github.com/yuru-sha/gorogue/internal/core/state"
 	gameitem "github.com/yuru-sha/gorogue/internal/game/item"
 	"github.com/yuru-sha/gorogue/internal/game/magic"
@@ -37,54 +38,73 @@ func (s *GameScreen) HandleInput(msg gruid.Msg) state.GameState {
 
 // handleNormalInput handles input in normal mode
 func (s *GameScreen) handleNormalInput(key gruid.Key) state.GameState {
-	switch key {
-	case gruid.KeyEscape:
-		logger.Info("Returning to menu")
-		return state.StateMenu
-	case "Left", "h", gruid.KeyArrowLeft:
-		s.tryMovePlayer(-1, 0)
-	case "Right", "l", gruid.KeyArrowRight:
-		s.tryMovePlayer(1, 0)
-	case "Up", "k", gruid.KeyArrowUp:
-		s.tryMovePlayer(0, -1)
-	case "Down", "j", gruid.KeyArrowDown:
-		s.tryMovePlayer(0, 1)
-	case "y":
-		s.tryMovePlayer(-1, -1)
-	case "u":
-		s.tryMovePlayer(1, -1)
-	case "b":
-		s.tryMovePlayer(-1, 1)
-	case "n":
-		s.tryMovePlayer(1, 1)
-	case "Q":
+	// Parse the key into a command
+	cmd := s.cmdParser.Parse(key)
+	
+	switch cmd.Type {
+	// Movement commands
+	case command.CmdMoveWest, command.CmdMoveEast, command.CmdMoveNorth, command.CmdMoveSouth,
+		command.CmdMoveNorthWest, command.CmdMoveNorthEast, command.CmdMoveSouthWest, command.CmdMoveSouthEast:
+		s.tryMovePlayer(cmd.Direction.X, cmd.Direction.Y)
+
+	// Action commands
+	case command.CmdLook:
+		s.handleLook()
+	case command.CmdInventory:
+		s.showInventory()
+	case command.CmdPickUp:
+		s.handlePickUp()
+	case command.CmdDrop:
+		s.enterDropMode()
+	case command.CmdUse:
+		s.enterUseMode()
+	case command.CmdQuaff:
+		s.enterQuaffMode()
+	case command.CmdRead:
+		s.enterReadMode()
+	case command.CmdWield:
+		s.enterEquipMode()
+	case command.CmdTakeOff:
+		s.enterUnequipMode()
+	case command.CmdWait:
+		s.handleWait()
+	case command.CmdSearch:
+		s.handleSearch()
+	case command.CmdOpen:
+		s.handleOpenDoor()
+	case command.CmdClose:
+		s.handleCloseDoor()
+
+	// Stair commands
+	case command.CmdGoUpstairs:
+		s.handleStairs(true)
+	case command.CmdGoDownstairs:
+		// Check if we're on stairs - if so, go down, otherwise wait
+		if s.canGoDownstairs() {
+			s.handleStairs(false)
+		} else {
+			s.handleWait()
+		}
+
+	// System commands
+	case command.CmdQuit:
 		logger.Info("Quit requested")
 		return state.StateMenu
-	case "<", ",": // Go upstairs
-		s.handleStairs(true)
-	case ">", ".": // Go downstairs
-		s.handleStairs(false)
-	case "i": // Show inventory
-		s.showInventory()
-	case "d": // Drop item
-		s.enterDropMode()
-	case "w": // Wield/wear item
-		s.enterEquipMode()
-	case "t": // Take off item
-		s.enterUnequipMode()
-	case "q": // Quaff potion
-		s.enterQuaffMode()
-	case "r": // Read scroll
-		s.enterReadMode()
-	case ":": // Enter CLI mode
-		s.enterCLIMode()
-	case "^W", "W": // Ctrl+W or Shift+W to toggle wizard mode
+	case command.CmdHelp:
+		return state.StateHelp
+	case command.CmdEscape:
+		logger.Info("Returning to menu")
+		return state.StateMenu
+	case command.CmdWizard:
 		s.wizardMode.Toggle()
 		status := "OFF"
 		if s.wizardMode.IsActive {
 			status = "ON"
 		}
 		s.AddMessage(fmt.Sprintf("ウィザードモード: %s", status))
+	case command.CmdCLI:
+		s.enterCLIMode()
+
 	default:
 		// Check if it's a wizard command
 		if s.wizardMode.IsActive && len(string(key)) == 1 {
