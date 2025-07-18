@@ -3,7 +3,7 @@
 package score
 
 import (
-	"math"
+	"fmt"
 	"time"
 
 	"github.com/yuru-sha/gorogue/internal/game/actor"
