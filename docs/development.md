@@ -18,89 +18,101 @@ cache_control: {"type": "ephemeral"}
 
 ### 必要条件
 
-- Python 3.12以上
-- uv（パッケージマネージャー）
+- Go 1.22以上
 - make（ビルドツール）
+- Git（バージョン管理）
 
 ### セットアップ手順
 
 ```bash
 # リポジトリのクローン
-git clone https://github.com/yourusername/GoRogue.git
-cd GoRogue
+git clone https://github.com/yuru-sha/gorogue.git
+cd gorogue
 
-# 開発環境のセットアップ
-make setup
+# 依存関係のインストール
+go mod tidy
+
+# ビルドの確認
+go build ./cmd/gorogue
 ```
 
 ## プロジェクト構造
 
 ```
-GoRogue/
-├── docs/               # ドキュメント
-├── assets/            # アセット（フォント、画像など）
-├── logs/            # ログファイル
-├── src/               # ソースコード
-│   └── GoRogue/
-│       ├── core/      # コアゲームロジック
-│       ├── entities/  # ゲーム内エンティティ
-│       ├── map/       # マップ生成
-│       ├── ui/        # ユーザーインターフェース
-│       └── utils/     # ユーティリティ
-└── tests/             # テストコード
+gorogue/
+├── docs/                # ドキュメント
+├── assets/             # アセット（フォント、画像など）
+├── cmd/gorogue/        # メインアプリケーション
+├── internal/           # 内部パッケージ
+│   ├── game/         # ゲームロジック
+│   ├── entity/       # エンティティ管理
+│   ├── dungeon/      # ダンジョン生成
+│   └── ui/           # ユーザーインターフェース
+├── pkg/                # 外部公開パッケージ
+└── test/               # テストコード
 ```
 
 ## 設定管理
 
-GoRogueでは.envファイルによる環境変数管理を採用しています。開発・運用設定の分離が可能です。
+GoRogueでは環境変数と設定ファイルによる設定管理を採用しています。開発・運用設定の分離が可能です。
 
-### 環境変数設定の手順
+### 設定ファイルの作成
 
-1. **.envファイルの作成**：
+1. **設定ファイルの作成**：
 ```bash
 # 設定テンプレートをコピー
-cp .env.example .env
+cp config.toml.example config.toml
 
-# .envファイルを編集
-vim .env  # または好みのエディタで編集
+# 設定ファイルを編集
+vim config.toml  # または好みのエディタで編集
 ```
 
 2. **環境変数による設定上書き**：
 ```bash
 # 一時的な設定変更
-DEBUG=true make run
+GOROGUE_DEBUG=true go run ./cmd/gorogue
 
-# 永続的な設定変更は.envファイルで行う
+# 永続的な設定変更はconfig.tomlで行う
 ```
 
 ### 主要な環境変数
 
 | 環境変数 | デフォルト値 | 説明 | 用途 |
 |----------|--------------|------|------|
-| `DEBUG` | false | デバッグモード | 開発時の詳細ログ出力 |
-| `LOG_LEVEL` | INFO | ログレベル | DEBUG/INFO/WARNING/ERROR |
-| `AUTO_SAVE_ENABLED` | true | オートセーブ機能 | セーブ頻度制御 |
-| `FONT_PATH` | auto | フォントファイルパス | 表示カスタマイズ |
+| `GOROGUE_DEBUG` | false | デバッグモード | 開発時の詳細ログ出力 |
+| `GOROGUE_LOG_LEVEL` | INFO | ログレベル | DEBUG/INFO/WARNING/ERROR |
+| `GOROGUE_CONFIG` | config.toml | 設定ファイルパス | 設定ファイル指定 |
+| `GOROGUE_PROFILE` | false | プロファイリング | パフォーマンス解析 |
 
 ### 開発・運用環境の分離
 
-**開発環境設定例**（.env）：
-```bash
-DEBUG=true
-LOG_LEVEL=DEBUG
-AUTO_SAVE_ENABLED=true
+**開発環境設定例**（config.dev.toml）：
+```toml
+[debug]
+enabled = true
+log_level = "DEBUG"
+profile = true
+
+[game]
+auto_save = true
+save_interval = 100
 ```
 
-**運用環境設定例**：
-```bash
-DEBUG=false
-LOG_LEVEL=INFO
-AUTO_SAVE_ENABLED=false
+**運用環境設定例**（config.prod.toml）：
+```toml
+[debug]
+enabled = false
+log_level = "INFO"
+profile = false
+
+[game]
+auto_save = false
+save_interval = 1000
 ```
 
 ### 実装場所
-- `src/GoRogue/config/env.py` - 環境変数管理クラス
-- `src/GoRogue/config/legacy.py` - 後方互換性用レガシー設定
+- `src/pyrogue/config/env.py` - 環境変数管理クラス
+- `src/pyrogue/config/legacy.py` - 後方互換性用レガシー設定
 
 ## 開発ワークフロー
 
@@ -136,7 +148,7 @@ make test
 pytest tests/test_specific.py
 
 # カバレッジレポートの生成
-pytest --cov=GoRogue tests/
+pytest --cov=pyrogue tests/
 ```
 
 ## コーディング規約
@@ -152,14 +164,14 @@ pytest --cov=GoRogue tests/
 
 ### 概要
 
-GoRogueは、GUIとCLIの両エンジンで統一されたコマンド処理システムを実装しています。新しいコマンドを追加する際は、以下の手順に従ってください。
+PyRogueは、GUIとCLIの両エンジンで統一されたコマンド処理システムを実装しています。新しいコマンドを追加する際は、以下の手順に従ってください。
 
 ### 新しいコマンドの追加手順
 
 #### 1. CommonCommandHandlerの拡張
 
 ```python
-# src/GoRogue/core/command_handler.py
+# src/pyrogue/core/command_handler.py
 class CommonCommandHandler:
     def handle_command(self, command: str, args: list[str] | None = None) -> CommandResult:
         # 既存のコマンド処理...
@@ -180,7 +192,7 @@ class CommonCommandHandler:
 #### 2. GameLogicの拡張
 
 ```python
-# src/GoRogue/core/game_logic.py
+# src/pyrogue/core/game_logic.py
 class GameLogic:
     def handle_new_action(self) -> bool:
         """新しいアクションの実装"""
@@ -195,7 +207,7 @@ class GameLogic:
 #### 3. キー入力マッピングの追加（GUI用）
 
 ```python
-# src/GoRogue/core/input_handlers.py
+# src/pyrogue/core/input_handlers.py
 def _key_to_command(self, event: tcod.event.KeyDown) -> str | None:
     # 既存のキーマッピング...
 
@@ -207,7 +219,7 @@ def _key_to_command(self, event: tcod.event.KeyDown) -> str | None:
 #### 4. ヘルプテキストの更新
 
 ```python
-# src/GoRogue/core/command_handler.py
+# src/pyrogue/core/command_handler.py
 def _handle_help(self) -> CommandResult:
     help_text = """
 Available Commands:
@@ -223,7 +235,7 @@ Available Commands:
 #### 5. テストの作成
 
 ```python
-# tests/GoRogue/core/test_command_handler.py
+# tests/pyrogue/core/test_command_handler.py
 def test_new_command():
     """新しいコマンドのテスト"""
     context = MockCommandContext()
@@ -256,7 +268,7 @@ def test_new_command():
 
 ```bash
 # CLIモードで新しいコマンドをテスト
-python -m GoRogue.main --cli
+python -m pyrogue.main --cli
 > help           # ヘルプの確認
 > newcommand     # 新しいコマンドのテスト
 ```
@@ -265,7 +277,7 @@ python -m GoRogue.main --cli
 
 ```bash
 # 新しいコマンドのテストを実行
-pytest tests/GoRogue/core/test_command_handler.py::test_new_command -v
+pytest tests/pyrogue/core/test_command_handler.py::test_new_command -v
 ```
 
 ### トラブルシューティング
@@ -289,7 +301,7 @@ pytest tests/GoRogue/core/test_command_handler.py::test_new_command -v
 ### UI関連の課題
 
 #### 1. 入力処理の修正中問題
-- **場所**: `src/GoRogue/ui/components/input_handler.py`
+- **場所**: `src/pyrogue/ui/components/input_handler.py`
 - **問題**: キーボード入力処理の一部で不具合が発生
 - **詳細**: 特定のキー組み合わせで期待通りの動作がしない場合がある
 - **影響範囲**: 特定の操作シナリオでのユーザー体験
@@ -307,7 +319,7 @@ pytest tests/GoRogue/core/test_command_handler.py::test_new_command -v
 - **優先度**: 中
 
 #### 3. 複雑なゲーム状態のシリアライゼーション
-- **場所**: `src/GoRogue/ui/components/save_load_manager.py`
+- **場所**: `src/pyrogue/ui/components/save_load_manager.py`
 - **問題**: セーブデータの一貫性保証が困難
 - **詳細**:
   - フロアデータの完全復元
@@ -366,12 +378,12 @@ pytest tests/GoRogue/core/test_command_handler.py::test_new_command -v
 - ドロップ処理が`remove_item()`をデフォルト引数（count=1）で呼び出し
 
 #### 修正内容
-1. **`src/GoRogue/entities/actors/inventory.py`**
+1. **`src/pyrogue/entities/actors/inventory.py`**
    - `remove_item(item, count=1)`に数量パラメータを追加
    - スタック可能アイテムの場合、count分だけstack_countを減算
    - stack_countが0以下になった場合のみアイテム削除
 
-2. **`src/GoRogue/ui/screens/inventory_screen.py`**
+2. **`src/pyrogue/ui/screens/inventory_screen.py`**
    - ドロップ処理で全スタック削除するよう修正：`remove_item(item, item.stack_count)`
    - ドロップメッセージにスタック数を反映
 
@@ -382,6 +394,6 @@ pytest tests/GoRogue/core/test_command_handler.py::test_new_command -v
 
 #### 修正ファイル
 ```
-src/GoRogue/entities/actors/inventory.py (lines 53-74)
-src/GoRogue/ui/screens/inventory_screen.py (lines 279-292)
+src/pyrogue/entities/actors/inventory.py (lines 53-74)
+src/pyrogue/ui/screens/inventory_screen.py (lines 279-292)
 ```
