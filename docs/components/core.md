@@ -1,10 +1,10 @@
 # Core コンポーネント
 
-PyRogueのゲームエンジンとコアシステム。ゲームループ、状態管理、入力処理、セーブ・ロード機能を統合管理します。
+GoRogueのゲームエンジンとコアシステム。ゲームループ、状態管理、入力処理、セーブ・ロード機能を統合管理します。
 
 ## 概要
 
-`src/pyrogue/core/`は、PyRogueの心臓部となるゲームエンジンシステムです。GUI/CLIの両対応、ターンベース制御、責務分離されたマネージャーアーキテクチャにより、堅牢で拡張性の高いゲームループを実現しています。
+`internal/core/`は、GoRogueの心臓部となるゲームエンジンシステムです。GUI/CLIの両対応、ターンベース制御、責務分離されたマネージャーアーキテクチャにより、堅牢で拡張性の高いゲームループを実現しています。
 
 ## アーキテクチャ
 
@@ -12,27 +12,26 @@ PyRogueのゲームエンジンとコアシステム。ゲームループ、状�
 
 ```
 core/
-├── __init__.py
-├── engine.py               # メインゲームエンジン (GUI)
-├── cli_engine.py          # CLIテスト用エンジン
-├── game_logic.py          # ゲームロジック統合管理
-├── game_states.py         # ゲーム状態定義
-├── input_handlers.py      # 入力処理システム
-├── save_manager.py        # セーブ・ロード機能
-├── score_manager.py       # スコアランキング
-├── command_handler.py     # 共通コマンドハンドラー (v0.1.0)
-├── auto_explore_handler.py # 自動探索ハンドラー (v0.1.0)
-├── debug_command_handler.py # デバッグコマンドハンドラー (v0.1.0)
-├── save_load_handler.py   # セーブ・ロードハンドラー (v0.1.0)
-├── info_command_handler.py # 情報表示ハンドラー (v0.1.0)
+├── engine.go              # メインゲームエンジン (GUI)
+├── cli_engine.go          # CLIテスト用エンジン
+├── game_logic.go          # ゲームロジック統合管理
+├── game_states.go         # ゲーム状態定義
+├── input_handlers.go      # 入力処理システム
+├── save_manager.go        # セーブ・ロード機能
+├── score_manager.go       # スコアランキング
+├── command_handler.go     # 共通コマンドハンドラー (v0.1.0)
+├── auto_explore_handler.go # 自動探索ハンドラー (v0.1.0)
+├── debug_command_handler.go # デバッグコマンドハンドラー (v0.1.0)
+├── save_load_handler.go   # セーブ・ロードハンドラー (v0.1.0)
+├── info_command_handler.go # 情報表示ハンドラー (v0.1.0)
 └── managers/              # 専門マネージャー群
-    ├── game_context.py    # 共有コンテキスト
-    ├── turn_manager.py    # ターン制御
-    ├── combat_manager.py  # 戦闘システム
-    ├── monster_ai_manager.py # モンスターAI
-    ├── movement_manager.py   # 移動処理
-    ├── item_manager.py      # アイテム管理
-    └── floor_manager.py     # フロア管理
+    ├── game_context.go    # 共有コンテキスト
+    ├── turn_manager.go    # ターン制御
+    ├── combat_manager.go  # 戦闘システム
+    ├── monster_ai_manager.go # モンスターAI
+    ├── movement_manager.go   # 移動処理
+    ├── item_manager.go      # アイテム管理
+    └── floor_manager.go     # フロア管理
 ```
 
 ### 設計原則
@@ -49,24 +48,26 @@ core/
 
 #### Engine (GUI版エンジン)
 
-PyRogueのメインゲームエンジン。フルグラフィカルUIとリアルタイム操作を提供。
+GoRogueのメインゲームエンジン。フルグラフィカルUIとリアルタイム操作を提供。
 
 **主要機能:**
-- **レンダリングエンジン**: TCOD使用のフルグラフィカルUI
+- **レンダリングエンジン**: gruid使用のフルグラフィカルUI
 - **イベント処理**: リアルタイムなキー入力とウィンドウイベント処理
 - **画面管理**: 複数画面状態の統合管理
 - **リサイズ対応**: 動的ウィンドウサイズ変更サポート
 
 **ゲームループ実装:**
-```python
-def main_loop(self) -> None:
-    """メインゲームループ"""
-    while self.running:
-        tcod.console_clear(self.root_console)
-        self._render_current_state()
-        tcod.console_flush()
-        self._process_events()
-        self._update_game_state()
+```go
+func (e *Engine) MainLoop() {
+    // メインゲームループ
+    for e.running {
+        e.console.Clear()
+        e.renderCurrentState()
+        e.console.Flush()
+        e.processEvents()
+        e.updateGameState()
+    }
+}
 ```
 
 #### CLIEngine (テスト・自動化用エンジン)
@@ -80,62 +81,74 @@ def main_loop(self) -> None:
 - **デバッグ機能**: 開発用デバッグコマンド豊富
 
 **使用例:**
-```python
-cli_engine = CLIEngine()
-cli_engine.start_new_game()
-cli_engine.execute_command("move south")
-cli_engine.execute_command("get item")
+```go
+cliEngine := NewCLIEngine()
+cliEngine.StartNewGame()
+cliEngine.ExecuteCommand("move south")
+cliEngine.ExecuteCommand("get item")
 ```
 
 ### ゲーム状態管理
 
-#### GameStates (game_states.py)
+#### GameStates (game_states.go)
 
 ゲーム全体の状態を型安全に定義。
 
-```python
-class GameStates(Enum):
-    MENU = auto()           # メニュー画面
-    PLAYERS_TURN = auto()   # プレイヤーターン
-    ENEMY_TURN = auto()     # 敵ターン
-    PLAYER_DEAD = auto()    # プレイヤー死亡
-    GAME_OVER = auto()      # ゲームオーバー
-    VICTORY = auto()        # 勝利
-    SHOW_INVENTORY = auto() # インベントリ表示
-    DROP_INVENTORY = auto() # アイテムドロップ
-    SHOW_MAGIC = auto()     # 魔法画面
-    TARGETING = auto()      # ターゲット選択
-    DIALOGUE = auto()       # 対話
-    LEVEL_UP = auto()       # レベルアップ
-    CHARACTER_SCREEN = auto() # キャラクター画面
-    EXIT = auto()           # 終了
+```go
+type GameState int
+
+const (
+    MENU GameState = iota           // メニュー画面
+    PLAYERS_TURN                    // プレイヤーターン
+    ENEMY_TURN                      // 敵ターン
+    PLAYER_DEAD                     // プレイヤー死亡
+    GAME_OVER                       // ゲームオーバー
+    VICTORY                         // 勝利
+    SHOW_INVENTORY                  // インベントリ表示
+    DROP_INVENTORY                  // アイテムドロップ
+    SHOW_MAGIC                      // 魔法画面
+    TARGETING                       // ターゲット選択
+    DIALOGUE                        // 対話
+    LEVEL_UP                        // レベルアップ
+    CHARACTER_SCREEN                // キャラクター画面
+    EXIT                            // 終了
+)
 ```
 
 ### 統合管理システム
 
-#### GameLogic (game_logic.py)
+#### GameLogic (game_logic.go)
 
 ゲーム全体のビジネスロジックを統合管理する調整役（Coordinator）。
 
 **設計転換:**
-- **リファクタリング前**: モノリシックな巨大クラス
+- **リファクタリング前**: モノリシックな巨大構造体
 - **リファクタリング後**: 責務分離された専門マネージャーの統合
 
 **統合管理機能:**
-```python
-class GameLogic:
-    def __init__(self, game_context: GameContext):
-        # 各専門マネージャーの初期化
-        self.movement_manager = MovementManager(game_context)
-        self.combat_manager = CombatManager(game_context)
-        self.item_manager = ItemManager(game_context)
-        self.floor_manager = FloorManager(game_context)
-        # ... 他のマネージャー
+```go
+type GameLogic struct {
+    movementManager   *MovementManager
+    combatManager     *CombatManager
+    itemManager       *ItemManager
+    floorManager      *FloorManager
+    // ... 他のマネージャー
+}
+
+func NewGameLogic(gameContext *GameContext) *GameLogic {
+    return &GameLogic{
+        movementManager: NewMovementManager(gameContext),
+        combatManager:   NewCombatManager(gameContext),
+        itemManager:     NewItemManager(gameContext),
+        floorManager:    NewFloorManager(gameContext),
+        // ... 他のマネージャー
+    }
+}
 ```
 
 ### コマンド処理システム（Handler Pattern - v0.1.0）
 
-#### CommonCommandHandler (command_handler.py)
+#### CommonCommandHandler (command_handler.go)
 
 機能別専用ハンドラーによる責務分離型コマンド処理システム。
 
@@ -149,28 +162,39 @@ CommonCommandHandler (コア)
 ```
 
 **実装例:**
-```python
-class CommonCommandHandler:
-    def __init__(self, context: CommandContext) -> None:
-        self.context = context
-        # 遅延初期化によるメモリ効率化
-        self._auto_explore_handler = None
-        self._debug_handler = None
-        self._save_load_handler = None
-        self._info_handler = None
+```go
+type CommonCommandHandler struct {
+    context           *CommandContext
+    // 遅延初期化によるメモリ効率化
+    autoExploreHandler *AutoExploreHandler
+    debugHandler      *DebugCommandHandler
+    saveLoadHandler   *SaveLoadHandler
+    infoHandler       *InfoCommandHandler
+}
 
-    def handle_command(self, command: str, args: list[str] | None = None) -> CommandResult:
-        if command in ["auto_explore", "O"]:
-            return self._get_auto_explore_handler().handle_auto_explore()
-        if command == "debug":
-            return self._get_debug_handler().handle_debug_command(args)
-        # ...
+func NewCommonCommandHandler(context *CommandContext) *CommonCommandHandler {
+    return &CommonCommandHandler{
+        context: context,
+    }
+}
 
-    def _get_auto_explore_handler(self):
-        """自動探索ハンドラーを取得（遅延初期化）"""
-        if self._auto_explore_handler is None:
-            self._auto_explore_handler = AutoExploreHandler(self.context)
-        return self._auto_explore_handler
+func (h *CommonCommandHandler) HandleCommand(command string, args []string) CommandResult {
+    switch command {
+    case "auto_explore", "O":
+        return h.getAutoExploreHandler().HandleAutoExplore()
+    case "debug":
+        return h.getDebugHandler().HandleDebugCommand(args)
+    // ...
+    }
+}
+
+func (h *CommonCommandHandler) getAutoExploreHandler() *AutoExploreHandler {
+    // 自動探索ハンドラーを取得（遅延初期化）
+    if h.autoExploreHandler == nil {
+        h.autoExploreHandler = NewAutoExploreHandler(h.context)
+    }
+    return h.autoExploreHandler
+}
 ```
 
 **利点:**
@@ -204,7 +228,7 @@ class CommonCommandHandler:
 
 ### 入力処理システム
 
-#### InputHandlers (input_handlers.py)
+#### InputHandlers (input_handlers.go)
 
 GUI/CLI両対応の統一入力処理システム。
 
@@ -214,36 +238,46 @@ GUI/CLI両対応の統一入力処理システム。
 - **Strategy Pattern**: 状態別ハンドリング
 
 **実装例:**
-```python
-def handle_input(self, key: tcod.event.KeyDown) -> Optional[Action]:
-    """状態に応じた入力処理"""
-    current_state = self.game_logic.game_state
+```go
+func (h *InputHandler) HandleInput(key gruid.Key) *Action {
+    // 状態に応じた入力処理
+    currentState := h.gameLogic.GameState
 
-    if current_state == GameStates.PLAYERS_TURN:
-        return self._handle_player_turn(key)
-    elif current_state == GameStates.SHOW_INVENTORY:
-        return self._handle_inventory(key)
-    # ... 他の状態処理
+    switch currentState {
+    case PLAYERS_TURN:
+        return h.handlePlayerTurn(key)
+    case SHOW_INVENTORY:
+        return h.handleInventory(key)
+    // ... 他の状態処理
+    }
+    return nil
+}
 ```
 
 ### 永続化システム
 
-#### SaveManager (save_manager.py)
+#### SaveManager (save_manager.go)
 
 Permadeathシステムに対応したセーブ・ロード機能。
 
 **重要機能:**
-```python
-class SaveManager:
-    def save_game(self, game_context: GameContext) -> bool:
-        """ゲーム状態の保存"""
-        # セーブデータの生成
-        # SHA256チェックサムによる整合性保証
-        # メイン/バックアップの二重保存
+```go
+type SaveManager struct {
+    // セーブマネージャーの実装
+}
 
-    def delete_save_on_death(self) -> None:
-        """Permadeath: 死亡時のセーブデータ削除"""
-        # 真のローグライクゲーム体験の実現
+func (s *SaveManager) SaveGame(gameContext *GameContext) error {
+    // ゲーム状態の保存
+    // SHA256チェックサムによる整合性保証
+    // メイン/バックアップの二重保存
+    return nil
+}
+
+func (s *SaveManager) DeleteSaveOnDeath() error {
+    // Permadeath: 死亡時のセーブデータ削除
+    // 真のローグライクゲーム体験の実現
+    return nil
+}
 ```
 
 **Permadeath実装:**
@@ -251,7 +285,7 @@ class SaveManager:
 - 改ざん検出によるチート防止
 - バックアップ機能による安全性
 
-#### ScoreManager (score_manager.py)
+#### ScoreManager (score_manager.go)
 
 ランキングシステムとゲーム記録管理。
 
@@ -261,19 +295,36 @@ class SaveManager:
 - ゲーム結果（勝利/死亡）とその詳細
 
 **機能:**
-```python
-def record_score(self, game_context: GameContext,
-                death_reason: str = None, victory: bool = False) -> None:
-    """スコア記録"""
-    score_entry = {
-        "player_name": game_context.player.name,
-        "level": game_context.player.level,
-        "floor": game_context.dungeon_manager.current_floor,
-        "gold": game_context.player.gold,
-        "monsters_killed": game_context.player.monsters_killed,
-        "result": "Victory" if victory else f"Died: {death_reason}",
-        "timestamp": datetime.now().isoformat()
+```go
+type ScoreEntry struct {
+    PlayerName     string
+    Level          int
+    Floor          int
+    Gold           int
+    MonstersKilled int
+    Result         string
+    Timestamp      time.Time
+}
+
+func (s *ScoreManager) RecordScore(gameContext *GameContext, deathReason string, victory bool) error {
+    // スコア記録
+    scoreEntry := ScoreEntry{
+        PlayerName:     gameContext.Player.Name,
+        Level:          gameContext.Player.Level,
+        Floor:          gameContext.DungeonManager.CurrentFloor,
+        Gold:           gameContext.Player.Gold,
+        MonstersKilled: gameContext.Player.MonstersKilled,
+        Timestamp:      time.Now(),
     }
+    
+    if victory {
+        scoreEntry.Result = "Victory"
+    } else {
+        scoreEntry.Result = fmt.Sprintf("Died: %s", deathReason)
+    }
+    
+    return s.saveScore(scoreEntry)
+}
 ```
 
 ## Manager アーキテクチャ
@@ -282,16 +333,27 @@ def record_score(self, game_context: GameContext,
 
 全マネージャー間の共有データハブ。依存関係注入のコンテナ役割。
 
-```python
-@dataclass
-class GameContext:
-    """ゲーム全体の共有コンテキスト"""
-    player: Player
-    inventory: Inventory
-    dungeon_manager: DungeonManager
-    message_log: MessageLog
-    game_state: GameStates = GameStates.PLAYERS_TURN
-    turn_count: int = 0
+```go
+type GameContext struct {
+    // ゲーム全体の共有コンテキスト
+    Player         *Player
+    Inventory      *Inventory
+    DungeonManager *DungeonManager
+    MessageLog     *MessageLog
+    GameState      GameState
+    TurnCount      int
+}
+
+func NewGameContext(player *Player, inventory *Inventory, dungeonManager *DungeonManager, messageLog *MessageLog) *GameContext {
+    return &GameContext{
+        Player:         player,
+        Inventory:      inventory,
+        DungeonManager: dungeonManager,
+        MessageLog:     messageLog,
+        GameState:      PLAYERS_TURN,
+        TurnCount:      0,
+    }
+}
 ```
 
 ### 専門マネージャー群
@@ -305,14 +367,16 @@ class GameContext:
 - MP自然回復処理
 
 **ターン処理フロー:**
-```python
-def execute_turn(self) -> None:
-    """1ターンの実行"""
-    self._process_status_effects()    # 状態異常処理
-    self._update_hunger_system()      # 満腹度更新
-    self._process_mp_regeneration()   # MP回復
-    self._check_win_condition()       # 勝利条件確認
-    self._increment_turn_counter()    # ターン数増加
+```go
+func (t *TurnManager) ExecuteTurn() error {
+    // 1ターンの実行
+    t.processStatusEffects()    // 状態異常処理
+    t.updateHungerSystem()      // 満腹度更新
+    t.processMPRegeneration()   // MP回復
+    t.checkWinCondition()       // 勝利条件確認
+    t.incrementTurnCounter()    // ターン数増加
+    return nil
+}
 ```
 
 #### CombatManager (戦闘システム)
@@ -332,16 +396,19 @@ def execute_turn(self) -> None:
 - 分裂処理
 
 **AI行動パターン:**
-```python
-def execute_monster_ai(self, monster: Monster) -> None:
-    """モンスターAI実行"""
-    if self._can_see_player(monster):
-        if self._is_adjacent_to_player(monster):
-            self._attack_player(monster)
-        else:
-            self._move_towards_player(monster)
-    else:
-        self._random_movement(monster)
+```go
+func (m *MonsterAIManager) ExecuteMonsterAI(monster *Monster) error {
+    // モンスターAI実行
+    if m.canSeePlayer(monster) {
+        if m.isAdjacentToPlayer(monster) {
+            return m.attackPlayer(monster)
+        } else {
+            return m.moveTowardsPlayer(monster)
+        }
+    } else {
+        return m.randomMovement(monster)
+    }
+}
 ```
 
 #### MovementManager (移動処理)
@@ -370,24 +437,26 @@ def execute_monster_ai(self, monster: Monster) -> None:
 
 ### メインゲームループ (Engine)
 
-```python
-def main_loop(self) -> None:
-    """統合ゲームループ"""
-    while self.running:
-        # 1. 画面クリア
-        tcod.console_clear(self.root_console)
+```go
+func (e *Engine) MainLoop() {
+    // 統合ゲームループ
+    for e.running {
+        // 1. 画面クリア
+        e.rootConsole.Clear()
 
-        # 2. 現在状態のレンダリング
-        self._render_current_state()
+        // 2. 現在状態のレンダリング
+        e.renderCurrentState()
 
-        # 3. 画面更新
-        tcod.console_flush()
+        // 3. 画面更新
+        e.rootConsole.Flush()
 
-        # 4. イベント処理
-        self._process_events()
+        // 4. イベント処理
+        e.processEvents()
 
-        # 5. ゲーム状態更新
-        self._update_game_state()
+        // 5. ゲーム状態更新
+        e.updateGameState()
+    }
+}
 ```
 
 ### ターン制御フロー
@@ -416,85 +485,97 @@ Increment Turn Counter
 
 ### 依存関係注入パターン
 
-```python
-class GameLogic:
-    def __init__(self, game_context: GameContext):
-        """依存関係の注入"""
-        self.game_context = game_context
+```go
+type GameLogic struct {
+    gameContext     *GameContext
+    turnManager     *TurnManager
+    combatManager   *CombatManager
+    movementManager *MovementManager
+}
 
-        # 各マネージャーに共通コンテキストを注入
-        self.turn_manager = TurnManager(game_context)
-        self.combat_manager = CombatManager(game_context)
-        self.movement_manager = MovementManager(game_context)
+func NewGameLogic(gameContext *GameContext) *GameLogic {
+    // 依存関係の注入
+    return &GameLogic{
+        gameContext:     gameContext,
+        // 各マネージャーに共通コンテキストを注入
+        turnManager:     NewTurnManager(gameContext),
+        combatManager:   NewCombatManager(gameContext),
+        movementManager: NewMovementManager(gameContext),
+    }
+}
 ```
 
 ### テスタビリティ向上策
 
 **CLIEngine活用:**
-```python
-def test_combat_system():
-    """戦闘システムのテスト"""
-    cli_engine = CLIEngine()
-    cli_engine.start_new_game()
+```go
+func TestCombatSystem(t *testing.T) {
+    // 戦闘システムのテスト
+    cliEngine := NewCLIEngine()
+    cliEngine.StartNewGame()
 
-    # モンスターとの戦闘をシミュレート
-    cli_engine.execute_command("move north")  # モンスターに近づく
-    cli_engine.execute_command("attack")      # 攻撃実行
+    // モンスターとの戦闘をシミュレート
+    cliEngine.ExecuteCommand("move north")  // モンスターに近づく
+    cliEngine.ExecuteCommand("attack")      // 攻撃実行
 
-    # 結果の検証
-    assert cli_engine.game_logic.game_context.player.health > 0
+    // 結果の検証
+    assert.Greater(t, cliEngine.GameLogic.GameContext.Player.Health, 0)
+}
 ```
 
 **モック対応:**
-```python
-# Protocol定義による抽象化
-class GameContextProtocol(Protocol):
-    player: Player
-    dungeon_manager: DungeonManager
+```go
+// インターフェース定義による抽象化
+type GameContextInterface interface {
+    GetPlayer() *Player
+    GetDungeonManager() *DungeonManager
+}
 
-# テストでのモック利用
-def test_movement_manager():
-    mock_context = create_mock_game_context()
-    movement_manager = MovementManager(mock_context)
-    # テスト実行...
+// テストでのモック利用
+func TestMovementManager(t *testing.T) {
+    mockContext := createMockGameContext()
+    movementManager := NewMovementManager(mockContext)
+    // テスト実行...
+}
 ```
 
 ## 使用パターン
 
 ### 基本的なゲーム開始
 
-```python
-from pyrogue.core.engine import Engine
+```go
+import "github.com/yuru-sha/gorogue/internal/core"
 
-# ゲームエンジンの初期化
-engine = Engine()
+// ゲームエンジンの初期化
+engine := core.NewEngine()
 
-# ゲームループ開始
-engine.run()
+// ゲームループ開始
+engine.Run()
 ```
 
 ### CLIモードでのテスト
 
-```python
-from pyrogue.core.cli_engine import CLIEngine
+```go
+import "github.com/yuru-sha/gorogue/internal/core"
 
-# CLIエンジンでの自動テスト
-cli = CLIEngine()
-cli.start_new_game()
+// CLIエンジンでの自動テスト
+cli := core.NewCLIEngine()
+cli.StartNewGame()
 
-# 自動的なゲームプレイ
-commands = ["move north", "get gold", "move east", "attack"]
-for command in commands:
-    cli.execute_command(command)
+// 自動的なゲームプレイ
+commands := []string{"move north", "get gold", "move east", "attack"}
+for _, command := range commands {
+    cli.ExecuteCommand(command)
+}
 ```
 
 ### マネージャーの個別利用
 
-```python
-# 戦闘システムの直接利用
-combat_manager = CombatManager(game_context)
-damage = combat_manager.calculate_damage(attacker, defender)
-combat_manager.apply_damage(defender, damage)
+```go
+// 戦闘システムの直接利用
+combatManager := NewCombatManager(gameContext)
+damage := combatManager.CalculateDamage(attacker, defender)
+combatManager.ApplyDamage(defender, damage)
 ```
 
 ## 拡張ガイド
@@ -746,7 +827,7 @@ def dump_game_state(game_context: GameContext) -> dict:
 
 ## まとめ
 
-Core コンポーネントは、PyRogueプロジェクトの中核として以下の価値を提供します：
+Core コンポーネントは、GoRogueプロジェクトの中核として以下の価値を提供します：
 
 - **統合管理**: 複雑なゲームロジックの整理された統合
 - **責務分離**: 保守性と拡張性を高める明確な役割分担

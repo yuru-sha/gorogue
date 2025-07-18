@@ -26,7 +26,7 @@ Storage: "50MB以上"
 #### 依存関係
 ```yaml
 Core Dependencies:
-  ebiten: "v2.6+"
+  gruid: "v0.23.0+"
   
 
 Development Dependencies:
@@ -59,27 +59,27 @@ Target Requirements:
 ```yaml
 Application Layer:
   - Description: "エントリーポイントと実行制御"
-  - Components: ["main.py", "cli_engine.py", "engine.py"]
+  - Components: ["cmd/gorogue/main.go", "cmd/gorogue-cli/main.go", "internal/game/engine.go"]
   - Responsibilities: ["アプリケーション初期化", "実行モード制御", "終了処理"]
 
 Presentation Layer:
   - Description: "ユーザーインターフェースとプレゼンテーション"
-  - Components: ["ui/screens/", "ui/components/"]
+  - Components: ["internal/ui/screens/", "internal/ui/components/"]
   - Responsibilities: ["画面表示", "入力処理", "レンダリング"]
 
 Business Logic Layer:
   - Description: "ゲームロジックとビジネスルール"
-  - Components: ["core/game_logic.py", "core/managers/"]
+  - Components: ["internal/game/logic.go", "internal/game/managers/"]
   - Responsibilities: ["ゲームルール実装", "状態管理", "計算処理"]
 
 Domain Layer:
   - Description: "ドメインエンティティとビジネスモデル"
-  - Components: ["entities/", "map/"]
+  - Components: ["internal/game/actor/", "internal/game/dungeon/"]
   - Responsibilities: ["エンティティ定義", "ドメインルール", "不変条件"]
 
 Infrastructure Layer:
   - Description: "外部システムとの接続"
-  - Components: ["config/", "utils/", "save_manager.py"]
+  - Components: ["internal/config/", "internal/utils/", "internal/game/save/"]
   - Responsibilities: ["データ永続化", "設定管理", "ユーティリティ"]
 ```
 
@@ -89,8 +89,8 @@ Infrastructure Layer:
 
 #### GameLogic インターフェース
 
-```python
-class GameLogic:
+```go
+type GameLogic struct {
     """ゲームロジックの中央制御クラス"""
 
     def __init__(self, player: Player, dungeon_manager: DungeonManager) -> None:
@@ -139,8 +139,8 @@ class GameLogic:
 
 #### CommandContext プロトコル
 
-```python
-class CommandContext(Protocol):
+```go
+type CommandContext interface {
     """コマンド実行環境の抽象化"""
 
     @property
@@ -168,10 +168,16 @@ class CommandContext(Protocol):
 
 #### 基本データ型
 
-```python
-# 座標型
-Position = tuple[int, int]
-Direction = tuple[int, int]
+```go
+// Position represents a coordinate in the game world
+type Position struct {
+    X, Y int
+}
+
+// Direction represents a movement direction
+type Direction struct {
+    DX, DY int
+}
 
 # 結果型
 @dataclass
@@ -230,8 +236,8 @@ class GameState:
 
 #### Actor 基底クラス
 
-```python
-class Actor:
+```go
+type Actor struct {
     """アクター（プレイヤー・モンスター）基底クラス"""
 
     def __init__(
@@ -290,8 +296,8 @@ class Actor:
 
 #### Item システム
 
-```python
-class Item:
+```go
+type Item struct {
     """アイテム基底クラス"""
 
     def __init__(
@@ -341,8 +347,8 @@ class Item:
 
 #### アルゴリズム仕様
 
-```python
-class SectionBasedBuilder:
+```go
+type SectionBasedBuilder struct {
     """BSPアルゴリズムによるダンジョン生成"""
 
     # 定数定義
@@ -1166,7 +1172,7 @@ run_cli_test() {
     echo "Running test: $test_name"
 
     # CLIモードでテスト実行
-    echo "$commands" | python -m pyrogue.main --cli --test > test_output.txt 2>&1
+    echo "$commands" | go run ./cmd/gorogue-cli --test > test_output.txt 2>&1
 
     # 結果検証
     if validate_test_output "$test_name" "test_output.txt"; then
@@ -1210,8 +1216,8 @@ validate_test_output() {
 
 ### 10.1 ログ仕様
 
-```python
-class GameLogger:
+```go
+type GameLogger struct {
     """ゲーム専用ログシステム"""
 
     def __init__(self, debug_mode: bool = False) -> None:
@@ -1268,8 +1274,8 @@ class GameLogger:
 
 ### 10.2 設定管理
 
-```python
-class ConfigManager:
+```go
+type ConfigManager struct {
     """設定管理システム"""
 
     def __init__(self, config_path: str = ".env") -> None:
@@ -1313,7 +1319,7 @@ class ConfigManager:
 
 ## まとめ
 
-この技術仕様書は、PyRogueプロジェクトの実装レベルでの技術的詳細を包括的に定義しています。
+この技術仕様書は、GoRogueプロジェクトの実装レベルでの技術的詳細を包括的に定義しています。
 
 ### 🏗️ **実装指針**
 - **API設計**: 型安全性と拡張性を重視したインターフェース
@@ -1333,4 +1339,4 @@ class ConfigManager:
 - **信頼性**: 堅牢なエラー処理とデータ保護
 - **効率性**: 最適化されたパフォーマンス
 
-この仕様書に従うことで、開発チームは一貫した高品質な実装を行い、PyRogueプロジェクトの技術的優秀性を維持・発展させることができます。
+この仕様書に従うことで、開発チームは一貫した高品質な実装を行い、GoRogueプロジェクトの技術的優秀性を維持・発展させることができます。

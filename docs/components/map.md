@@ -1,10 +1,10 @@
 # Map コンポーネント
 
-PyRogueのダンジョン生成システム。オリジナルRogue準拠の26階層構造と、Builder Patternによる高品質な手続き生成を実現します。
+GoRogueのダンジョン生成システム。オリジナルRogue準拠の26階層構造と、Builder Patternによる高品質な手続き生成を実現します。
 
 ## 概要
 
-`src/pyrogue/map/`は、PyRogueの世界生成の中核となるダンジョンシステムです。オリジナルRogueの3x3グリッド構造を基盤とし、現代的なBuilder Patternにより拡張性の高い手続き生成を実現しています。
+`internal/game/map/`は、GoRogueの世界生成の中核となるダンジョンシステムです。オリジナルRogueの3x3グリッド構造を基盤とし、現代的なBuilder Patternにより拡張性の高い手続き生成を実現しています。
 
 ## アーキテクチャ
 
@@ -932,7 +932,7 @@ class CommonCommandHandler:
 
 ## まとめ
 
-Map コンポーネントは、PyRogueプロジェクトの世界生成において以下の価値を提供します：
+Map コンポーネントは、GoRogueプロジェクトの世界生成において以下の価値を提供します：
 
 - **オリジナル忠実性**: Rogueの本質的なダンジョン構造の再現
 - **現代的設計**: Builder Patternによる高い拡張性と保守性
