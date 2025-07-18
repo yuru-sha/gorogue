@@ -29,6 +29,8 @@ func (s *GameScreen) HandleInput(msg gruid.Msg) state.GameState {
 			return s.handleReadInput(msg.Key)
 		case ModeCLI:
 			return s.handleCLIInput(msg.Key)
+		case ModeDirection:
+			return s.handleDirectionInput(msg.Key)
 		default: // ModeNormal
 			return s.handleNormalInput(msg.Key)
 		}
@@ -94,6 +96,8 @@ func (s *GameScreen) handleNormalInput(key gruid.Key) state.GameState {
 		return state.StateMenu
 	case command.CmdHelp:
 		return state.StateHelp
+	case command.CmdSymbol:
+		return state.StateSymbol
 	case command.CmdEscape:
 		logger.Info("Returning to menu")
 		return state.StateMenu
@@ -358,4 +362,29 @@ func (s *GameScreen) handleCLIInput(key gruid.Key) state.GameState {
 		}
 		return state.StateGame
 	}
+}
+
+// handleDirectionInput handles input in direction mode
+func (s *GameScreen) handleDirectionInput(key gruid.Key) state.GameState {
+	// Parse the key into a command
+	cmd := s.cmdParser.Parse(key)
+	
+	switch cmd.Type {
+	case command.CmdMoveWest, command.CmdMoveEast, command.CmdMoveNorth, command.CmdMoveSouth,
+		command.CmdMoveNorthWest, command.CmdMoveNorthEast, command.CmdMoveSouthWest, command.CmdMoveSouthEast:
+		// Call the callback with the direction
+		if s.directionCallback != nil {
+			s.directionCallback(cmd.Direction.X, cmd.Direction.Y)
+		}
+		s.inputMode = ModeNormal
+		s.directionCallback = nil
+	case command.CmdEscape:
+		s.AddMessage("Canceled.")
+		s.inputMode = ModeNormal
+		s.directionCallback = nil
+	default:
+		s.AddMessage("Invalid direction. Use hjklybnu or arrow keys.")
+	}
+	
+	return state.StateGame
 }

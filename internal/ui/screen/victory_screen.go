@@ -12,12 +12,12 @@ import (
 
 // VictoryScreen represents the victory screen
 type VictoryScreen struct {
-	width        int
-	height       int
-	selected     int
-	scoreEntry   *score.ScoreEntry
-	showStats    bool
-	menuItems    []string
+	width      int
+	height     int
+	selected   int
+	scoreEntry *score.ScoreEntry
+	showStats  bool
+	menuItems  []string
 }
 
 // NewVictoryScreen creates a new victory screen

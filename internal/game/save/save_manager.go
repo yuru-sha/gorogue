@@ -359,7 +359,6 @@ func (sm *SaveManager) readSaveData(filename string) (*SaveData, error) {
 	return &saveData, nil
 }
 
-
 // createMetadata creates metadata from save data
 func (sm *SaveManager) createMetadata(saveData *SaveData) *SaveMetadata {
 	return &SaveMetadata{

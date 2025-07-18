@@ -53,24 +53,24 @@ func (p *Parser) initializeKeyMap() {
 	p.keyMap["Right"] = Command{Type: CmdMoveEast, Direction: Direction{X: 1, Y: 0}}
 
 	// Action commands - PyRogue style
-	p.keyMap["i"] = Command{Type: CmdInventory} // Inventory
-	p.keyMap[","] = Command{Type: CmdPickUp}    // Pick up (PyRogue style)
-	p.keyMap["g"] = Command{Type: CmdPickUp}    // Pick up (also g for compatibility)
-	p.keyMap["u"] = Command{Type: CmdUse}       // Use item (PyRogue unified interface)
-	p.keyMap["e"] = Command{Type: CmdEquip}     // Equip item (PyRogue style)
-	p.keyMap["r"] = Command{Type: CmdUnequip}   // Unequip item (PyRogue style)
-	p.keyMap["d"] = Command{Type: CmdDisarm}    // Disarm trap (PyRogue style)
-	p.keyMap["o"] = Command{Type: CmdOpen}      // Open door
-	p.keyMap["c"] = Command{Type: CmdClose}     // Close door
-	p.keyMap["s"] = Command{Type: CmdSearch}    // Search
-	p.keyMap["z"] = Command{Type: CmdUse}       // Spellbook (PyRogue style)
-	p.keyMap["f"] = Command{Type: CmdFight}     // Fight
-	p.keyMap["x"] = Command{Type: CmdLook}      // Look/examine
-	p.keyMap[" "] = Command{Type: CmdWait}      // Space bar to rest/wait
-	p.keyMap["."] = Command{Type: CmdWait}      // Period to rest (when not on stairs)
+	p.keyMap["i"] = Command{Type: CmdInventory}          // Inventory
+	p.keyMap[","] = Command{Type: CmdPickUp}             // Pick up (PyRogue style)
+	p.keyMap["g"] = Command{Type: CmdPickUp}             // Pick up (also g for compatibility)
+	p.keyMap["u"] = Command{Type: CmdUse}                // Use item (PyRogue unified interface)
+	p.keyMap["e"] = Command{Type: CmdEquip}              // Equip item (PyRogue style)
+	p.keyMap["r"] = Command{Type: CmdUnequip}            // Unequip item (PyRogue style)
+	p.keyMap["d"] = Command{Type: CmdDisarm}             // Disarm trap (PyRogue style)
+	p.keyMap["o"] = Command{Type: CmdOpen}               // Open door
+	p.keyMap["c"] = Command{Type: CmdClose}              // Close door
+	p.keyMap["s"] = Command{Type: CmdSearch}             // Search
+	p.keyMap["z"] = Command{Type: CmdUse}                // Spellbook (PyRogue style)
+	p.keyMap["f"] = Command{Type: CmdFight}              // Fight
+	p.keyMap["x"] = Command{Type: CmdLook}               // Look/examine
+	p.keyMap[" "] = Command{Type: CmdWait}               // Space bar to rest/wait
+	p.keyMap["."] = Command{Type: CmdWait}               // Period to rest (when not on stairs)
 	p.keyMap[gruid.KeyTab] = Command{Type: CmdToggleFOV} // Toggle FOV (PyRogue style)
-	p.keyMap["^L"] = Command{Type: CmdLook}     // Ctrl+L to redraw screen
-	p.keyMap["^R"] = Command{Type: CmdLook}     // Ctrl+R to repeat last message
+	p.keyMap["^L"] = Command{Type: CmdLook}              // Ctrl+L to redraw screen
+	p.keyMap["^R"] = Command{Type: CmdLook}              // Ctrl+R to repeat last message
 
 	// Stair commands - PyRogue style
 	p.keyMap["<"] = Command{Type: CmdGoUpstairs}   // Go up
@@ -80,7 +80,7 @@ func (p *Parser) initializeKeyMap() {
 	p.keyMap["Q"] = Command{Type: CmdQuit}               // Quit
 	p.keyMap["S"] = Command{Type: CmdQuit}               // Save and quit (PyRogue)
 	p.keyMap["?"] = Command{Type: CmdHelp}               // Help
-	p.keyMap["/"] = Command{Type: CmdLook}               // Identify object (PyRogue)
+	p.keyMap["/"] = Command{Type: CmdSymbol}             // Symbol explanation (PyRogue)
 	p.keyMap[gruid.KeyEscape] = Command{Type: CmdEscape} // Escape/cancel
 	p.keyMap["^W"] = Command{Type: CmdWizard}            // Ctrl+W for wizard mode
 	p.keyMap[":"] = Command{Type: CmdCLI}                // CLI mode (our addition)
@@ -135,6 +135,7 @@ func (p *Parser) GetKeyBindings() map[string]string {
 	bindings["Q"] = "Quit the game"
 	bindings["S"] = "Save and quit"
 	bindings["?"] = "Show this help"
+	bindings["/"] = "Show symbol explanation"
 	bindings["ESC"] = "Cancel command"
 	bindings["Ctrl+W"] = "Toggle wizard mode"
 	bindings["Ctrl+S"] = "Save game"

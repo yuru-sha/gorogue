@@ -3,63 +3,72 @@ package screen
 import (
 	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/state"
+	"github.com/yuru-sha/gorogue/internal/game/save"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
-// PyRogue準拠のタイトルアート
+// PyRogue準拠のタイトルアート（純ASCII文字）
 var titleArt = []string{
 	"",
-	"  @@@@@@   @@@@@@  @@@@@@@   @@@@@@   @@@@@@  @@@  @@@  @@@@@@@",
-	" @@@@@@@  @@@@@@@ @@@@@@@@ @@@@@@@@  @@@@@@@  @@@  @@@  @@@@@@@@",
-	" !@@      @@!  @@ @@!  @@@  @@!  @@@  @@!  @@@  @@!  @@@  @@!",
-	" !@!      !@!  @!@ !@!  @!@  !@!  @!@  !@!  @!@  !@!  @!@  !@!",
-	" !@! @!@!@ @!@  !@! @!@!!@!  @!@  !@!  @!@  !@!  @!@  !@!  @!@!!@!",
-	" !!! !!@! !@!  !!! !!@!@!   !@!  !!!  !@!  !!!  !@!  !!!  !!@!@!",
-	" :!!   !:  !!:  !!! !!: :!!  !!:  !!!  !!:  !!!  !!:  !!!  !!: :!!",
-	" :!:   !:  :!:  !:!  :!:  :!:  :!:  :!:  :!:  :!:  :!:  :!:  :!:  :!:",
-	"  ::: ::::  ::::: ::  ::   :::  ::::: ::  ::::: ::  ::::: ::  ::   :::",
-	"  :: :: :    : :  :   :    :    : :  :   : :  :   : :  :   :    :",
+	"  ####   ####  ####   ####   ####  #   # #####",
+	" #      #    # #   # #    # #    # #   # #    ",
+	" #  ### #    # ####  #    # #  ### #   # ####",
+	" #    # #    # #   # #    # #    # #   # #    ",
+	"  ####   ####  #   #  ####   ####   ###  #####",
+	"",
+	" A Go Roguelike Adventure",
 	"",
 }
 
+// PyRogue準拠のシンプルなメニュー
 var menuBox = []string{
 	"",
-	"N) New Game",
-	"L) Load Game",
-	"S) Scores",
-	"H) Help",
-	"Q) Quit",
+	"New Game",
+	"Help",
+	"Quit",
 	"",
 }
 
 var version = "v0.1.0"
 
-// Colors
+// Colors (SDL2対応の16進数カラー)
 var (
-	colorYellow   = gruid.Style{Fg: 3}  // 黄色
-	colorGray     = gruid.Style{Fg: 8}  // グレー
-	colorWhite    = gruid.Style{Fg: 15} // 白
-	colorDarkGray = gruid.Style{Fg: 7}  // 暗いグレー
+	colorYellow   = gruid.Style{Fg: 0xFFFF00} // 黄色
+	colorGray     = gruid.Style{Fg: 0x808080} // グレー
+	colorWhite    = gruid.Style{Fg: 0xFFFFFF} // 白
+	colorDarkGray = gruid.Style{Fg: 0x404040} // 暗いグレー
 )
 
 // MenuScreen represents the menu screen
 type MenuScreen struct {
-	width    int
-	height   int
-	selected int
-	grid     gruid.Grid
-	menuItems []string
+	width       int
+	height      int
+	selected    int
+	grid        gruid.Grid
+	menuItems   []string
+	saveManager *save.SaveManager
 }
 
 // NewMenuScreen creates a new menu screen
 func NewMenuScreen(width, height int) *MenuScreen {
-	menuItems := []string{"N) New Game", "L) Load Game", "S) Scores", "H) Help", "Q) Quit"}
+	// セーブマネージャーを初期化
+	saveManager := save.NewSaveManager()
+	saveManager.Initialize()
+
+	// セーブデータの存在をチェック
+	menuItems := []string{"New Game"}
+	if saveManager.FileExists() {
+		menuItems = append(menuItems, "Load Game")
+	}
+	menuItems = append(menuItems, "Help", "Quit")
+
 	return &MenuScreen{
-		width:     width,
-		height:    height,
-		selected:  0,
-		grid:      gruid.NewGrid(width, height),
-		menuItems: menuItems,
+		width:       width,
+		height:      height,
+		selected:    0,
+		grid:        gruid.NewGrid(width, height),
+		menuItems:   menuItems,
+		saveManager: saveManager,
 	}
 }
 
@@ -67,31 +76,47 @@ func NewMenuScreen(width, height int) *MenuScreen {
 func (s *MenuScreen) HandleInput(msg gruid.Msg) state.GameState {
 	switch msg := msg.(type) {
 	case gruid.MsgKeyDown:
+		logger.Debug("MenuScreen key pressed", "key", msg.Key, "mod", msg.Mod)
 		switch msg.Key {
-		case "Up":
+		case gruid.KeyArrowUp:
 			s.selected = (s.selected - 1 + len(s.menuItems)) % len(s.menuItems)
-		case "Down":
+			logger.Debug("Selected item changed", "selected", s.selected)
+		case gruid.KeyArrowDown:
 			s.selected = (s.selected + 1) % len(s.menuItems)
-		case "Enter":
+			logger.Debug("Selected item changed", "selected", s.selected)
+		case gruid.KeyEnter:
 			return s.handleMenuSelection()
 		default:
-			// キーによる直接選択
-			switch msg.Key {
+			// キーによる直接選択（文字列での判定）
+			keyStr := string(msg.Key)
+			switch keyStr {
 			case "n", "N":
 				s.selected = 0
 				return s.handleMenuSelection()
 			case "l", "L":
-				s.selected = 1
-				return s.handleMenuSelection()
-			case "s", "S":
-				s.selected = 2
-				return s.handleMenuSelection()
+				// Load Gameがメニューにあるかチェック
+				for i, item := range s.menuItems {
+					if item == "Load Game" {
+						s.selected = i
+						return s.handleMenuSelection()
+					}
+				}
 			case "h", "H":
-				s.selected = 3
-				return s.handleMenuSelection()
+				// Helpの位置を動的に検索
+				for i, item := range s.menuItems {
+					if item == "Help" {
+						s.selected = i
+						return s.handleMenuSelection()
+					}
+				}
 			case "q", "Q":
-				s.selected = 4
-				return s.handleMenuSelection()
+				// Quitの位置を動的に検索
+				for i, item := range s.menuItems {
+					if item == "Quit" {
+						s.selected = i
+						return s.handleMenuSelection()
+					}
+				}
 			}
 		}
 	}
@@ -101,21 +126,22 @@ func (s *MenuScreen) HandleInput(msg gruid.Msg) state.GameState {
 
 // handleMenuSelection handles menu selection
 func (s *MenuScreen) handleMenuSelection() state.GameState {
-	switch s.selected {
-	case 0: // New Game
+	if s.selected < 0 || s.selected >= len(s.menuItems) {
+		return state.StateMenu
+	}
+
+	selectedItem := s.menuItems[s.selected]
+	switch selectedItem {
+	case "New Game":
 		logger.Info("New Game selected from menu")
 		return state.StateGame
-	case 1: // Load Game
+	case "Load Game":
 		logger.Info("Load Game selected from menu")
 		return state.StateSaveLoad
-	case 2: // Scores
-		logger.Info("Scores selected from menu")
-		// TODO: Implement scores screen
-		return state.StateMenu
-	case 3: // Help
+	case "Help":
 		logger.Info("Help selected from menu")
 		return state.StateHelp
-	case 4: // Quit
+	case "Quit":
 		logger.Info("Quit selected from menu")
 		return state.StateGameOver
 	}
@@ -124,8 +150,8 @@ func (s *MenuScreen) handleMenuSelection() state.GameState {
 
 // Draw draws the menu screen
 func (s *MenuScreen) Draw(grid *gruid.Grid) {
-	// グリッドをクリア
-	grid.Fill(gruid.Cell{Rune: ' '})
+	// グリッドをクリア（背景色を明示的に設定）
+	grid.Fill(gruid.Cell{Rune: ' ', Style: gruid.Style{Bg: 0x000000, Fg: 0xFFFFFF}})
 
 	// タイトルの描画
 	titleY := 2
@@ -157,28 +183,19 @@ func (s *MenuScreen) Draw(grid *gruid.Grid) {
 	}
 
 	// バージョン情報の描画
-	versionText := "Version " + version
+	versionText := "GoRogue " + version + " - PyRogue compatible"
 	versionX := 1
 	versionY := s.height - 1
 	s.drawText(grid, versionX, versionY, versionText, colorDarkGray)
 
-	// 操作説明の描画
-	controlsText := "↑↓:Select  Enter:Decide  or Press Key"
+	// PyRogue風の操作説明（下部）
+	controlsText := "Use UP/DOWN arrows to navigate, ENTER to select, ESC to quit"
 	controlsX := (s.width - len(controlsText)) / 2
 	if controlsX < 0 {
 		controlsX = 0
 	}
-	controlsY := menuY + len(s.menuItems) + 2
+	controlsY := s.height - 2
 	s.drawText(grid, controlsX, controlsY, controlsText, colorGray)
-
-	// PyRogue風のクレジット表示
-	creditText := "A faithful recreation of the classic Rogue"
-	creditX := (s.width - len(creditText)) / 2
-	if creditX < 0 {
-		creditX = 0
-	}
-	creditY := controlsY + 2
-	s.drawText(grid, creditX, creditY, creditText, colorDarkGray)
 
 	logger.Trace("Menu screen drawn")
 }

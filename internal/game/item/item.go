@@ -34,14 +34,14 @@ type Item struct {
 	IsCursed     bool // 呪われているかどうか
 	IsBlessed    bool // 祝福されているかどうか
 	// 武器・防具用
-	Damage       int // 武器のダメージ
-	Defense      int // 防具の防御力
-	Enchantment  int // 強化値 (+1, +2, etc.)
+	Damage      int // 武器のダメージ
+	Defense     int // 防具の防御力
+	Enchantment int // 強化値 (+1, +2, etc.)
 	// 杖用
-	Charges      int // 杖の残りチャージ数
-	MaxCharges   int // 杖の最大チャージ数
+	Charges    int // 杖の残りチャージ数
+	MaxCharges int // 杖の最大チャージ数
 	// 識別用
-	ItemID       int // PyRouge準拠のID
+	ItemID int // PyRouge準拠のID
 }
 
 // GetItemSymbol returns the symbol for a given item type
@@ -259,11 +259,11 @@ func NewRandomWeapon(x, y, floor int) *Item {
 			validWeapons = append(validWeapons, weapon)
 		}
 	}
-	
+
 	if len(validWeapons) == 0 {
 		validWeapons = WeaponTypes // Fallback
 	}
-	
+
 	weapon := validWeapons[rand.Intn(len(validWeapons))]
 	item := NewItem(x, y, ItemWeapon, weapon.Name, weapon.Value)
 	item.Damage = weapon.Damage
@@ -280,11 +280,11 @@ func NewRandomArmor(x, y, floor int) *Item {
 			validArmors = append(validArmors, armor)
 		}
 	}
-	
+
 	if len(validArmors) == 0 {
 		validArmors = ArmorTypes // Fallback
 	}
-	
+
 	armor := validArmors[rand.Intn(len(validArmors))]
 	item := NewItem(x, y, ItemArmor, armor.Name, armor.Value)
 	item.Defense = armor.Defense
@@ -301,11 +301,11 @@ func NewRandomWand(x, y, floor int) *Item {
 			validWands = append(validWands, wand)
 		}
 	}
-	
+
 	if len(validWands) == 0 {
 		validWands = WandTypes // Fallback
 	}
-	
+
 	wand := validWands[rand.Intn(len(validWands))]
 	item := NewItem(x, y, ItemWand, wand.Name, wand.Value)
 	item.Charges = wand.MinCharges + rand.Intn(wand.MaxCharges-wand.MinCharges+1)

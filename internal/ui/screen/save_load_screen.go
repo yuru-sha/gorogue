@@ -176,8 +176,6 @@ func (s *SaveLoadScreen) updateSaveInfo() {
 	}
 }
 
-
-
 // setMessage sets a message with color
 func (s *SaveLoadScreen) setMessage(message string, color gruid.Color) {
 	s.message = message
@@ -261,7 +259,6 @@ func (s *SaveLoadScreen) drawSaveFileInfo(grid *gruid.Grid) {
 	}
 }
 
-
 // drawControls draws control instructions
 func (s *SaveLoadScreen) drawControls(grid *gruid.Grid) {
 	controlsY := s.height - 8
@@ -283,7 +280,6 @@ func (s *SaveLoadScreen) drawControls(grid *gruid.Grid) {
 		s.drawText(grid, x, y, control, s.colorNormal)
 	}
 }
-
 
 // drawText draws text at the specified position
 func (s *SaveLoadScreen) drawText(grid *gruid.Grid, x, y int, text string, color gruid.Color) {

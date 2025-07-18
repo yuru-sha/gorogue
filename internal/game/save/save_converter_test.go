@@ -653,7 +653,7 @@ func TestSaveConverter_ErrorHandling(t *testing.T) {
 
 	// Test conversion with invalid monster type
 	saveMonster := Monster{
-		Type:   "?",  // ? は定義されていないモンスタータイプ
+		Type:   "?", // ? は定義されていないモンスタータイプ
 		Symbol: '?',
 	}
 

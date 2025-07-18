@@ -113,7 +113,7 @@ func main() {
 		config.PrintConfig()
 	}
 
-	logger.Info("Starting GoRogue", 
+	logger.Info("Starting GoRogue",
 		"render_mode", "sdl2_ascii",
 		"debug_mode", config.GetDebugMode(),
 		"log_level", config.GetLogLevel(),

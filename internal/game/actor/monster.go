@@ -27,32 +27,32 @@ type MonsterType struct {
 // Predefined monster types - PyRogue準拠の定義 (A-Z全26種類)
 var MonsterTypes = map[rune]MonsterType{
 	// 初期階層モンスター (B1-5)
-	'A': {Symbol: 'A', Name: "アクエーター", Level: 5, HP: 15, Attack: 0, Defense: 2, Experience: 20, Color: 0x0000FF, Speed: 2, MinFloor: 1, MaxFloor: 7},  // Blue
-	'B': {Symbol: 'B', Name: "コウモリ", Level: 1, HP: 8, Attack: 2, Defense: 1, Experience: 1, Color: 0x8B4513, Speed: 1, MinFloor: 1, MaxFloor: 8},     // Brown
-	'C': {Symbol: 'C', Name: "ケンタウロス", Level: 4, HP: 17, Attack: 17, Defense: 2, Experience: 25, Color: 0xCD853F, Speed: 2, MinFloor: 7, MaxFloor: 16}, // Peru
-	'D': {Symbol: 'D', Name: "ドラゴン", Level: 10, HP: 90, Attack: 90, Defense: 3, Experience: 9000, Color: 0xFF0000, Speed: 3, MinFloor: 18, MaxFloor: 26}, // Red
-	'E': {Symbol: 'E', Name: "イーミュー", Level: 1, HP: 11, Attack: 2, Defense: 7, Experience: 2, Color: 0x8B4513, Speed: 2, MinFloor: 1, MaxFloor: 4},   // Brown
-	'F': {Symbol: 'F', Name: "フライ", Level: 1, HP: 13, Attack: 3, Defense: 3, Experience: 3, Color: 0x00FF00, Speed: 1, MinFloor: 1, MaxFloor: 6},     // Green
-	'G': {Symbol: 'G', Name: "グリフィン", Level: 13, HP: 90, Attack: 100, Defense: 5, Experience: 2000, Color: 0x32CD32, Speed: 2, MinFloor: 20, MaxFloor: 26}, // LimeGreen
-	'H': {Symbol: 'H', Name: "ホブゴブリン", Level: 1, HP: 9, Attack: 8, Defense: 1, Experience: 3, Color: 0xFF8C00, Speed: 2, MinFloor: 1, MaxFloor: 9},   // DarkOrange
-	'I': {Symbol: 'I', Name: "アイスモンスター", Level: 1, HP: 15, Attack: 12, Defense: 2, Experience: 5, Color: 0xFF1493, Speed: 2, MinFloor: 2, MaxFloor: 11}, // DeepPink
+	'A': {Symbol: 'A', Name: "アクエーター", Level: 5, HP: 15, Attack: 0, Defense: 2, Experience: 20, Color: 0x0000FF, Speed: 2, MinFloor: 1, MaxFloor: 7},          // Blue
+	'B': {Symbol: 'B', Name: "コウモリ", Level: 1, HP: 8, Attack: 2, Defense: 1, Experience: 1, Color: 0x8B4513, Speed: 1, MinFloor: 1, MaxFloor: 8},              // Brown
+	'C': {Symbol: 'C', Name: "ケンタウロス", Level: 4, HP: 17, Attack: 17, Defense: 2, Experience: 25, Color: 0xCD853F, Speed: 2, MinFloor: 7, MaxFloor: 16},        // Peru
+	'D': {Symbol: 'D', Name: "ドラゴン", Level: 10, HP: 90, Attack: 90, Defense: 3, Experience: 9000, Color: 0xFF0000, Speed: 3, MinFloor: 18, MaxFloor: 26},      // Red
+	'E': {Symbol: 'E', Name: "イーミュー", Level: 1, HP: 11, Attack: 2, Defense: 7, Experience: 2, Color: 0x8B4513, Speed: 2, MinFloor: 1, MaxFloor: 4},            // Brown
+	'F': {Symbol: 'F', Name: "フライ", Level: 1, HP: 13, Attack: 3, Defense: 3, Experience: 3, Color: 0x00FF00, Speed: 1, MinFloor: 1, MaxFloor: 6},              // Green
+	'G': {Symbol: 'G', Name: "グリフィン", Level: 13, HP: 90, Attack: 100, Defense: 5, Experience: 2000, Color: 0x32CD32, Speed: 2, MinFloor: 20, MaxFloor: 26},    // LimeGreen
+	'H': {Symbol: 'H', Name: "ホブゴブリン", Level: 1, HP: 9, Attack: 8, Defense: 1, Experience: 3, Color: 0xFF8C00, Speed: 2, MinFloor: 1, MaxFloor: 9},            // DarkOrange
+	'I': {Symbol: 'I', Name: "アイスモンスター", Level: 1, HP: 15, Attack: 12, Defense: 2, Experience: 5, Color: 0xFF1493, Speed: 2, MinFloor: 2, MaxFloor: 11},       // DeepPink
 	'J': {Symbol: 'J', Name: "ジャバーワック", Level: 15, HP: 132, Attack: 120, Defense: 6, Experience: 4000, Color: 0x40E0D0, Speed: 3, MinFloor: 21, MaxFloor: 26}, // Turquoise
-	'K': {Symbol: 'K', Name: "ケストレル", Level: 1, HP: 10, Attack: 5, Defense: 2, Experience: 2, Color: 0x8B008B, Speed: 1, MinFloor: 1, MaxFloor: 6},    // DarkMagenta
-	'L': {Symbol: 'L', Name: "レプラコーン", Level: 3, HP: 13, Attack: 13, Defense: 8, Experience: 7, Color: 0x9ACD32, Speed: 1, MinFloor: 6, MaxFloor: 16}, // YellowGreen
-	'M': {Symbol: 'M', Name: "メドューサ", Level: 8, HP: 25, Attack: 25, Defense: 2, Experience: 200, Color: 0xA0522D, Speed: 3, MinFloor: 14, MaxFloor: 20}, // Sienna
-	'N': {Symbol: 'N', Name: "ニンフ", Level: 3, HP: 12, Attack: 0, Defense: 9, Experience: 37, Color: 0x98FB98, Speed: 2, MinFloor: 6, MaxFloor: 16},      // PaleGreen
-	'O': {Symbol: 'O', Name: "オーク", Level: 1, HP: 6, Attack: 6, Defense: 1, Experience: 2, Color: 0x696969, Speed: 2, MinFloor: 5, MaxFloor: 12},       // DimGray
-	'P': {Symbol: 'P', Name: "ファントム", Level: 8, HP: 76, Attack: 50, Defense: 4, Experience: 120, Color: 0x778899, Speed: 3, MinFloor: 14, MaxFloor: 23}, // LightSlateGray
-	'Q': {Symbol: 'Q', Name: "クァッガ", Level: 3, HP: 15, Attack: 15, Defense: 2, Experience: 32, Color: 0x4B0082, Speed: 2, MinFloor: 7, MaxFloor: 16},   // Indigo
-	'R': {Symbol: 'R', Name: "ラットルスネーク", Level: 2, HP: 9, Attack: 9, Defense: 1, Experience: 9, Color: 0x9932CC, Speed: 2, MinFloor: 3, MaxFloor: 10}, // DarkOrchid
-	'S': {Symbol: 'S', Name: "スネーク", Level: 1, HP: 8, Attack: 3, Defense: 1, Experience: 3, Color: 0xF5F5DC, Speed: 2, MinFloor: 2, MaxFloor: 9},      // Beige
-	'T': {Symbol: 'T', Name: "トロル", Level: 6, HP: 55, Attack: 55, Defense: 4, Experience: 120, Color: 0x8B4513, Speed: 3, MinFloor: 13, MaxFloor: 22},   // Brown
-	'U': {Symbol: 'U', Name: "アンバーハルク", Level: 7, HP: 45, Attack: 45, Defense: 3, Experience: 80, Color: 0xFFD700, Speed: 3, MinFloor: 14, MaxFloor: 23}, // Gold
-	'V': {Symbol: 'V', Name: "バンパイア", Level: 8, HP: 55, Attack: 55, Defense: 1, Experience: 350, Color: 0x8B0000, Speed: 3, MinFloor: 14, MaxFloor: 26}, // DarkRed
-	'W': {Symbol: 'W', Name: "ワイト", Level: 5, HP: 30, Attack: 30, Defense: 4, Experience: 55, Color: 0xF0E68C, Speed: 2, MinFloor: 11, MaxFloor: 18},    // Khaki
-	'X': {Symbol: 'X', Name: "ゼロックス", Level: 7, HP: 42, Attack: 42, Defense: 7, Experience: 100, Color: 0x00CED1, Speed: 2, MinFloor: 14, MaxFloor: 21}, // DarkTurquoise
-	'Y': {Symbol: 'Y', Name: "イエティ", Level: 4, HP: 35, Attack: 35, Defense: 6, Experience: 50, Color: 0xF0F8FF, Speed: 2, MinFloor: 11, MaxFloor: 20},  // AliceBlue
-	'Z': {Symbol: 'Z', Name: "ゾンビ", Level: 2, HP: 6, Attack: 6, Defense: 1, Experience: 6, Color: 0x556B2F, Speed: 3, MinFloor: 3, MaxFloor: 10},      // DarkOliveGreen
+	'K': {Symbol: 'K', Name: "ケストレル", Level: 1, HP: 10, Attack: 5, Defense: 2, Experience: 2, Color: 0x8B008B, Speed: 1, MinFloor: 1, MaxFloor: 6},            // DarkMagenta
+	'L': {Symbol: 'L', Name: "レプラコーン", Level: 3, HP: 13, Attack: 13, Defense: 8, Experience: 7, Color: 0x9ACD32, Speed: 1, MinFloor: 6, MaxFloor: 16},         // YellowGreen
+	'M': {Symbol: 'M', Name: "メドューサ", Level: 8, HP: 25, Attack: 25, Defense: 2, Experience: 200, Color: 0xA0522D, Speed: 3, MinFloor: 14, MaxFloor: 20},       // Sienna
+	'N': {Symbol: 'N', Name: "ニンフ", Level: 3, HP: 12, Attack: 0, Defense: 9, Experience: 37, Color: 0x98FB98, Speed: 2, MinFloor: 6, MaxFloor: 16},            // PaleGreen
+	'O': {Symbol: 'O', Name: "オーク", Level: 1, HP: 6, Attack: 6, Defense: 1, Experience: 2, Color: 0x696969, Speed: 2, MinFloor: 5, MaxFloor: 12},              // DimGray
+	'P': {Symbol: 'P', Name: "ファントム", Level: 8, HP: 76, Attack: 50, Defense: 4, Experience: 120, Color: 0x778899, Speed: 3, MinFloor: 14, MaxFloor: 23},       // LightSlateGray
+	'Q': {Symbol: 'Q', Name: "クァッガ", Level: 3, HP: 15, Attack: 15, Defense: 2, Experience: 32, Color: 0x4B0082, Speed: 2, MinFloor: 7, MaxFloor: 16},          // Indigo
+	'R': {Symbol: 'R', Name: "ラットルスネーク", Level: 2, HP: 9, Attack: 9, Defense: 1, Experience: 9, Color: 0x9932CC, Speed: 2, MinFloor: 3, MaxFloor: 10},         // DarkOrchid
+	'S': {Symbol: 'S', Name: "スネーク", Level: 1, HP: 8, Attack: 3, Defense: 1, Experience: 3, Color: 0xF5F5DC, Speed: 2, MinFloor: 2, MaxFloor: 9},              // Beige
+	'T': {Symbol: 'T', Name: "トロル", Level: 6, HP: 55, Attack: 55, Defense: 4, Experience: 120, Color: 0x8B4513, Speed: 3, MinFloor: 13, MaxFloor: 22},         // Brown
+	'U': {Symbol: 'U', Name: "アンバーハルク", Level: 7, HP: 45, Attack: 45, Defense: 3, Experience: 80, Color: 0xFFD700, Speed: 3, MinFloor: 14, MaxFloor: 23},      // Gold
+	'V': {Symbol: 'V', Name: "バンパイア", Level: 8, HP: 55, Attack: 55, Defense: 1, Experience: 350, Color: 0x8B0000, Speed: 3, MinFloor: 14, MaxFloor: 26},       // DarkRed
+	'W': {Symbol: 'W', Name: "ワイト", Level: 5, HP: 30, Attack: 30, Defense: 4, Experience: 55, Color: 0xF0E68C, Speed: 2, MinFloor: 11, MaxFloor: 18},          // Khaki
+	'X': {Symbol: 'X', Name: "ゼロックス", Level: 7, HP: 42, Attack: 42, Defense: 7, Experience: 100, Color: 0x00CED1, Speed: 2, MinFloor: 14, MaxFloor: 21},       // DarkTurquoise
+	'Y': {Symbol: 'Y', Name: "イエティ", Level: 4, HP: 35, Attack: 35, Defense: 6, Experience: 50, Color: 0xF0F8FF, Speed: 2, MinFloor: 11, MaxFloor: 20},         // AliceBlue
+	'Z': {Symbol: 'Z', Name: "ゾンビ", Level: 2, HP: 6, Attack: 6, Defense: 1, Experience: 6, Color: 0x556B2F, Speed: 3, MinFloor: 3, MaxFloor: 10},              // DarkOliveGreen
 }
 
 // AIState represents the current AI state of a monster

@@ -25,9 +25,9 @@ func TestVictoryScreen_NewVictoryScreen(t *testing.T) {
 		Timestamp:      time.Now(),
 		Version:        "v0.1.0",
 	}
-	
+
 	screen := NewVictoryScreen(80, 50, scoreEntry)
-	
+
 	if screen.width != 80 {
 		t.Errorf("Expected width 80, got %d", screen.width)
 	}
@@ -47,7 +47,7 @@ func TestVictoryScreen_NewVictoryScreen(t *testing.T) {
 
 func TestVictoryScreen_HandleInput(t *testing.T) {
 	screen := NewVictoryScreen(80, 50, nil)
-	
+
 	// Test Up key
 	msg := gruid.MsgKeyDown{Key: "Up"}
 	result := screen.HandleInput(msg)
@@ -57,7 +57,7 @@ func TestVictoryScreen_HandleInput(t *testing.T) {
 	if screen.selected != 2 { // Should wrap around
 		t.Errorf("Expected selected 2, got %d", screen.selected)
 	}
-	
+
 	// Test Down key
 	msg = gruid.MsgKeyDown{Key: "Down"}
 	result = screen.HandleInput(msg)
@@ -67,7 +67,7 @@ func TestVictoryScreen_HandleInput(t *testing.T) {
 	if screen.selected != 0 { // Should wrap around
 		t.Errorf("Expected selected 0, got %d", screen.selected)
 	}
-	
+
 	// Test Space key (toggle stats)
 	initialShowStats := screen.showStats
 	msg = gruid.MsgKeyDown{Key: "Space"}
@@ -78,7 +78,7 @@ func TestVictoryScreen_HandleInput(t *testing.T) {
 	if screen.showStats == initialShowStats {
 		t.Error("Expected showStats to toggle")
 	}
-	
+
 	// Test Enter key (Restart)
 	msg = gruid.MsgKeyDown{Key: "Enter"}
 	result = screen.HandleInput(msg)
@@ -89,21 +89,21 @@ func TestVictoryScreen_HandleInput(t *testing.T) {
 
 func TestVictoryScreen_MenuSelection(t *testing.T) {
 	screen := NewVictoryScreen(80, 50, nil)
-	
+
 	// Test Restart
 	screen.selected = 0
 	result := screen.handleMenuSelection()
 	if result != state.StateGame {
 		t.Errorf("Expected StateGame, got %v", result)
 	}
-	
+
 	// Test Main Menu
 	screen.selected = 1
 	result = screen.handleMenuSelection()
 	if result != state.StateMenu {
 		t.Errorf("Expected StateMenu, got %v", result)
 	}
-	
+
 	// Test Quit
 	screen.selected = 2
 	result = screen.handleMenuSelection()
@@ -128,23 +128,23 @@ func TestVictoryScreen_BonusCalculations(t *testing.T) {
 		Timestamp:      time.Now(),
 		Version:        "v0.1.0",
 	}
-	
+
 	screen := NewVictoryScreen(80, 50, scoreEntry)
-	
+
 	// Test survival bonus
 	survivalBonus := screen.calculateSurvivalBonus()
 	expected := 10 * 100 // Level 10 * 100
 	if survivalBonus != expected {
 		t.Errorf("Expected survival bonus %d, got %d", expected, survivalBonus)
 	}
-	
+
 	// Test speed bonus
 	speedBonus := screen.calculateSpeedBonus()
 	expectedSpeed := 10000 - 1*1000 // 10000 - 1 hour * 1000
 	if speedBonus != expectedSpeed {
 		t.Errorf("Expected speed bonus %d, got %d", expectedSpeed, speedBonus)
 	}
-	
+
 	// Test exploration bonus
 	explorationBonus := screen.calculateExplorationBonus()
 	expectedExploration := 26 * 50 // Floor 26 * 50
@@ -155,21 +155,21 @@ func TestVictoryScreen_BonusCalculations(t *testing.T) {
 
 func TestVictoryScreen_FormatPlayTime(t *testing.T) {
 	screen := NewVictoryScreen(80, 50, nil)
-	
+
 	// Test minutes only
 	result := screen.formatPlayTime(90) // 1 minute 30 seconds
 	expected := "01:30"
 	if result != expected {
 		t.Errorf("Expected %s, got %s", expected, result)
 	}
-	
+
 	// Test hours
 	result = screen.formatPlayTime(3661) // 1 hour 1 minute 1 second
 	expected = "01:01:01"
 	if result != expected {
 		t.Errorf("Expected %s, got %s", expected, result)
 	}
-	
+
 	// Test zero time
 	result = screen.formatPlayTime(0)
 	expected = "00:00"
@@ -194,13 +194,13 @@ func TestVictoryScreen_Draw(t *testing.T) {
 		Timestamp:      time.Now(),
 		Version:        "v0.1.0",
 	}
-	
+
 	screen := NewVictoryScreen(80, 50, scoreEntry)
 	grid := gruid.NewGrid(80, 50)
-	
+
 	// Test that drawing doesn't panic
 	screen.Draw(&grid)
-	
+
 	// Check that the grid is not empty
 	hasContent := false
 	for y := 0; y < 50; y++ {
@@ -218,7 +218,7 @@ func TestVictoryScreen_Draw(t *testing.T) {
 			break
 		}
 	}
-	
+
 	if !hasContent {
 		t.Error("Expected grid to have content after drawing")
 	}

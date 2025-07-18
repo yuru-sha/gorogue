@@ -39,7 +39,7 @@ func main() {
 
 	// 環境変数で設定されていればそれを使用、フラグで上書き
 	debugEnabled := config.GetDebugMode() || *debugMode
-	
+
 	if debugEnabled {
 		logger.Info("Starting GoRogue CLI in debug mode",
 			"env_debug", config.GetDebugMode(),

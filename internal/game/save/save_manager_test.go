@@ -57,8 +57,8 @@ func TestSaveManager_SaveAndLoad(t *testing.T) {
 
 	// Create test save data
 	saveData := &SaveData{
-		Version:   SaveVersion,
-		GameInfo:  GameInfo{CharName: "TestPlayer", PlayTime: 100, TurnCount: 10},
+		Version:  SaveVersion,
+		GameInfo: GameInfo{CharName: "TestPlayer", PlayTime: 100, TurnCount: 10},
 		PlayerData: Player{
 			Level:     5,
 			HP:        50,
@@ -123,9 +123,9 @@ func TestSaveManager_FileExists(t *testing.T) {
 	}
 
 	saveData := &SaveData{
-		Version:   SaveVersion,
-		GameInfo:  GameInfo{CharName: "TestPlayer"},
-		PlayerData: Player{Level: 1, HP: 20, MaxHP: 20, Gold: 0, Inventory: []InventoryItem{}},
+		Version:     SaveVersion,
+		GameInfo:    GameInfo{CharName: "TestPlayer"},
+		PlayerData:  Player{Level: 1, HP: 20, MaxHP: 20, Gold: 0, Inventory: []InventoryItem{}},
 		DungeonData: Dungeon{CurrentFloor: 1},
 	}
 
@@ -159,9 +159,9 @@ func TestSaveManager_DeleteSave(t *testing.T) {
 
 	// Create test save data
 	saveData := &SaveData{
-		Version:   SaveVersion,
-		GameInfo:  GameInfo{CharName: "TestPlayer"},
-		PlayerData: Player{Level: 1, HP: 20, MaxHP: 20, Gold: 0, Inventory: []InventoryItem{}},
+		Version:     SaveVersion,
+		GameInfo:    GameInfo{CharName: "TestPlayer"},
+		PlayerData:  Player{Level: 1, HP: 20, MaxHP: 20, Gold: 0, Inventory: []InventoryItem{}},
 		DungeonData: Dungeon{CurrentFloor: 1},
 	}
 
@@ -220,9 +220,9 @@ func TestSaveManager_GetSaveInfo(t *testing.T) {
 
 	// Create test save data
 	saveData := &SaveData{
-		Version:   SaveVersion,
-		GameInfo:  GameInfo{CharName: "TestPlayer", PlayTime: 3600, TurnCount: 100},
-		PlayerData: Player{Level: 5, HP: 50, MaxHP: 100, Gold: 200, Inventory: []InventoryItem{}},
+		Version:     SaveVersion,
+		GameInfo:    GameInfo{CharName: "TestPlayer", PlayTime: 3600, TurnCount: 100},
+		PlayerData:  Player{Level: 5, HP: 50, MaxHP: 100, Gold: 200, Inventory: []InventoryItem{}},
 		DungeonData: Dungeon{CurrentFloor: 3},
 	}
 
@@ -265,9 +265,9 @@ func TestSaveManager_AutoSave(t *testing.T) {
 
 	// Create test save data
 	saveData := &SaveData{
-		Version:   SaveVersion,
-		GameInfo:  GameInfo{CharName: "TestPlayer", PlayTime: 100, TurnCount: 10},
-		PlayerData: Player{Level: 1, HP: 20, MaxHP: 20, Gold: 0, Inventory: []InventoryItem{}},
+		Version:     SaveVersion,
+		GameInfo:    GameInfo{CharName: "TestPlayer", PlayTime: 100, TurnCount: 10},
+		PlayerData:  Player{Level: 1, HP: 20, MaxHP: 20, Gold: 0, Inventory: []InventoryItem{}},
 		DungeonData: Dungeon{CurrentFloor: 1},
 	}
 
@@ -312,9 +312,9 @@ func TestSaveManager_ExportImport(t *testing.T) {
 
 	// Create test save data
 	saveData := &SaveData{
-		Version:   SaveVersion,
-		GameInfo:  GameInfo{CharName: "TestPlayer", PlayTime: 100, TurnCount: 10},
-		PlayerData: Player{Level: 5, HP: 50, MaxHP: 100, Gold: 100, Inventory: []InventoryItem{}},
+		Version:     SaveVersion,
+		GameInfo:    GameInfo{CharName: "TestPlayer", PlayTime: 100, TurnCount: 10},
+		PlayerData:  Player{Level: 5, HP: 50, MaxHP: 100, Gold: 100, Inventory: []InventoryItem{}},
 		DungeonData: Dungeon{CurrentFloor: 2},
 	}
 
@@ -384,9 +384,9 @@ func TestSaveManager_GetSaveFileSize(t *testing.T) {
 
 	// Create test save data
 	saveData := &SaveData{
-		Version:   SaveVersion,
-		GameInfo:  GameInfo{CharName: "TestPlayer", PlayTime: 100, TurnCount: 10},
-		PlayerData: Player{Level: 1, HP: 20, MaxHP: 20, Gold: 0, Inventory: []InventoryItem{}},
+		Version:     SaveVersion,
+		GameInfo:    GameInfo{CharName: "TestPlayer", PlayTime: 100, TurnCount: 10},
+		PlayerData:  Player{Level: 1, HP: 20, MaxHP: 20, Gold: 0, Inventory: []InventoryItem{}},
 		DungeonData: Dungeon{CurrentFloor: 1},
 	}
 
@@ -436,9 +436,9 @@ func TestSaveManager_GetDiskUsage(t *testing.T) {
 
 	// Create test save data
 	saveData := &SaveData{
-		Version:   SaveVersion,
-		GameInfo:  GameInfo{CharName: "TestPlayer", PlayTime: 100, TurnCount: 10},
-		PlayerData: Player{Level: 1, HP: 20, MaxHP: 20, Gold: 0, Inventory: []InventoryItem{}},
+		Version:     SaveVersion,
+		GameInfo:    GameInfo{CharName: "TestPlayer", PlayTime: 100, TurnCount: 10},
+		PlayerData:  Player{Level: 1, HP: 20, MaxHP: 20, Gold: 0, Inventory: []InventoryItem{}},
 		DungeonData: Dungeon{CurrentFloor: 1},
 	}
 

@@ -24,6 +24,7 @@ const (
 	ModeQuaff
 	ModeRead
 	ModeCLI
+	ModeDirection
 )
 
 // GameScreen handles the main game display
@@ -37,11 +38,12 @@ type GameScreen struct {
 	grid            gruid.Grid             // 画面全体のグリッド
 	wizardMode      *wizard.WizardMode     // ウィザードモード
 	cliMode         *cli.CLIMode           // CLIデバッグモード
-	inputMode       InputMode              // 現在の入力モード
-	equippableItems []*gameitem.Item       // 装備可能アイテムリスト
-	cliBuffer       string                 // CLI入力バッファ
-	cliHistory      []string               // CLIコマンド履歴
-	cmdParser       *command.Parser        // Command parser
+	inputMode         InputMode              // 現在の入力モード
+	equippableItems   []*gameitem.Item       // 装備可能アイテムリスト
+	cliBuffer         string                 // CLI入力バッファ
+	cliHistory        []string               // CLIコマンド履歴
+	cmdParser         *command.Parser        // Command parser
+	directionCallback func(dx, dy int)       // Direction mode callback
 }
 
 // NewGameScreen creates a new game screen

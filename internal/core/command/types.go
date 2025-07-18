@@ -45,6 +45,7 @@ const (
 	CmdEscape  // Cancel/Back (ESC)
 	CmdWizard  // Toggle wizard mode (^W)
 	CmdCLI     // Enter CLI mode (:)
+	CmdSymbol  // Show symbol explanation (/)
 	CmdUnknown // Unknown command
 )
 
@@ -129,6 +130,8 @@ func (t Type) String() string {
 		return "Wizard Mode"
 	case CmdCLI:
 		return "CLI Mode"
+	case CmdSymbol:
+		return "Symbol Explanation"
 	default:
 		return "Unknown"
 	}

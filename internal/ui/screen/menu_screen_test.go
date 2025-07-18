@@ -11,7 +11,7 @@ import (
 func TestMenuScreen_NewMenuScreen(t *testing.T) {
 	logger.Setup()
 	screen := NewMenuScreen(80, 50)
-	
+
 	if screen.width != 80 {
 		t.Errorf("Expected width 80, got %d", screen.width)
 	}
@@ -29,7 +29,7 @@ func TestMenuScreen_NewMenuScreen(t *testing.T) {
 func TestMenuScreen_HandleInput(t *testing.T) {
 	logger.Setup()
 	screen := NewMenuScreen(80, 50)
-	
+
 	// Test Up key
 	msg := gruid.MsgKeyDown{Key: "Up"}
 	result := screen.HandleInput(msg)
@@ -39,7 +39,7 @@ func TestMenuScreen_HandleInput(t *testing.T) {
 	if screen.selected != 4 { // Should wrap around
 		t.Errorf("Expected selected 4, got %d", screen.selected)
 	}
-	
+
 	// Test Down key
 	msg = gruid.MsgKeyDown{Key: "Down"}
 	result = screen.HandleInput(msg)
@@ -49,21 +49,21 @@ func TestMenuScreen_HandleInput(t *testing.T) {
 	if screen.selected != 0 { // Should wrap around
 		t.Errorf("Expected selected 0, got %d", screen.selected)
 	}
-	
+
 	// Test Enter key (New Game)
 	msg = gruid.MsgKeyDown{Key: "Enter"}
 	result = screen.HandleInput(msg)
 	if result != state.StateGame {
 		t.Errorf("Expected StateGame, got %v", result)
 	}
-	
+
 	// Test direct key selection
 	msg = gruid.MsgKeyDown{Key: "H"}
 	result = screen.HandleInput(msg)
 	if result != state.StateHelp {
 		t.Errorf("Expected StateHelp, got %v", result)
 	}
-	
+
 	// Test quit key
 	msg = gruid.MsgKeyDown{Key: "q"}
 	result = screen.HandleInput(msg)
@@ -76,10 +76,10 @@ func TestMenuScreen_Draw(t *testing.T) {
 	logger.Setup()
 	screen := NewMenuScreen(80, 50)
 	grid := gruid.NewGrid(80, 50)
-	
+
 	// Test that drawing doesn't panic
 	screen.Draw(&grid)
-	
+
 	// Check that the grid is not empty
 	hasContent := false
 	for y := 0; y < 50; y++ {
@@ -97,7 +97,7 @@ func TestMenuScreen_Draw(t *testing.T) {
 			break
 		}
 	}
-	
+
 	if !hasContent {
 		t.Error("Expected grid to have content after drawing")
 	}
@@ -106,35 +106,35 @@ func TestMenuScreen_Draw(t *testing.T) {
 func TestMenuScreen_MenuSelection(t *testing.T) {
 	logger.Setup()
 	screen := NewMenuScreen(80, 50)
-	
+
 	// Test New Game
 	screen.selected = 0
 	result := screen.handleMenuSelection()
 	if result != state.StateGame {
 		t.Errorf("Expected StateGame, got %v", result)
 	}
-	
+
 	// Test Load Game
 	screen.selected = 1
 	result = screen.handleMenuSelection()
 	if result != state.StateSaveLoad {
 		t.Errorf("Expected StateSaveLoad, got %v", result)
 	}
-	
+
 	// Test Scores
 	screen.selected = 2
 	result = screen.handleMenuSelection()
 	if result != state.StateMenu { // TODO: Should be StateScores when implemented
 		t.Errorf("Expected StateMenu, got %v", result)
 	}
-	
+
 	// Test Help
 	screen.selected = 3
 	result = screen.handleMenuSelection()
 	if result != state.StateHelp {
 		t.Errorf("Expected StateHelp, got %v", result)
 	}
-	
+
 	// Test Quit
 	screen.selected = 4
 	result = screen.handleMenuSelection()

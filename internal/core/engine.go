@@ -26,6 +26,7 @@ type Engine struct {
 	helpScreen     *uiscreen.HelpScreen
 	gameOverScreen *uiscreen.GameOverScreen
 	victoryScreen  *uiscreen.VictoryScreen
+	symbolScreen   *uiscreen.SymbolScreen
 	msgs           []gruid.Msg
 }
 
@@ -64,11 +65,12 @@ func NewEngine() *Engine {
 	gameScreen.SetDungeonManager(dungeonManager) // ダンジョンマネージャーを設定
 	menuScreen := uiscreen.NewMenuScreen(screenWidth, screenHeight)
 	helpScreen := uiscreen.NewHelpScreen(screenWidth, screenHeight)
-	
+	symbolScreen := uiscreen.NewSymbolScreen(screenWidth, screenHeight)
+
 	// ゲームオーバー・勝利画面（初期は空のスコアエントリーで作成）
 	gameOverScreen := uiscreen.NewGameOverScreen(screenWidth, screenHeight, nil)
 	victoryScreen := uiscreen.NewVictoryScreen(screenWidth, screenHeight, nil)
-	
+
 	logger.Debug("Created screens")
 
 	// ステートマネージャーの初期化
@@ -78,6 +80,7 @@ func NewEngine() *Engine {
 	stateManager.RegisterState(state.StateHelp, helpScreen)
 	stateManager.RegisterState(state.StateGameOver, gameOverScreen)
 	stateManager.RegisterState(state.StateVictory, victoryScreen)
+	stateManager.RegisterState(state.StateSymbol, symbolScreen)
 
 	// メニュー状態で開始
 	stateManager.SetState(state.StateMenu)
@@ -92,6 +95,7 @@ func NewEngine() *Engine {
 		helpScreen:     helpScreen,
 		gameOverScreen: gameOverScreen,
 		victoryScreen:  victoryScreen,
+		symbolScreen:   symbolScreen,
 		msgs:           make([]gruid.Msg, 0),
 	}
 

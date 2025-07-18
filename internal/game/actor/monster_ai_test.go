@@ -202,7 +202,7 @@ func TestMonsterCombat(t *testing.T) {
 	// Test special abilities for specific monsters
 	dragon := NewMonster(5, 5, 'D')
 	dragonBaseDamage := dragon.CalculateDamage(player.GetTotalDefense())
-	
+
 	// Test multiple times to account for randomness
 	bonusFound := false
 	for i := 0; i < 10; i++ {
@@ -259,7 +259,7 @@ func TestMonsterSpecialAbilities(t *testing.T) {
 	// Test Dragon fire damage with multiple attempts
 	dragon := NewMonster(5, 5, 'D')
 	baseDamage := dragon.CalculateDamage(player.GetTotalDefense())
-	
+
 	// Test multiple times to account for randomness
 	bonusFound := false
 	for i := 0; i < 10; i++ {
@@ -276,7 +276,7 @@ func TestMonsterSpecialAbilities(t *testing.T) {
 	// Test Vampire life drain with multiple attempts
 	vampire := NewMonster(5, 5, 'V')
 	vampire.HP = vampire.MaxHP / 2 // Damage the vampire first
-	
+
 	// Test multiple times to account for randomness
 	vampireBonusFound := false
 	for i := 0; i < 10; i++ {

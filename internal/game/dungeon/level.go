@@ -333,13 +333,12 @@ func (l *Level) SpawnMonsters() {
 	// 階層に応じたモンスター数を計算（DungeonManagerの計算を使用）
 	numMonsters := l.getMonsterSpawnCount()
 
-
 	// 各部屋にモンスターを配置
 	for i := 0; i < numMonsters; i++ {
 		maxAttempts := 50
 		placed := false
 		var x, y int
-		
+
 		for attempts := 0; attempts < maxAttempts; attempts++ {
 			// ランダムな部屋を選択
 			room := l.Rooms[rand.Intn(len(l.Rooms))]
@@ -367,7 +366,7 @@ func (l *Level) SpawnMonsters() {
 			placed = true
 			break
 		}
-		
+
 		if !placed {
 			logger.Debug("Failed to place monster after max attempts", "floor", l.FloorNumber, "attempts", maxAttempts)
 			continue

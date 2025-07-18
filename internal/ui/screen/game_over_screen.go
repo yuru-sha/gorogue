@@ -12,12 +12,12 @@ import (
 
 // GameOverScreen represents the game over screen
 type GameOverScreen struct {
-	width        int
-	height       int
-	selected     int
-	scoreEntry   *score.ScoreEntry
-	showStats    bool
-	menuItems    []string
+	width      int
+	height     int
+	selected   int
+	scoreEntry *score.ScoreEntry
+	showStats  bool
+	menuItems  []string
 }
 
 // NewGameOverScreen creates a new game over screen
