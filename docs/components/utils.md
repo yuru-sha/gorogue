@@ -1,10 +1,10 @@
 # Utils コンポーネント
 
-GoRogueのユーティリティシステム。ロギング機能を中心とした共通機能を提供し、プロジェクト全体のデバッグ支援と品質向上を担います。
+PyRogueのユーティリティシステム。ロギング機能を中心とした共通機能を提供し、プロジェクト全体のデバッグ支援と品質向上を担います。
 
 ## 概要
 
-`src/GoRogue/utils/`は、GoRogueプロジェクトの基盤となるユーティリティ機能を提供します。現在は高品質なロギングシステムを中核とし、プロジェクト全体（23ファイル）で広く活用されています。
+`src/pyrogue/utils/`は、PyRogueプロジェクトの基盤となるユーティリティ機能を提供します。現在は高品質なロギングシステムを中核とし、プロジェクト全体（23ファイル）で広く活用されています。
 
 ## アーキテクチャ
 
@@ -64,7 +64,7 @@ class GameLogger:
 ```python
 def setup_game_logger() -> logging.Logger:
     """シンプルなゲームロガーを設定"""
-    logger = logging.getLogger("GoRogue")
+    logger = logging.getLogger("pyrogue")
 
     # 重複ハンドラー防止
     if logger.handlers:
@@ -156,9 +156,9 @@ entities/items/light_items.py    # 光源アイテム管理
 
 ```
 # 標準ログフォーマット
-2025-07-13 13:30:32,296 - GoRogue - INFO - TCOD BSP dungeon built: 10 rooms
-2025-07-13 13:30:32,297 - GoRogue - DEBUG - Dungeon generation completed for floor 5
-2025-07-13 13:30:32,298 - GoRogue - INFO - Game started - {'player': 'test'}
+2025-07-13 13:30:32,296 - pyrogue - INFO - TCOD BSP dungeon built: 10 rooms
+2025-07-13 13:30:32,297 - pyrogue - DEBUG - Dungeon generation completed for floor 5
+2025-07-13 13:30:32,298 - pyrogue - INFO - Game started - {'player': 'test'}
 ```
 
 ## 使用パターン
@@ -166,7 +166,7 @@ entities/items/light_items.py    # 光源アイテム管理
 ### 基本的な使用方法
 
 ```python
-from GoRogue.utils import game_logger
+from pyrogue.utils import game_logger
 
 # 基本ログ出力
 game_logger.info("Game started")
@@ -357,7 +357,7 @@ from logging.handlers import RotatingFileHandler
 
 def setup_rotating_logger() -> logging.Logger:
     """自動ローテーション対応ロガー"""
-    logger = logging.getLogger("GoRogue")
+    logger = logging.getLogger("pyrogue")
 
     # ローテーションハンドラー
     handler = RotatingFileHandler(
@@ -458,7 +458,7 @@ game_logger.logger.setLevel(logging.DEBUG)
 ```python
 def test_logging_functionality():
     """ログ機能のテスト"""
-    with patch('GoRogue.utils.logger.game_logger') as mock_logger:
+    with patch('pyrogue.utils.logger.game_logger') as mock_logger:
         game_function_that_logs()
         mock_logger.info.assert_called_with("Expected message")
 ```
@@ -476,7 +476,7 @@ grep "PERF:" logs/game.log | tail -20
 
 ## まとめ
 
-Utils コンポーネントは、GoRogueプロジェクトの基盤として以下の価値を提供します：
+Utils コンポーネントは、PyRogueプロジェクトの基盤として以下の価値を提供します：
 
 - **統一性**: プロジェクト全体での一貫したログ出力
 - **柔軟性**: 環境に応じた動的な制御機能
