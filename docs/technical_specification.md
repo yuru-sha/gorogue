@@ -5,7 +5,7 @@ cache_control: {"type": "ephemeral"}
 
 ## ドキュメント概要
 
-この技術仕様書は、GoRogueプロジェクトの実装レベルでの技術仕様を詳細に記述します。API設計、データ構造、パフォーマンス要件、セキュリティ仕様、実装ガイドラインを包括的に定義し、開発者が一貫した高品質な実装を行うための技術的指針を提供します。
+この技術仕様書は、GoRogueプロジェクトの実装レベルでの技術仕様を詳細に記述します。API設計、データ構造、パフォーマンス要件、セキュリティ仕様、実装ガイドラインを包括的に定義し、開発者がGo言語の特性を活かした一貫した高品質な実装を行うための技術的指針を提供します。
 
 ## 1. システム仕様
 
@@ -13,38 +13,37 @@ cache_control: {"type": "ephemeral"}
 
 #### 実行環境
 ```yaml
-Python Version: ">=3.12"
+Go Version: ">=1.22"
 Platform Support:
   - macOS: ">=10.15"
   - Windows: ">=10"
   - Linux: "Ubuntu >=20.04, Fedora >=35"
 Architecture: "x86_64, arm64"
-Memory: "512MB以上推奨"
-Storage: "100MB以上"
+Memory: "256MB以上推奨"
+Storage: "50MB以上"
 ```
 
 #### 依存関係
 ```yaml
 Core Dependencies:
-  tcod: ">=19.0.0"
-  numpy: ">=1.26.3"
-  python-dotenv: ">=1.0.0"
+  ebiten: "v2.6+"
+  
 
 Development Dependencies:
-  pytest: ">=8.0.0"
-  pytest-cov: ">=4.0.0"
-  mypy: ">=1.8.0"
-  ruff: ">=0.1.0"
-  pre-commit: ">=3.6.0"
+  golangci-lint: ">=1.55.0"
+  go test: "標準ライブラリ"
+  go vet: "標準ライブラリ"
+  gofmt: "標準ライブラリ"
+  go mod: "標準ライブラリ"
 ```
 
 #### パフォーマンス要件
 ```yaml
 Minimum Requirements:
   FPS: ">=30 (ターンベースのため実質制限なし)"
-  Memory Usage: "<=256MB"
-  Startup Time: "<=3秒"
-  Save/Load Time: "<=1秒"
+  Memory Usage: "<=128MB"
+  Startup Time: "<=2秒"
+  Save/Load Time: "<=0.5秒"
 
 Target Requirements:
   FPS: "60"
@@ -1167,7 +1166,7 @@ run_cli_test() {
     echo "Running test: $test_name"
 
     # CLIモードでテスト実行
-    echo "$commands" | python -m GoRogue.main --cli --test > test_output.txt 2>&1
+    echo "$commands" | python -m pyrogue.main --cli --test > test_output.txt 2>&1
 
     # 結果検証
     if validate_test_output "$test_name" "test_output.txt"; then
@@ -1221,7 +1220,7 @@ class GameLogger:
 
     def setup_logging(self) -> None:
         """ロガー設定"""
-        logger = logging.getLogger('GoRogue')
+        logger = logging.getLogger('pyrogue')
 
         # ハンドラー設定
         if self.debug_mode:
@@ -1230,7 +1229,7 @@ class GameLogger:
                 '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
             )
         else:
-            handler = logging.FileHandler('GoRogue.log')
+            handler = logging.FileHandler('pyrogue.log')
             formatter = logging.Formatter(
                 '%(asctime)s - %(levelname)s - %(message)s'
             )
@@ -1314,7 +1313,7 @@ class ConfigManager:
 
 ## まとめ
 
-この技術仕様書は、GoRogueプロジェクトの実装レベルでの技術的詳細を包括的に定義しています。
+この技術仕様書は、PyRogueプロジェクトの実装レベルでの技術的詳細を包括的に定義しています。
 
 ### 🏗️ **実装指針**
 - **API設計**: 型安全性と拡張性を重視したインターフェース
@@ -1334,4 +1333,4 @@ class ConfigManager:
 - **信頼性**: 堅牢なエラー処理とデータ保護
 - **効率性**: 最適化されたパフォーマンス
 
-この仕様書に従うことで、開発チームは一貫した高品質な実装を行い、GoRogueプロジェクトの技術的優秀性を維持・発展させることができます。
+この仕様書に従うことで、開発チームは一貫した高品質な実装を行い、PyRogueプロジェクトの技術的優秀性を維持・発展させることができます。

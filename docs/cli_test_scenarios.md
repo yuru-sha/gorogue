@@ -1,14 +1,14 @@
 ---
 cache_control: {"type": "ephemeral"}
 ---
-# GoRogue CLIモード テストシナリオ記録
+# PyRogue CLIモード テストシナリオ記録
 
 ## 概要
 
-このドキュメントは、GoRogueプロジェクトのリファクタリング後にCLIモードで実施した動作確認テストシナリオを記録したものです。
+このドキュメントは、PyRogueプロジェクトのリファクタリング後にCLIモードで実施した動作確認テストシナリオを記録したものです。
 
 **テスト実施日**: 2024年7月11日
-**テスト対象**: リファクタリング後のGoRogue（MovementManager、ItemManager、FloorManager分離後）
+**テスト対象**: リファクタリング後のPyRogue（MovementManager、ItemManager、FloorManager分離後）
 **テスト環境**: Darwin 24.5.0、Python 3.12.2、uv環境
 
 ## テストシナリオ一覧
@@ -24,7 +24,7 @@ cache_control: {"type": "ephemeral"}
 ```
 usage: main.py [-h] [--cli]
 
-GoRogue - A Python Roguelike Game
+PyRogue - A Python Roguelike Game
 
 options:
   -h, --help  show this help message and exit
@@ -38,7 +38,7 @@ options:
 **期待結果**: プレイヤー情報とプロンプトが表示される
 **実際の結果**: ✅ 成功
 ```
-GoRogue CLI Mode - Type 'help' for commands
+PyRogue CLI Mode - Type 'help' for commands
 
 ==================================================
 Floor: B1F
@@ -366,7 +366,7 @@ CLIモードの動作確認を自動化するため、テストスクリプト�
 ```bash
 $ ./scripts/cli_test.sh
 
-[INFO] GoRogue CLIモード自動テスト開始
+[INFO] PyRogue CLIモード自動テスト開始
 ================================================================
 
 [INFO] === 基本起動テスト ===
@@ -425,7 +425,7 @@ def is_alive(self) -> bool:
 
 ## 結論
 
-GoRogueのリファクタリング後のCLIモードは**完全に動作**しており、以下の成果が確認されました：
+PyRogueのリファクタリング後のCLIモードは**完全に動作**しており、以下の成果が確認されました：
 
 1. **機能の完全性**: すべての基本機能が正常に動作
 2. **責務分離の成功**: 各マネージャーが独立して正常動作

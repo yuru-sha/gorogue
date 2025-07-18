@@ -1,10 +1,10 @@
 # UI コンポーネント
 
-GoRogueのユーザーインターフェースシステム。画面管理、描画処理、入力制御を統合し、直感的で応答性の高いゲーム体験を提供します。
+PyRogueのユーザーインターフェースシステム。画面管理、描画処理、入力制御を統合し、直感的で応答性の高いゲーム体験を提供します。
 
 ## 概要
 
-`src/GoRogue/ui/`は、GoRogueのフロントエンドを担当するユーザーインターフェースシステムです。TCODライブラリとの効率的な統合により、文字ベースながら高度な描画機能と包括的な入力処理を実現しています。
+`src/pyrogue/ui/`は、PyRogueのフロントエンドを担当するユーザーインターフェースシステムです。TCODライブラリとの効率的な統合により、文字ベースながら高度な描画機能と包括的な入力処理を実現しています。
 
 ## アーキテクチャ
 
@@ -79,7 +79,7 @@ class MenuScreen(Screen):
         # タイトル表示
         tcod.console_print(root_console,
                           x=center_x, y=5,
-                          string="GoRogue",
+                          string="PYROGUE",
                           fg=color.YELLOW)
 
         # メニューオプション
@@ -640,7 +640,7 @@ def render_viewport_only(self, console: tcod.Console,
 ### 基本的な画面実装
 
 ```python
-from GoRogue.ui.screens.screen import Screen
+from pyrogue.ui.screens.screen import Screen
 
 class CustomScreen(Screen):
     """カスタム画面の実装例"""
@@ -661,7 +661,7 @@ class CustomScreen(Screen):
 ### カスタム描画コンポーネント
 
 ```python
-from GoRogue.ui.components.game_renderer import GameRenderer
+from pyrogue.ui.components.game_renderer import GameRenderer
 
 class CustomRenderer(GameRenderer):
     """カスタム描画機能"""
@@ -779,7 +779,7 @@ class KeyRepeatHandler:
 
 ## まとめ
 
-UI コンポーネントは、GoRogueプロジェクトのユーザー体験において以下の価値を提供します：
+UI コンポーネントは、PyRogueプロジェクトのユーザー体験において以下の価値を提供します：
 
 - **直感的操作**: 3種類の入力方式による包括的なサポート
 - **視覚的魅力**: 文字ベースながら豊富な視覚情報
