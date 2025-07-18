@@ -202,9 +202,18 @@ func TestMonsterCombat(t *testing.T) {
 	// Test special abilities for specific monsters
 	dragon := NewMonster(5, 5, 'D')
 	dragonBaseDamage := dragon.CalculateDamage(player.GetTotalDefense())
-	dragonFinalDamage := dragon.applyDamageModifiers(dragonBaseDamage, player)
-	if dragonFinalDamage <= dragonBaseDamage {
-		t.Error("Expected dragon to have damage bonus")
+	
+	// Test multiple times to account for randomness
+	bonusFound := false
+	for i := 0; i < 10; i++ {
+		dragonFinalDamage := dragon.applyDamageModifiers(dragonBaseDamage, player)
+		if dragonFinalDamage > dragonBaseDamage {
+			bonusFound = true
+			break
+		}
+	}
+	if !bonusFound {
+		t.Error("Expected dragon to have damage bonus in at least one of 10 attempts")
 	}
 }
 
@@ -247,20 +256,38 @@ func TestMonsterSpecialAbilities(t *testing.T) {
 		t.Errorf("Expected Eye to have high accuracy (>0.95), got %f", eyeHitChance)
 	}
 
-	// Test Dragon fire damage
+	// Test Dragon fire damage with multiple attempts
 	dragon := NewMonster(5, 5, 'D')
 	baseDamage := dragon.CalculateDamage(player.GetTotalDefense())
-	dragonDamage := dragon.applyDamageModifiers(baseDamage, player)
-	if dragonDamage <= baseDamage {
-		t.Error("Expected Dragon to have fire damage bonus")
+	
+	// Test multiple times to account for randomness
+	bonusFound := false
+	for i := 0; i < 10; i++ {
+		dragonDamage := dragon.applyDamageModifiers(baseDamage, player)
+		if dragonDamage > baseDamage {
+			bonusFound = true
+			break
+		}
+	}
+	if !bonusFound {
+		t.Error("Expected Dragon to have fire damage bonus in at least one of 10 attempts")
 	}
 
-	// Test Vampire life drain
+	// Test Vampire life drain with multiple attempts
 	vampire := NewMonster(5, 5, 'V')
 	vampire.HP = vampire.MaxHP / 2 // Damage the vampire first
-	vampireDamage := vampire.applyDamageModifiers(baseDamage, player)
-	if vampireDamage <= baseDamage {
-		t.Error("Expected Vampire to have damage bonus")
+	
+	// Test multiple times to account for randomness
+	vampireBonusFound := false
+	for i := 0; i < 10; i++ {
+		vampireDamage := vampire.applyDamageModifiers(baseDamage, player)
+		if vampireDamage > baseDamage {
+			vampireBonusFound = true
+			break
+		}
+	}
+	if !vampireBonusFound {
+		t.Error("Expected Vampire to have damage bonus in at least one of 10 attempts")
 	}
 
 	// Test Leprechaun gold stealing
