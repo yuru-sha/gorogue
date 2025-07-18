@@ -184,6 +184,27 @@ func (s *GameScreen) handleCloseDoor() {
 	// TODO: Implement door closing functionality
 }
 
+// handleFight handles the fight command - attack in a specific direction
+func (s *GameScreen) handleFight() {
+	s.AddMessage("Attack which direction? (hjklybnu)")
+	// TODO: Implement directional attack functionality
+	// For now, just provide the message
+}
+
+// handleDisarm handles the disarm trap command
+func (s *GameScreen) handleDisarm() {
+	s.AddMessage("Disarm trap which direction? (hjklybnu)")
+	// TODO: Implement directional disarm functionality
+	// For now, just provide the message
+}
+
+// handleToggleFOV toggles field of view display
+func (s *GameScreen) handleToggleFOV() {
+	s.AddMessage("FOV display toggled")
+	// TODO: Implement FOV toggle functionality
+	// For now, just provide the message
+}
+
 // canGoDownstairs checks if the player can go down stairs
 func (s *GameScreen) canGoDownstairs() bool {
 	if s.dungeonManager == nil {

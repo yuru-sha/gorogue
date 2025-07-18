@@ -54,24 +54,21 @@ func (p *Parser) initializeKeyMap() {
 
 	// Action commands - PyRogue style
 	p.keyMap["i"] = Command{Type: CmdInventory} // Inventory
-	p.keyMap["g"] = Command{Type: CmdPickUp}    // Pick up (PyRogue style)
-	p.keyMap[","] = Command{Type: CmdPickUp}    // Pick up (also comma for compatibility)
-	p.keyMap["d"] = Command{Type: CmdDrop}      // Drop
-	p.keyMap["q"] = Command{Type: CmdQuaff}     // Quaff potion
-	p.keyMap["r"] = Command{Type: CmdRead}      // Read scroll
-	p.keyMap["w"] = Command{Type: CmdWield}     // Wield/wear
-	p.keyMap["W"] = Command{Type: CmdWield}     // Wield/wear (also uppercase)
-	p.keyMap["T"] = Command{Type: CmdTakeOff}   // Take off (PyRogue uses uppercase T)
-	p.keyMap["P"] = Command{Type: CmdUse}       // Put on ring (PyRogue style)
-	p.keyMap["R"] = Command{Type: CmdUse}       // Remove ring (PyRogue style)
-	p.keyMap[" "] = Command{Type: CmdWait}      // Space bar to rest/wait (PyRogue)
-	p.keyMap["."] = Command{Type: CmdWait}      // Period to rest (when not on stairs)
+	p.keyMap[","] = Command{Type: CmdPickUp}    // Pick up (PyRogue style)
+	p.keyMap["g"] = Command{Type: CmdPickUp}    // Pick up (also g for compatibility)
+	p.keyMap["u"] = Command{Type: CmdUse}       // Use item (PyRogue unified interface)
+	p.keyMap["e"] = Command{Type: CmdEquip}     // Equip item (PyRogue style)
+	p.keyMap["r"] = Command{Type: CmdUnequip}   // Unequip item (PyRogue style)
+	p.keyMap["d"] = Command{Type: CmdDisarm}    // Disarm trap (PyRogue style)
+	p.keyMap["o"] = Command{Type: CmdOpen}      // Open door
+	p.keyMap["c"] = Command{Type: CmdClose}     // Close door
 	p.keyMap["s"] = Command{Type: CmdSearch}    // Search
-	p.keyMap["e"] = Command{Type: CmdUse}       // Eat food (PyRogue style)
-	p.keyMap["z"] = Command{Type: CmdUse}       // Zap wand (PyRogue style)
-	p.keyMap["t"] = Command{Type: CmdUse}       // Throw (PyRogue style)
-	p.keyMap["c"] = Command{Type: CmdClose}     // Call item (name item in PyRogue)
-	p.keyMap["x"] = Command{Type: CmdLook}      // Look/examine (PyRogue style)
+	p.keyMap["z"] = Command{Type: CmdUse}       // Spellbook (PyRogue style)
+	p.keyMap["f"] = Command{Type: CmdFight}     // Fight
+	p.keyMap["x"] = Command{Type: CmdLook}      // Look/examine
+	p.keyMap[" "] = Command{Type: CmdWait}      // Space bar to rest/wait
+	p.keyMap["."] = Command{Type: CmdWait}      // Period to rest (when not on stairs)
+	p.keyMap[gruid.KeyTab] = Command{Type: CmdToggleFOV} // Toggle FOV (PyRogue style)
 	p.keyMap["^L"] = Command{Type: CmdLook}     // Ctrl+L to redraw screen
 	p.keyMap["^R"] = Command{Type: CmdLook}     // Ctrl+R to repeat last message
 
@@ -108,27 +105,25 @@ func (p *Parser) GetKeyBindings() map[string]string {
 	bindings["H,J,K,L"] = "Run in direction (until wall/object)"
 	bindings["Y,U,B,N"] = "Run diagonally"
 	bindings["Arrow keys"] = "Move in four directions"
+	bindings["Numpad"] = "Move with keys 1-9 (including diagonals)"
 
 	// Actions
 	bindings["i"] = "Inventory - show what you are carrying"
-	bindings["g"] = "Get/pick up object(s)"
-	bindings[","] = "Pick up object(s) (alternative)"
-	bindings["d"] = "Drop an object"
-	bindings["q"] = "Quaff a potion"
-	bindings["r"] = "Read a scroll"
-	bindings["w,W"] = "Wield a weapon or wear armor"
-	bindings["T"] = "Take off armor"
-	bindings["P"] = "Put on a ring"
-	bindings["R"] = "Remove a ring"
-	bindings["e"] = "Eat food"
-	bindings["z"] = "Zap a wand"
-	bindings["t"] = "Throw an object"
-	bindings["c"] = "Call an object (name it)"
+	bindings[","] = "Pick up object(s) (PyRogue style)"
+	bindings["g"] = "Get/pick up object(s) (alternative)"
+	bindings["u"] = "Use item (unified interface)"
+	bindings["e"] = "Equip item"
+	bindings["r"] = "Unequip item"
+	bindings["d"] = "Disarm trap"
+	bindings["o"] = "Open a door"
+	bindings["c"] = "Close a door"
+	bindings["s"] = "Search for traps/doors"
+	bindings["z"] = "Spellbook"
+	bindings["f"] = "Fight (attack adjacent monster)"
+	bindings["x"] = "Look/examine surroundings"
 	bindings["."] = "Rest for a turn"
 	bindings["Space"] = "Rest for a turn"
-	bindings["s"] = "Search for traps/doors"
-	bindings["x"] = "Look/examine surroundings"
-	bindings["/"] = "Identify object on screen"
+	bindings["Tab"] = "Toggle field of view display"
 	bindings["Ctrl+L"] = "Redraw the screen"
 	bindings["Ctrl+R"] = "Repeat last message"
 
@@ -142,6 +137,8 @@ func (p *Parser) GetKeyBindings() map[string]string {
 	bindings["?"] = "Show this help"
 	bindings["ESC"] = "Cancel command"
 	bindings["Ctrl+W"] = "Toggle wizard mode"
+	bindings["Ctrl+S"] = "Save game"
+	bindings["Ctrl+L"] = "Load game"
 	bindings[":"] = "Enter CLI debug mode"
 
 	return bindings

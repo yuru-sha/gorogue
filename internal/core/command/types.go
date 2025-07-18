@@ -29,6 +29,11 @@ const (
 	CmdSearch    // Search (s)
 	CmdOpen      // Open door (o)
 	CmdClose     // Close door (c)
+	CmdFight     // Fight/Attack (f)
+	CmdDisarm    // Disarm trap (d)
+	CmdEquip     // Equip item (e)
+	CmdUnequip   // Unequip item (r)
+	CmdToggleFOV // Toggle field of view (Tab)
 
 	// Stair commands
 	CmdGoUpstairs   // Go up stairs (<)
@@ -100,6 +105,16 @@ func (t Type) String() string {
 		return "Open"
 	case CmdClose:
 		return "Close"
+	case CmdFight:
+		return "Fight"
+	case CmdDisarm:
+		return "Disarm"
+	case CmdEquip:
+		return "Equip"
+	case CmdUnequip:
+		return "Unequip"
+	case CmdToggleFOV:
+		return "Toggle FOV"
 	case CmdGoUpstairs:
 		return "Go Upstairs"
 	case CmdGoDownstairs:

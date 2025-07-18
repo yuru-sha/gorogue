@@ -57,15 +57,7 @@ func (s *GameScreen) handleNormalInput(key gruid.Key) state.GameState {
 	case command.CmdDrop:
 		s.enterDropMode()
 	case command.CmdUse:
-		s.enterUseMode()
-	case command.CmdQuaff:
-		s.enterQuaffMode()
-	case command.CmdRead:
-		s.enterReadMode()
-	case command.CmdWield:
-		s.enterEquipMode()
-	case command.CmdTakeOff:
-		s.enterUnequipMode()
+		s.enterUseMode() // PyRogue unified use interface
 	case command.CmdWait:
 		s.handleWait()
 	case command.CmdSearch:
@@ -74,6 +66,16 @@ func (s *GameScreen) handleNormalInput(key gruid.Key) state.GameState {
 		s.handleOpenDoor()
 	case command.CmdClose:
 		s.handleCloseDoor()
+	case command.CmdFight:
+		s.handleFight()
+	case command.CmdDisarm:
+		s.handleDisarm()
+	case command.CmdEquip:
+		s.enterEquipMode()
+	case command.CmdUnequip:
+		s.enterUnequipMode()
+	case command.CmdToggleFOV:
+		s.handleToggleFOV()
 
 	// Stair commands
 	case command.CmdGoUpstairs:
