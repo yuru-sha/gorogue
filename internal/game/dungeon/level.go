@@ -333,24 +333,43 @@ func (l *Level) SpawnMonsters() {
 	// 階層に応じたモンスター数を計算（DungeonManagerの計算を使用）
 	numMonsters := l.getMonsterSpawnCount()
 
+
 	// 各部屋にモンスターを配置
 	for i := 0; i < numMonsters; i++ {
-		// ランダムな部屋を選択
-		room := l.Rooms[rand.Intn(len(l.Rooms))]
+		maxAttempts := 50
+		placed := false
+		var x, y int
+		
+		for attempts := 0; attempts < maxAttempts; attempts++ {
+			// ランダムな部屋を選択
+			room := l.Rooms[rand.Intn(len(l.Rooms))]
 
-		// 部屋内のランダムな位置を選択
-		x := room.X + 1 + rand.Intn(room.Width-2)
-		y := room.Y + 1 + rand.Intn(room.Height-2)
+			// 部屋が十分な大きさかチェック
+			if room.Width <= 2 || room.Height <= 2 {
+				continue
+			}
 
-		// その位置が床タイルかチェック
-		if l.GetTile(x, y).Type != TileFloor {
-			i-- // 無効な位置の場合は再試行
-			continue
+			// 部屋内のランダムな位置を選択
+			x = room.X + 1 + rand.Intn(room.Width-2)
+			y = room.Y + 1 + rand.Intn(room.Height-2)
+
+			// その位置が床タイルかチェック
+			if l.GetTile(x, y).Type != TileFloor {
+				continue
+			}
+
+			// 既にモンスターがいないかチェック
+			if l.GetMonsterAt(x, y) != nil {
+				continue
+			}
+
+			// モンスターを配置
+			placed = true
+			break
 		}
-
-		// 既にモンスターがいないかチェック
-		if l.GetMonsterAt(x, y) != nil {
-			i-- // 既にモンスターがいる場合は再試行
+		
+		if !placed {
+			logger.Debug("Failed to place monster after max attempts", "floor", l.FloorNumber, "attempts", maxAttempts)
 			continue
 		}
 
