@@ -1,10 +1,10 @@
 # Config コンポーネント
 
-GoRogueの設定管理システム。環境変数とゲーム設定の統合管理を担当します。
+PyRogueの設定管理システム。環境変数とゲーム設定の統合管理を担当します。
 
 ## 概要
 
-`src/GoRogue/config/`は、現代的な環境変数管理と後方互換性を両立した設定システムです。`.env`ファイルによる外部設定、型安全なアクセスAPI、レガシーシステムとの統合を提供します。
+`src/pyrogue/config/`は、現代的な環境変数管理と後方互換性を両立した設定システムです。`.env`ファイルによる外部設定、型安全なアクセスAPI、レガシーシステムとの統合を提供します。
 
 ## アーキテクチャ
 
@@ -23,6 +23,7 @@ config/
 - **後方互換性**: 既存のCONFIGインターフェースの維持
 - **責務分離**: 環境変数管理とゲーム設定の分離
 - **拡張性**: 新しい設定項目の容易な追加
+- **Handler Pattern連携**: v0.1.0のHandler Patternとの統合設計
 
 ## 主要コンポーネント
 
@@ -56,7 +57,7 @@ def get_float(self, key: str, default: float = 0.0) -> float:
 #### 実装例
 
 ```python
-from GoRogue.config.env import env_config
+from pyrogue.config.env import env_config
 
 # 環境変数の読み込み
 env_config.load_env()
@@ -129,7 +130,7 @@ CONFIG = GameConfig()
 ### 基本的な使用方法
 
 ```python
-from GoRogue.config.env import (
+from pyrogue.config.env import (
     env_config,
     get_debug_mode,
     get_auto_save_enabled,
@@ -148,7 +149,7 @@ if get_debug_mode():
 ### レガシーAPIの継続利用
 
 ```python
-from GoRogue.config import CONFIG
+from pyrogue.config import CONFIG
 
 # 既存コードとの互換性
 display_config = CONFIG.display
@@ -250,13 +251,65 @@ class GameConfig:
 - **キャッシュ**: 一度読み込んだ設定値はos.environに保存
 - **軽量**: 最小限の依存関係とメモリ使用量
 
+## Handler Pattern連携（v0.1.0）
+
+### Handler Patternでの設定活用
+
+各Handlerは環境設定を適切に参照し、機能の可用性を制御します：
+
+```python
+class DebugCommandHandler:
+    def __init__(self, context: CommandContext):
+        self.context = context
+        self.debug_enabled = get_debug_mode()
+
+    def handle_debug_command(self, args: list[str]) -> CommandResult:
+        """デバッグコマンド処理（設定依存）"""
+        if not self.debug_enabled:
+            return CommandResult.failure("Debug mode is disabled")
+
+        # デバッグ機能の実行
+        return self._execute_debug_action(args)
+```
+
+### 設定ベースの機能制御
+
+```python
+class SaveLoadHandler:
+    def handle_auto_save(self) -> CommandResult:
+        """オートセーブ処理（設定依存）"""
+        if not get_auto_save_enabled():
+            return CommandResult.success("Auto-save disabled")
+
+        # オートセーブの実行
+        return self._perform_auto_save()
+```
+
+### ハンドラー初期化時の設定注入
+
+```python
+class CommonCommandHandler:
+    def __init__(self, context: CommandContext):
+        self.context = context
+        # 設定値に基づくハンドラー初期化制御
+        self._init_handlers_based_on_config()
+
+    def _init_handlers_based_on_config(self):
+        """設定に基づくハンドラー初期化"""
+        if get_debug_mode():
+            self._debug_handler = DebugCommandHandler(self.context)
+        else:
+            self._debug_handler = None
+```
+
 ## まとめ
 
-Config コンポーネントは、GoRogueプロジェクトの設定管理において以下の価値を提供します：
+Config コンポーネントは、PyRogueプロジェクトの設定管理において以下の価値を提供します：
 
 - **開発効率**: .envファイルによる環境依存設定の外部化
 - **型安全性**: 実行時エラーを防ぐ型安全なAPI
 - **保守性**: 後方互換性を保ちながらの段階的移行
 - **拡張性**: 新しい設定項目の容易な追加
+- **Handler Pattern統合**: v0.1.0のHandler Patternとの完全な連携
 
 この設計により、開発・テスト・本番環境での設定管理が統一され、プロジェクトの成長に対応できる柔軟なシステムを実現しています。

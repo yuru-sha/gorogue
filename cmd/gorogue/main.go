@@ -11,6 +11,7 @@ import (
 
 	"github.com/anaseto/gruid"
 	"github.com/anaseto/gruid-sdl"
+	"github.com/yuru-sha/gorogue/internal/config"
 	"github.com/yuru-sha/gorogue/internal/core"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 	"golang.org/x/image/font"
@@ -106,7 +107,17 @@ func main() {
 	}
 	defer logger.Cleanup()
 
-	logger.Info("Starting GoRogue", "render_mode", "sdl2_ascii")
+	// 設定の読み込み確認
+	if config.GetDebugMode() {
+		logger.Info("Debug mode enabled", "config_loaded", true)
+		config.PrintConfig()
+	}
+
+	logger.Info("Starting GoRogue", 
+		"render_mode", "sdl2_ascii",
+		"debug_mode", config.GetDebugMode(),
+		"log_level", config.GetLogLevel(),
+	)
 
 	// ゲームエンジンの初期化
 	engine := core.NewEngine()
@@ -115,8 +126,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// SDL2ドライバーの設定 - ASCII文字表示用（Inconsolata 8x16フォント）
-	config := sdl.Config{
+	// SDL2ドライバーの設定 - 固定サイズ
+	sdlConfig := sdl.Config{
 		TileManager: NewASCIITileManager(10, 16), // 10x16のInconsolataフォント用サイズ
 		Width:       80,
 		Height:      50,
@@ -124,7 +135,7 @@ func main() {
 		Fullscreen:  false,
 	}
 
-	driver := sdl.NewDriver(config)
+	driver := sdl.NewDriver(sdlConfig)
 
 	// ドライバーの初期化
 	if err := driver.Init(); err != nil {

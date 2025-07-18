@@ -1,11 +1,11 @@
 ---
 cache_control: {"type": "ephemeral"}
 ---
-# GoRogue - 機能一覧
+# PyRogue - 機能一覧
 
 ## 概要
 
-GoRogueは、伝統的なローグライクゲームの要素を現代的な技術で実装した完全なゲームシステムです。以下では、実装されている機能を詳細に説明します。
+PyRogueは、伝統的なローグライクゲームの要素を現代的な技術で実装した完全なゲームシステムです。以下では、実装されている機能を詳細に説明します。
 
 ## ゲームプレイ機能
 
@@ -31,10 +31,10 @@ GoRogueは、伝統的なローグライクゲームの要素を現代的な技�
 - **戦術的配置**: 回避困難で戦術的価値の高い位置にのみ配置
 
 #### 実装場所
-- `src/GoRogue/map/dungeon/section_based_builder.py` - BSPダンジョン生成
-- `src/GoRogue/map/dungeon/maze_builder.py` - 迷路生成専用ビルダー
-- `src/GoRogue/map/dungeon/director.py` - ダンジョン生成ディレクター
-- `src/GoRogue/map/dungeon_manager.py` - マルチフロア管理
+- `src/pyrogue/map/dungeon/section_based_builder.py` - BSPダンジョン生成
+- `src/pyrogue/map/dungeon/maze_builder.py` - 迷路生成専用ビルダー
+- `src/pyrogue/map/dungeon/director.py` - ダンジョン生成ディレクター
+- `src/pyrogue/map/dungeon_manager.py` - マルチフロア管理
 
 #### 詳細仕様
 ```python
@@ -73,9 +73,9 @@ MAZE_COMPLEXITY = 0.75                # 迷路の複雑さ
 - **z**: 魔法書（spellbook）
 
 #### 実装場所
-- `src/GoRogue/core/input_handlers.py` - 入力処理
-- `src/GoRogue/ui/components/input_handler.py` - UI入力処理
-- `src/GoRogue/core/command_handler.py` - 統一コマンド処理
+- `src/pyrogue/core/input_handlers.py` - 入力処理
+- `src/pyrogue/ui/components/input_handler.py` - UI入力処理
+- `src/pyrogue/core/command_handler.py` - 統一コマンド処理
 
 #### コマンド統一化システム
 - **共通コマンドハンドラー**: GUIとCLIで統一されたコマンド処理
@@ -96,8 +96,8 @@ MAZE_COMPLEXITY = 0.75                # 迷路の複雑さ
 - **テレポートトラップ**: ランダムテレポート（マゼンタの`T`で表示）
 
 #### 実装場所
-- `src/GoRogue/entities/traps/trap.py` - トラップ基底クラス・各種トラップ
-- `src/GoRogue/core/game_logic.py` - 探索・解除ロジック（`search_trap`, `disarm_trap`）
+- `src/pyrogue/entities/traps/trap.py` - トラップ基底クラス・各種トラップ
+- `src/pyrogue/core/game_logic.py` - 探索・解除ロジック（`search_trap`, `disarm_trap`）
 
 #### 詳細仕様
 ```python
@@ -134,9 +134,9 @@ TRAP_DISARM_FAILURE_TRIGGER = 30      # 解除失敗時の発動確率（%）
 - **Ctrl+R**: 全マップ探索（全隠し要素発見）
 
 #### 実装場所
-- `src/GoRogue/core/game_logic.py` - ウィザードモード管理
-- `src/GoRogue/ui/components/game_renderer.py` - 可視化機能
-- `src/GoRogue/ui/components/input_handler.py` - ウィザードコマンド
+- `src/pyrogue/core/game_logic.py` - ウィザードモード管理
+- `src/pyrogue/ui/components/game_renderer.py` - 可視化機能
+- `src/pyrogue/ui/components/input_handler.py` - ウィザードコマンド
 
 ### 5. 戦闘システム
 
@@ -147,8 +147,8 @@ TRAP_DISARM_FAILURE_TRIGGER = 30      # 解除失敗時の発動確率（%）
 - **クリティカルヒット**: 5%確率で2倍ダメージ
 
 #### 実装場所
-- `src/GoRogue/core/managers/combat_manager.py` - 戦闘管理
-- `src/GoRogue/core/managers/turn_manager.py` - ターン管理
+- `src/pyrogue/core/managers/combat_manager.py` - 戦闘管理
+- `src/pyrogue/core/managers/turn_manager.py` - ターン管理
 
 #### 詳細仕様
 ```python
@@ -167,8 +167,8 @@ BASE_ATTACK_BONUS = 1                 # 基本攻撃ボーナス
 - **能力値成長**: レベルアップ時のHP/MP増加
 
 #### 実装場所
-- `src/GoRogue/entities/actors/player.py` - プレイヤー成長
-- `src/GoRogue/core/managers/combat_manager.py` - 経験値計算
+- `src/pyrogue/entities/actors/player.py` - プレイヤー成長
+- `src/pyrogue/core/managers/combat_manager.py` - 経験値計算
 
 #### 詳細仕様
 ```python
@@ -198,11 +198,11 @@ MP_PER_LEVEL = 5                      # レベルアップ時MP増加
 - **魔術師 (Mage)**: 魔法関連サービス、呪文販売
 
 #### 実装場所
-- `src/GoRogue/entities/actors/npc.py` - NPC基底クラス
-- `src/GoRogue/core/managers/dialogue_manager.py` - 会話管理
-- `src/GoRogue/core/managers/trading_manager.py` - 取引管理
-- `src/GoRogue/ui/screens/dialogue_screen.py` - 会話UI
-- `src/GoRogue/ui/screens/trading_screen.py` - 取引UI
+- `src/pyrogue/entities/actors/npc.py` - NPC基底クラス
+- `src/pyrogue/core/managers/dialogue_manager.py` - 会話管理
+- `src/pyrogue/core/managers/trading_manager.py` - 取引管理
+- `src/pyrogue/ui/screens/dialogue_screen.py` - 会話UI
+- `src/pyrogue/ui/screens/trading_screen.py` - 取引UI
 
 #### 無効化の制御
 ```python
@@ -237,8 +237,8 @@ TRADE_DISCOUNT = 0.7                  # 買取価格割引率
 - **幻覚攻撃**: 視覚混乱の発症（Dream Eater系）
 
 #### 実装場所
-- `src/GoRogue/core/managers/monster_ai_manager.py` - AI管理システム
-- `src/GoRogue/entities/actors/monster.py` - モンスター基底クラス
+- `src/pyrogue/core/managers/monster_ai_manager.py` - AI管理システム
+- `src/pyrogue/entities/actors/monster.py` - モンスター基底クラス
 
 #### 詳細仕様
 ```python
@@ -264,9 +264,9 @@ HALLUCINATION_CHANCE = 0.3            # 幻覚発症確率
 - **特殊トラップ**: 精神攻撃トラップ（将来実装）
 
 #### 実装場所
-- `src/GoRogue/entities/actors/status_effects.py` - 状態異常システム
-- `src/GoRogue/ui/components/game_renderer.py` - 表示変換
-- `src/GoRogue/entities/items/effects.py` - 幻覚ポーション効果
+- `src/pyrogue/entities/actors/status_effects.py` - 状態異常システム
+- `src/pyrogue/ui/components/game_renderer.py` - 表示変換
+- `src/pyrogue/entities/items/effects.py` - 幻覚ポーション効果
 
 #### 詳細仕様
 ```python
@@ -294,8 +294,8 @@ HALLUCINATION_COLORS = [              # 幻覚時色彩
 - **継続ダメージ**: 餓死寸前時の体力減少
 
 #### 実装場所
-- `src/GoRogue/entities/actors/player.py` - プレイヤー飢餓管理
-- `src/GoRogue/constants.py` - 飢餓関連定数
+- `src/pyrogue/entities/actors/player.py` - プレイヤー飢餓管理
+- `src/pyrogue/constants.py` - 飢餓関連定数
 
 #### 詳細仕様
 ```python
@@ -322,8 +322,8 @@ FULL_RECOVERY_RATE = 0.1              # 満腹時回復率
 - **ランダム化**: プレイ毎に異なる割り当て
 
 #### 実装場所
-- `src/GoRogue/entities/items/identification.py` - 識別システム
-- `src/GoRogue/entities/actors/player.py` - プレイヤー識別記録
+- `src/pyrogue/entities/items/identification.py` - 識別システム
+- `src/pyrogue/entities/actors/player.py` - プレイヤー識別記録
 
 #### 詳細仕様
 ```python
@@ -360,8 +360,8 @@ RING_MATERIALS = [                    # 指輪材質リスト
 - **日時**: 記録日時
 
 #### 実装場所
-- `src/GoRogue/core/score_manager.py` - スコア管理システム
-- `src/GoRogue/ui/screens/score_screen.py` - スコア表示UI
+- `src/pyrogue/core/score_manager.py` - スコア管理システム
+- `src/pyrogue/ui/screens/score_screen.py` - スコア表示UI
 
 #### 詳細仕様
 ```python
@@ -388,14 +388,14 @@ SCORE_FLOOR_MULTIPLIER = 200          # 階層スコア倍率
 - **バックアップ管理**: 自動バックアップ・復旧
 
 #### 実装場所
-- `src/GoRogue/core/save_manager.py` - セーブ管理・Permadeath処理
-- `src/GoRogue/core/engine.py` - エンジン制御
+- `src/pyrogue/core/save_manager.py` - セーブ管理・Permadeath処理
+- `src/pyrogue/core/engine.py` - エンジン制御
 
 #### 詳細仕様
 ```python
 # Permadeathシステムパラメータ
-SAVE_FILE_PATH = "saves/GoRogue_save.json"
-BACKUP_FILE_PATH = "saves/GoRogue_save_backup.json"
+SAVE_FILE_PATH = "saves/pyrogue_save.json"
+BACKUP_FILE_PATH = "saves/pyrogue_save_backup.json"
 CHECKSUM_VERIFICATION = True          # チェックサム検証の有効化
 AUTO_BACKUP_INTERVAL = 10             # 自動バックアップ間隔（ターン）
 ```
@@ -425,9 +425,9 @@ AUTO_BACKUP_INTERVAL = 10             # 自動バックアップ間隔（ター�
 - **食料**: 満腹度回復、栄養補給
 
 #### 実装場所
-- `src/GoRogue/entities/items/item.py` - アイテム基底クラス
-- `src/GoRogue/entities/items/item_types.py` - アイテム種別定義
-- `src/GoRogue/entities/items/effects.py` - アイテム効果
+- `src/pyrogue/entities/items/item.py` - アイテム基底クラス
+- `src/pyrogue/entities/items/item_types.py` - アイテム種別定義
+- `src/pyrogue/entities/items/effects.py` - アイテム効果
 
 ### 2. インベントリシステム
 
@@ -459,8 +459,8 @@ AUTO_BACKUP_INTERVAL = 10             # 自動バックアップ間隔（ター�
 - **?**: インベントリ画面内でヘルプ表示切り替え（JIS配列対応）
 
 #### 実装場所
-- `src/GoRogue/entities/actors/inventory.py` - インベントリ管理
-- `src/GoRogue/ui/screens/inventory_screen.py` - インベントリUI
+- `src/pyrogue/entities/actors/inventory.py` - インベントリ管理
+- `src/pyrogue/ui/screens/inventory_screen.py` - インベントリUI
 
 ## 魔法システム
 
@@ -475,8 +475,8 @@ AUTO_BACKUP_INTERVAL = 10             # 自動バックアップ間隔（ター�
 - **Cure Poison**: 毒状態の回復
 
 #### 実装場所
-- `src/GoRogue/entities/magic/spells.py` - 魔法システム
-- `src/GoRogue/ui/screens/magic_screen.py` - 魔法UI
+- `src/pyrogue/entities/magic/spells.py` - 魔法システム
+- `src/pyrogue/ui/screens/magic_screen.py` - 魔法UI
 
 ### 2. 魔法書（Spellbook）システム
 
@@ -515,8 +515,8 @@ POISON_BOLT_COST = 4                  # Poison Bolt消費MP
 - **処理順序**: 移動 → ゴールド回収 → 他アイテム通知 → トラップチェック
 
 #### 実装場所
-- `src/GoRogue/core/managers/movement_manager.py` - 移動時の自動回収処理
-- `src/GoRogue/entities/items/item.py` - ゴールドアイテム定義
+- `src/pyrogue/core/managers/movement_manager.py` - 移動時の自動回収処理
+- `src/pyrogue/entities/items/item.py` - ゴールドアイテム定義
 
 #### 詳細仕様
 ```python
@@ -559,7 +559,7 @@ You picked up 25 gold.
 - **戦術的影響**: 意図しない移動による危険
 
 #### 実装場所
-- `src/GoRogue/entities/actors/status_effects.py` - 状態異常システム
+- `src/pyrogue/entities/actors/status_effects.py` - 状態異常システム
 
 ### 2. 状態異常管理
 
@@ -597,7 +597,7 @@ CONFUSION_DURATION = 5                # 混乱持続時間
 - **回避**: 発見後は回避可能
 
 #### 実装場所
-- `src/GoRogue/entities/traps/trap.py` - トラップシステム
+- `src/pyrogue/entities/traps/trap.py` - トラップシステム
 
 ### 2. トラップ管理
 
@@ -630,8 +630,8 @@ SEARCH_SUCCESS_RATE = 0.6             # 探索成功率
 - **Exit**: ゲーム終了
 
 #### 実装場所
-- `src/GoRogue/ui/screens/` - 各種画面システム
-- `src/GoRogue/ui/components/` - UI コンポーネント
+- `src/pyrogue/ui/screens/` - 各種画面システム
+- `src/pyrogue/ui/components/` - UI コンポーネント
 
 ### 2. 視界システム (FOV)
 
@@ -641,7 +641,7 @@ SEARCH_SUCCESS_RATE = 0.6             # 探索成功率
 - **霧システム**: 未探索・既探索領域の区別
 
 #### 実装場所
-- `src/GoRogue/ui/components/fov_manager.py` - 視界管理
+- `src/pyrogue/ui/components/fov_manager.py` - 視界管理
 
 ## セーブ・ロードシステム
 
@@ -657,8 +657,8 @@ SEARCH_SUCCESS_RATE = 0.6             # 探索成功率
 - **自動セーブ**: 重要なイベント時の自動保存
 
 #### 実装場所
-- `src/GoRogue/core/save_manager.py` - セーブ・ロード管理
-- `src/GoRogue/ui/components/save_load_manager.py` - UI連携
+- `src/pyrogue/core/save_manager.py` - セーブ・ロード管理
+- `src/pyrogue/ui/components/save_load_manager.py` - UI連携
 
 ### 2. ロード機能
 
@@ -681,8 +681,8 @@ SEARCH_SUCCESS_RATE = 0.6             # 探索成功率
 - **待機**: 発見前の待機状態
 
 #### 実装場所
-- `src/GoRogue/core/managers/monster_ai_manager.py` - モンスターAI管理
-- `src/GoRogue/entities/actors/monster.py` - モンスター基底クラス
+- `src/pyrogue/core/managers/monster_ai_manager.py` - モンスターAI管理
+- `src/pyrogue/entities/actors/monster.py` - モンスター基底クラス
 
 ### 2. モンスター種別
 
@@ -692,8 +692,8 @@ SEARCH_SUCCESS_RATE = 0.6             # 探索成功率
 - **特殊能力**: 一部モンスターの特殊攻撃
 
 #### 実装場所
-- `src/GoRogue/entities/actors/monster_types.py` - モンスター定義
-- `src/GoRogue/entities/actors/monster_spawner.py` - モンスター生成
+- `src/pyrogue/entities/actors/monster_types.py` - モンスター定義
+- `src/pyrogue/entities/actors/monster_spawner.py` - モンスター生成
 
 ## 設定・カスタマイズ
 
@@ -705,8 +705,8 @@ SEARCH_SUCCESS_RATE = 0.6             # 探索成功率
 - **操作設定**: キーバインドのカスタマイズ
 
 #### 実装場所
-- `src/GoRogue/config.py` - 設定管理（非推奨）
-- `src/GoRogue/constants.py` - 定数管理（推奨）
+- `src/pyrogue/config.py` - 設定管理（非推奨）
+- `src/pyrogue/constants.py` - 定数管理（推奨）
 
 ### 2. デバッグ機能
 
@@ -716,13 +716,13 @@ SEARCH_SUCCESS_RATE = 0.6             # 探索成功率
 - **ログ出力**: 詳細なゲーム状態ログ
 
 #### 実装場所
-- `src/GoRogue/utils/logger.py` - ログシステム
-- `src/GoRogue/core/cli_engine.py` - CLI開発モード
+- `src/pyrogue/utils/logger.py` - ログシステム
+- `src/pyrogue/core/cli_engine.py` - CLI開発モード
 
 #### CLIモード詳細
 ```bash
 # CLIモードでの起動
-python -m GoRogue.main --cli
+python -m pyrogue.main --cli
 
 # 利用可能なコマンド例
 > move north    # 北へ移動
@@ -779,7 +779,7 @@ python -m GoRogue.main --cli
 
 ## まとめ
 
-GoRogueは、**オリジナルRogue（1980年代）の忠実な再現**と**現代的な拡張機能**を融合した、完全に機能する本格的なローグライクゲームです。
+PyRogueは、**オリジナルRogue（1980年代）の忠実な再現**と**現代的な拡張機能**を融合した、完全に機能する本格的なローグライクゲームです。
 
 ### 🎯 **完成度の高い機能群**
 - **オリジナルRogue準拠**: 26階層、手続き生成、パーマデス、識別システム
@@ -803,4 +803,4 @@ GoRogueは、**オリジナルRogue（1980年代）の忠実な再現**と**現�
 - **包括的ドキュメント**: 開発ガイド、アーキテクチャ文書
 - **一貫したコーディング規約**: 日本語コメント、PEP 8準拠
 
-GoRogueは、単なるゲームではなく、**高品質なソフトウェア開発のベストプラクティス**を実践した、教育的価値の高いプロジェクトでもあります。各機能は独立性を保ちながら有機的に連携し、一貫性のあるゲーム体験を実現しています。
+PyRogueは、単なるゲームではなく、**高品質なソフトウェア開発のベストプラクティス**を実践した、教育的価値の高いプロジェクトでもあります。各機能は独立性を保ちながら有機的に連携し、一貫性のあるゲーム体験を実現しています。

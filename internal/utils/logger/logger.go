@@ -7,7 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
+
+	"github.com/yuru-sha/gorogue/internal/config"
 )
 
 const (
@@ -15,10 +18,10 @@ const (
 )
 
 var (
-	// ログファイルのパス
-	logDir    = "logs"
-	gameLog   = filepath.Join(logDir, "game.log")
-	errorLog  = filepath.Join(logDir, "error.log")
+	// ログファイルのパス（環境変数で設定可能）
+	logDir    string
+	gameLog   string
+	errorLog  string
 	gameFile  *os.File
 	errorFile *os.File
 
@@ -56,6 +59,11 @@ func rotateLogFile(basePath string) error {
 
 // Setup initializes the logger
 func Setup() error {
+	// 環境変数から設定を取得
+	logDir = config.GetString("LOG_DIRECTORY", "logs")
+	gameLog = filepath.Join(logDir, "game.log")
+	errorLog = filepath.Join(logDir, "error.log")
+
 	// ログディレクトリの作成
 	if err := os.MkdirAll(logDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create log directory: %v", err)
@@ -82,10 +90,34 @@ func Setup() error {
 		return fmt.Errorf("failed to create error log file: %v", err)
 	}
 
+	// 環境変数からログレベルを取得
+	logLevel := config.GetLogLevel()
+	debugMode := config.GetDebugMode()
+
+	// ログレベルの設定
+	var level slog.Level
+	switch strings.ToUpper(logLevel) {
+	case "DEBUG":
+		level = slog.LevelDebug
+	case "INFO":
+		level = slog.LevelInfo
+	case "WARNING", "WARN":
+		level = slog.LevelWarn
+	case "ERROR":
+		level = slog.LevelError
+	default:
+		level = slog.LevelInfo
+	}
+
+	// デバッグモードの場合はDEBUGレベルを強制
+	if debugMode {
+		level = slog.LevelDebug
+	}
+
 	// JSONハンドラーの作成
 	gameOpts := &slog.HandlerOptions{
-		Level:     slog.LevelDebug,
-		AddSource: true,
+		Level:     level,
+		AddSource: debugMode,
 	}
 	errorOpts := &slog.HandlerOptions{
 		Level:     slog.LevelError,
@@ -104,6 +136,9 @@ func Setup() error {
 		"num_cpu", runtime.NumCPU(),
 		"max_procs", runtime.GOMAXPROCS(0),
 		"process_id", os.Getpid(),
+		"debug_mode", debugMode,
+		"log_level", logLevel,
+		"log_directory", logDir,
 	)
 
 	return nil
