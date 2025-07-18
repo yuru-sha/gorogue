@@ -6,16 +6,29 @@ import (
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
+// PyRogue準拠のタイトルアート
 var titleArt = []string{
 	"",
-	"GoRogue",
+	"  @@@@@@   @@@@@@  @@@@@@@   @@@@@@   @@@@@@  @@@  @@@  @@@@@@@",
+	" @@@@@@@  @@@@@@@ @@@@@@@@ @@@@@@@@  @@@@@@@  @@@  @@@  @@@@@@@@",
+	" !@@      @@!  @@ @@!  @@@  @@!  @@@  @@!  @@@  @@!  @@@  @@!",
+	" !@!      !@!  @!@ !@!  @!@  !@!  @!@  !@!  @!@  !@!  @!@  !@!",
+	" !@! @!@!@ @!@  !@! @!@!!@!  @!@  !@!  @!@  !@!  @!@  !@!  @!@!!@!",
+	" !!! !!@! !@!  !!! !!@!@!   !@!  !!!  !@!  !!!  !@!  !!!  !!@!@!",
+	" :!!   !:  !!:  !!! !!: :!!  !!:  !!!  !!:  !!!  !!:  !!!  !!: :!!",
+	" :!:   !:  :!:  !:!  :!:  :!:  :!:  :!:  :!:  :!:  :!:  :!:  :!:  :!:",
+	"  ::: ::::  ::::: ::  ::   :::  ::::: ::  ::::: ::  ::::: ::  ::   :::",
+	"  :: :: :    : :  :   :    :    : :  :   : :  :   : :  :   :    :",
 	"",
 }
 
 var menuBox = []string{
 	"",
-	"NEW GAME",
-	"QUIT",
+	"N) New Game",
+	"L) Load Game",
+	"S) Scores",
+	"H) Help",
+	"Q) Quit",
 	"",
 }
 
@@ -35,15 +48,18 @@ type MenuScreen struct {
 	height   int
 	selected int
 	grid     gruid.Grid
+	menuItems []string
 }
 
 // NewMenuScreen creates a new menu screen
 func NewMenuScreen(width, height int) *MenuScreen {
+	menuItems := []string{"N) New Game", "L) Load Game", "S) Scores", "H) Help", "Q) Quit"}
 	return &MenuScreen{
-		width:    width,
-		height:   height,
-		selected: 0,
-		grid:     gruid.NewGrid(width, height),
+		width:     width,
+		height:    height,
+		selected:  0,
+		grid:      gruid.NewGrid(width, height),
+		menuItems: menuItems,
 	}
 }
 
@@ -53,20 +69,56 @@ func (s *MenuScreen) HandleInput(msg gruid.Msg) state.GameState {
 	case gruid.MsgKeyDown:
 		switch msg.Key {
 		case "Up":
-			s.selected = 0
+			s.selected = (s.selected - 1 + len(s.menuItems)) % len(s.menuItems)
 		case "Down":
-			s.selected = 1
+			s.selected = (s.selected + 1) % len(s.menuItems)
 		case "Enter":
-			if s.selected == 0 {
-				logger.Info("Game started from menu")
-				return state.StateGame
-			} else {
-				logger.Info("Game quit from menu")
-				return state.StateGameOver
+			return s.handleMenuSelection()
+		default:
+			// キーによる直接選択
+			switch msg.Key {
+			case "n", "N":
+				s.selected = 0
+				return s.handleMenuSelection()
+			case "l", "L":
+				s.selected = 1
+				return s.handleMenuSelection()
+			case "s", "S":
+				s.selected = 2
+				return s.handleMenuSelection()
+			case "h", "H":
+				s.selected = 3
+				return s.handleMenuSelection()
+			case "q", "Q":
+				s.selected = 4
+				return s.handleMenuSelection()
 			}
 		}
 	}
 
+	return state.StateMenu
+}
+
+// handleMenuSelection handles menu selection
+func (s *MenuScreen) handleMenuSelection() state.GameState {
+	switch s.selected {
+	case 0: // New Game
+		logger.Info("New Game selected from menu")
+		return state.StateGame
+	case 1: // Load Game
+		logger.Info("Load Game selected from menu")
+		return state.StateSaveLoad
+	case 2: // Scores
+		logger.Info("Scores selected from menu")
+		// TODO: Implement scores screen
+		return state.StateMenu
+	case 3: // Help
+		logger.Info("Help selected from menu")
+		return state.StateHelp
+	case 4: // Quit
+		logger.Info("Quit selected from menu")
+		return state.StateGameOver
+	}
 	return state.StateMenu
 }
 
@@ -76,24 +128,32 @@ func (s *MenuScreen) Draw(grid *gruid.Grid) {
 	grid.Fill(gruid.Cell{Rune: ' '})
 
 	// タイトルの描画
-	titleY := s.height/4 - len(titleArt)/2
+	titleY := 2
 	for i, line := range titleArt {
-		titleX := (s.width - len(line)) / 2
-		s.drawText(grid, titleX, titleY+i, line, colorYellow)
+		if len(line) > 0 { // 空行以外のみ描画
+			titleX := (s.width - len(line)) / 2
+			if titleX < 0 {
+				titleX = 0
+			}
+			s.drawText(grid, titleX, titleY+i, line, colorYellow)
+		}
 	}
 
 	// メニューの描画
-	menuY := titleY + len(titleArt) + 4
-	for i, line := range menuBox {
-		menuX := (s.width - len(line)) / 2
+	menuY := titleY + len(titleArt) + 2
+	for i, item := range s.menuItems {
+		menuX := (s.width - len(item)) / 2
 		style := colorGray
 
 		// 選択中の項目をハイライト
-		if (i == 1 && s.selected == 0) || (i == 2 && s.selected == 1) {
+		if i == s.selected {
 			style = colorWhite
+			// 選択中の項目には矢印を表示
+			arrowX := menuX - 3
+			s.drawText(grid, arrowX, menuY+i, ">>", colorWhite)
 		}
 
-		s.drawText(grid, menuX, menuY+i, line, style)
+		s.drawText(grid, menuX, menuY+i, item, style)
 	}
 
 	// バージョン情報の描画
@@ -103,10 +163,22 @@ func (s *MenuScreen) Draw(grid *gruid.Grid) {
 	s.drawText(grid, versionX, versionY, versionText, colorDarkGray)
 
 	// 操作説明の描画
-	controlsText := "↑↓:Select  Enter:Decide"
+	controlsText := "↑↓:Select  Enter:Decide  or Press Key"
 	controlsX := (s.width - len(controlsText)) / 2
-	controlsY := menuY + len(menuBox) + 2
+	if controlsX < 0 {
+		controlsX = 0
+	}
+	controlsY := menuY + len(s.menuItems) + 2
 	s.drawText(grid, controlsX, controlsY, controlsText, colorGray)
+
+	// PyRogue風のクレジット表示
+	creditText := "A faithful recreation of the classic Rogue"
+	creditX := (s.width - len(creditText)) / 2
+	if creditX < 0 {
+		creditX = 0
+	}
+	creditY := controlsY + 2
+	s.drawText(grid, creditX, creditY, creditText, colorDarkGray)
 
 	logger.Trace("Menu screen drawn")
 }

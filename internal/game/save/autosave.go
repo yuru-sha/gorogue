@@ -153,40 +153,40 @@ func (asm *AutoSaveManager) SaveOnExit(saveData *SaveData) error {
 	return asm.AutoSave(saveData)
 }
 
-// HasAutoSave checks if an auto-save exists
+// HasAutoSave checks if an auto-save exists (PyRogue style - same as main save)
 func (asm *AutoSaveManager) HasAutoSave() bool {
 	if asm.saveManager == nil {
 		return false
 	}
 
-	return asm.saveManager.HasAutoSave()
+	return asm.saveManager.FileExists()
 }
 
-// LoadAutoSave loads the auto-save
+// LoadAutoSave loads the auto-save (PyRogue style - same as main save)
 func (asm *AutoSaveManager) LoadAutoSave() (*SaveData, error) {
 	if asm.saveManager == nil {
 		return nil, fmt.Errorf("save manager not initialized")
 	}
 
-	return asm.saveManager.LoadAutoSave()
+	return asm.saveManager.LoadGame()
 }
 
-// DeleteAutoSave deletes the auto-save
+// DeleteAutoSave deletes the auto-save (PyRogue style - same as main save)
 func (asm *AutoSaveManager) DeleteAutoSave() error {
 	if asm.saveManager == nil {
 		return fmt.Errorf("save manager not initialized")
 	}
 
-	return asm.saveManager.DeleteSave(AutoSaveSlot)
+	return asm.saveManager.DeleteSave()
 }
 
-// GetAutoSaveInfo returns information about the auto-save
+// GetAutoSaveInfo returns information about the auto-save (PyRogue style - same as main save)
 func (asm *AutoSaveManager) GetAutoSaveInfo() (string, error) {
 	if asm.saveManager == nil {
 		return "", fmt.Errorf("save manager not initialized")
 	}
 
-	return asm.saveManager.GetSaveSlotInfo(AutoSaveSlot)
+	return asm.saveManager.GetSaveInfo()
 }
 
 // SetEnabled enables or disables auto-save

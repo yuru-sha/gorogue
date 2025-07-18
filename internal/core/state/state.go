@@ -12,6 +12,7 @@ const (
 	StateHelp
 	StateGameOver
 	StateSaveLoad
+	StateVictory
 )
 
 // State represents a game state interface

@@ -20,20 +20,11 @@ const (
 	// SaveDirectory is the directory where save files are stored
 	SaveDirectory = "saves"
 
-	// MaxSaveSlots is the maximum number of save slots
-	MaxSaveSlots = 3
-
-	// SaveFileExtension is the file extension for save files
-	SaveFileExtension = ".json"
-
-	// MetadataExtension is the file extension for metadata files
-	MetadataExtension = ".meta"
+	// SaveFileName is the name of the save file (PyRogue style)
+	SaveFileName = "rogue.sav"
 
 	// BackupExtension is the file extension for backup files
 	BackupExtension = ".bak"
-
-	// AutoSaveSlot is the slot number for auto-saves
-	AutoSaveSlot = 99
 )
 
 // SaveManager manages save file operations
@@ -81,26 +72,19 @@ func (sm *SaveManager) Initialize() error {
 	return nil
 }
 
-// SaveGame saves the game state to the specified slot
-func (sm *SaveManager) SaveGame(saveData *SaveData, slot int) error {
-	if slot < 0 || (slot >= MaxSaveSlots && slot != AutoSaveSlot) {
-		return fmt.Errorf("invalid save slot: %d", slot)
-	}
-
+// SaveGame saves the game state (PyRogue style - single save file)
+func (sm *SaveManager) SaveGame(saveData *SaveData) error {
 	// Update save data
 	saveData.SavedAt = time.Now()
-	saveData.GameInfo.SaveSlot = slot
 
 	// Generate file paths
-	saveFile := sm.getSaveFilePath(slot)
-	metadataFile := sm.getMetadataFilePath(slot)
-	backupFile := sm.getBackupFilePath(slot)
+	saveFile := sm.getSaveFilePath()
+	backupFile := sm.getBackupFilePath()
 
 	// Create backup if enabled and file exists
-	if sm.backupEnabled && sm.FileExists(slot) {
+	if sm.backupEnabled && sm.FileExists() {
 		if err := sm.createBackup(saveFile, backupFile); err != nil {
 			logger.Warn("Failed to create backup",
-				"slot", slot,
 				"error", err,
 			)
 		}
@@ -111,22 +95,12 @@ func (sm *SaveManager) SaveGame(saveData *SaveData, slot int) error {
 		return fmt.Errorf("failed to write save data: %w", err)
 	}
 
-	// Write metadata
-	metadata := sm.createMetadata(saveData)
-	if err := sm.writeMetadata(metadata, metadataFile); err != nil {
-		logger.Warn("Failed to write metadata",
-			"slot", slot,
-			"error", err,
-		)
-	}
-
 	// Clean up old backups
 	if sm.backupEnabled {
-		sm.cleanupBackups(slot)
+		sm.cleanupBackups()
 	}
 
 	logger.Info("Game saved successfully",
-		"slot", slot,
 		"file", saveFile,
 		"char_name", saveData.GameInfo.CharName,
 		"level", saveData.PlayerData.Level,
@@ -136,17 +110,13 @@ func (sm *SaveManager) SaveGame(saveData *SaveData, slot int) error {
 	return nil
 }
 
-// LoadGame loads the game state from the specified slot
-func (sm *SaveManager) LoadGame(slot int) (*SaveData, error) {
-	if slot < 0 || (slot >= MaxSaveSlots && slot != AutoSaveSlot) {
-		return nil, fmt.Errorf("invalid save slot: %d", slot)
+// LoadGame loads the game state (PyRogue style - single save file)
+func (sm *SaveManager) LoadGame() (*SaveData, error) {
+	if !sm.FileExists() {
+		return nil, fmt.Errorf("save file does not exist")
 	}
 
-	if !sm.FileExists(slot) {
-		return nil, fmt.Errorf("save file does not exist for slot %d", slot)
-	}
-
-	saveFile := sm.getSaveFilePath(slot)
+	saveFile := sm.getSaveFilePath()
 
 	// Read save data
 	saveData, err := sm.readSaveData(saveFile)
@@ -165,7 +135,6 @@ func (sm *SaveManager) LoadGame(slot int) (*SaveData, error) {
 	}
 
 	logger.Info("Game loaded successfully",
-		"slot", slot,
 		"file", saveFile,
 		"char_name", saveData.GameInfo.CharName,
 		"level", saveData.PlayerData.Level,
@@ -176,72 +145,44 @@ func (sm *SaveManager) LoadGame(slot int) (*SaveData, error) {
 	return saveData, nil
 }
 
-// DeleteSave deletes the save file for the specified slot
-func (sm *SaveManager) DeleteSave(slot int) error {
-	if slot < 0 || (slot >= MaxSaveSlots && slot != AutoSaveSlot) {
-		return fmt.Errorf("invalid save slot: %d", slot)
+// DeleteSave deletes the save file (PyRogue style - single save file)
+func (sm *SaveManager) DeleteSave() error {
+	if !sm.FileExists() {
+		return fmt.Errorf("save file does not exist")
 	}
 
-	if !sm.FileExists(slot) {
-		return fmt.Errorf("save file does not exist for slot %d", slot)
-	}
-
-	saveFile := sm.getSaveFilePath(slot)
-	metadataFile := sm.getMetadataFilePath(slot)
+	saveFile := sm.getSaveFilePath()
 
 	// Delete save file
 	if err := os.Remove(saveFile); err != nil {
 		return fmt.Errorf("failed to delete save file: %w", err)
 	}
 
-	// Delete metadata file
-	if err := os.Remove(metadataFile); err != nil {
-		logger.Warn("Failed to delete metadata file",
-			"file", metadataFile,
-			"error", err,
-		)
-	}
-
 	// Delete backup files
-	sm.cleanupAllBackups(slot)
+	sm.cleanupAllBackups()
 
 	logger.Info("Save deleted successfully",
-		"slot", slot,
 		"file", saveFile,
 	)
 
 	return nil
 }
 
-// FileExists checks if a save file exists for the specified slot
-func (sm *SaveManager) FileExists(slot int) bool {
-	saveFile := sm.getSaveFilePath(slot)
+// FileExists checks if a save file exists (PyRogue style - single save file)
+func (sm *SaveManager) FileExists() bool {
+	saveFile := sm.getSaveFilePath()
 	_, err := os.Stat(saveFile)
 	return err == nil
 }
 
-// GetSaveMetadata returns metadata for the specified slot
-func (sm *SaveManager) GetSaveMetadata(slot int) (*SaveMetadata, error) {
-	if !sm.FileExists(slot) {
-		return nil, fmt.Errorf("save file does not exist for slot %d", slot)
+// GetSaveMetadata returns metadata for the save file
+func (sm *SaveManager) GetSaveMetadata() (*SaveMetadata, error) {
+	if !sm.FileExists() {
+		return nil, fmt.Errorf("save file does not exist")
 	}
 
-	metadataFile := sm.getMetadataFilePath(slot)
-
-	// Try to read metadata file first
-	if _, err := os.Stat(metadataFile); err == nil {
-		metadata, err := sm.readMetadata(metadataFile)
-		if err == nil {
-			return metadata, nil
-		}
-		logger.Warn("Failed to read metadata file, falling back to save file",
-			"file", metadataFile,
-			"error", err,
-		)
-	}
-
-	// Fallback: read from save file
-	saveFile := sm.getSaveFilePath(slot)
+	// Read from save file
+	saveFile := sm.getSaveFilePath()
 	saveData, err := sm.readSaveData(saveFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read save data: %w", err)
@@ -250,35 +191,20 @@ func (sm *SaveManager) GetSaveMetadata(slot int) (*SaveMetadata, error) {
 	return sm.createMetadata(saveData), nil
 }
 
-// GetAllSaveMetadata returns metadata for all existing save slots
-func (sm *SaveManager) GetAllSaveMetadata() map[int]*SaveMetadata {
-	metadata := make(map[int]*SaveMetadata)
-
-	for slot := 0; slot < MaxSaveSlots; slot++ {
-		if sm.FileExists(slot) {
-			if meta, err := sm.GetSaveMetadata(slot); err == nil {
-				metadata[slot] = meta
-			}
-		}
-	}
-
-	// Check auto-save slot
-	if sm.FileExists(AutoSaveSlot) {
-		if meta, err := sm.GetSaveMetadata(AutoSaveSlot); err == nil {
-			metadata[AutoSaveSlot] = meta
-		}
-	}
-
-	return metadata
+// AutoSave performs an automatic save (PyRogue style)
+func (sm *SaveManager) AutoSave(saveData *SaveData) error {
+	// In PyRogue, auto-save overwrites the main save file
+	logger.Debug("Performing auto-save")
+	return sm.SaveGame(saveData)
 }
 
-// GetSaveSlotInfo returns formatted information about a save slot
-func (sm *SaveManager) GetSaveSlotInfo(slot int) (string, error) {
-	if !sm.FileExists(slot) {
-		return "Empty", nil
+// GetSaveInfo returns formatted information about the save file
+func (sm *SaveManager) GetSaveInfo() (string, error) {
+	if !sm.FileExists() {
+		return "No save file", nil
 	}
 
-	metadata, err := sm.GetSaveMetadata(slot)
+	metadata, err := sm.GetSaveMetadata()
 	if err != nil {
 		return "", err
 	}
@@ -305,28 +231,13 @@ func (sm *SaveManager) GetSaveSlotInfo(slot int) (string, error) {
 	), nil
 }
 
-// AutoSave performs an automatic save
-func (sm *SaveManager) AutoSave(saveData *SaveData) error {
-	return sm.SaveGame(saveData, AutoSaveSlot)
-}
-
-// HasAutoSave checks if an auto-save exists
-func (sm *SaveManager) HasAutoSave() bool {
-	return sm.FileExists(AutoSaveSlot)
-}
-
-// LoadAutoSave loads the auto-save
-func (sm *SaveManager) LoadAutoSave() (*SaveData, error) {
-	return sm.LoadGame(AutoSaveSlot)
-}
-
 // GetSaveFileSize returns the size of the save file in bytes
-func (sm *SaveManager) GetSaveFileSize(slot int) (int64, error) {
-	if !sm.FileExists(slot) {
-		return 0, fmt.Errorf("save file does not exist for slot %d", slot)
+func (sm *SaveManager) GetSaveFileSize() (int64, error) {
+	if !sm.FileExists() {
+		return 0, fmt.Errorf("save file does not exist")
 	}
 
-	saveFile := sm.getSaveFilePath(slot)
+	saveFile := sm.getSaveFilePath()
 	info, err := os.Stat(saveFile)
 	if err != nil {
 		return 0, err
@@ -336,12 +247,12 @@ func (sm *SaveManager) GetSaveFileSize(slot int) (int64, error) {
 }
 
 // ExportSave exports a save file to the specified path
-func (sm *SaveManager) ExportSave(slot int, exportPath string) error {
-	if !sm.FileExists(slot) {
-		return fmt.Errorf("save file does not exist for slot %d", slot)
+func (sm *SaveManager) ExportSave(exportPath string) error {
+	if !sm.FileExists() {
+		return fmt.Errorf("save file does not exist")
 	}
 
-	saveFile := sm.getSaveFilePath(slot)
+	saveFile := sm.getSaveFilePath()
 
 	// Copy file
 	if err := sm.copyFile(saveFile, exportPath); err != nil {
@@ -349,7 +260,6 @@ func (sm *SaveManager) ExportSave(slot int, exportPath string) error {
 	}
 
 	logger.Info("Save exported successfully",
-		"slot", slot,
 		"export_path", exportPath,
 	)
 
@@ -357,11 +267,7 @@ func (sm *SaveManager) ExportSave(slot int, exportPath string) error {
 }
 
 // ImportSave imports a save file from the specified path
-func (sm *SaveManager) ImportSave(importPath string, slot int) error {
-	if slot < 0 || (slot >= MaxSaveSlots && slot != AutoSaveSlot) {
-		return fmt.Errorf("invalid save slot: %d", slot)
-	}
-
+func (sm *SaveManager) ImportSave(importPath string) error {
 	// Verify import file exists
 	if _, err := os.Stat(importPath); err != nil {
 		return fmt.Errorf("import file does not exist: %s", importPath)
@@ -377,14 +283,13 @@ func (sm *SaveManager) ImportSave(importPath string, slot int) error {
 		return fmt.Errorf("import file integrity check failed: %w", err)
 	}
 
-	// Save to slot
-	if err := sm.SaveGame(saveData, slot); err != nil {
+	// Save to main save file
+	if err := sm.SaveGame(saveData); err != nil {
 		return fmt.Errorf("failed to save imported data: %w", err)
 	}
 
 	logger.Info("Save imported successfully",
 		"import_path", importPath,
-		"slot", slot,
 	)
 
 	return nil
@@ -393,21 +298,14 @@ func (sm *SaveManager) ImportSave(importPath string, slot int) error {
 // Private methods
 
 // getSaveFilePath returns the full path to the save file
-func (sm *SaveManager) getSaveFilePath(slot int) string {
-	filename := fmt.Sprintf("save_%d%s", slot, SaveFileExtension)
-	return filepath.Join(sm.saveDir, filename)
-}
-
-// getMetadataFilePath returns the full path to the metadata file
-func (sm *SaveManager) getMetadataFilePath(slot int) string {
-	filename := fmt.Sprintf("save_%d%s", slot, MetadataExtension)
-	return filepath.Join(sm.saveDir, filename)
+func (sm *SaveManager) getSaveFilePath() string {
+	return filepath.Join(sm.saveDir, SaveFileName)
 }
 
 // getBackupFilePath returns the full path to the backup file
-func (sm *SaveManager) getBackupFilePath(slot int) string {
+func (sm *SaveManager) getBackupFilePath() string {
 	timestamp := time.Now().Format("20060102_150405")
-	filename := fmt.Sprintf("save_%d_%s%s", slot, timestamp, BackupExtension)
+	filename := fmt.Sprintf("rogue_%s%s", timestamp, BackupExtension)
 	return filepath.Join(sm.saveDir, filename)
 }
 
@@ -461,35 +359,6 @@ func (sm *SaveManager) readSaveData(filename string) (*SaveData, error) {
 	return &saveData, nil
 }
 
-// writeMetadata writes metadata to file
-func (sm *SaveManager) writeMetadata(metadata *SaveMetadata, filename string) error {
-	file, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(metadata)
-}
-
-// readMetadata reads metadata from file
-func (sm *SaveManager) readMetadata(filename string) (*SaveMetadata, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	var metadata SaveMetadata
-	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(&metadata); err != nil {
-		return nil, err
-	}
-
-	return &metadata, nil
-}
 
 // createMetadata creates metadata from save data
 func (sm *SaveManager) createMetadata(saveData *SaveData) *SaveMetadata {
@@ -504,7 +373,7 @@ func (sm *SaveManager) createMetadata(saveData *SaveData) *SaveMetadata {
 		IsCompleted: saveData.GameInfo.IsCompleted,
 		IsVictory:   saveData.GameInfo.IsVictory,
 		Seed:        saveData.GameInfo.Seed,
-		SlotNumber:  saveData.GameInfo.SaveSlot,
+		SlotNumber:  0, // Always 0 for single save file
 	}
 }
 
@@ -594,8 +463,8 @@ func (sm *SaveManager) copyFile(source, destination string) error {
 }
 
 // cleanupBackups removes old backup files
-func (sm *SaveManager) cleanupBackups(slot int) {
-	pattern := fmt.Sprintf("save_%d_*%s", slot, BackupExtension)
+func (sm *SaveManager) cleanupBackups() {
+	pattern := fmt.Sprintf("rogue_*%s", BackupExtension)
 	matches, err := filepath.Glob(filepath.Join(sm.saveDir, pattern))
 	if err != nil {
 		return
@@ -622,9 +491,9 @@ func (sm *SaveManager) cleanupBackups(slot int) {
 	}
 }
 
-// cleanupAllBackups removes all backup files for a slot
-func (sm *SaveManager) cleanupAllBackups(slot int) {
-	pattern := fmt.Sprintf("save_%d_*%s", slot, BackupExtension)
+// cleanupAllBackups removes all backup files
+func (sm *SaveManager) cleanupAllBackups() {
+	pattern := fmt.Sprintf("rogue_*%s", BackupExtension)
 	matches, err := filepath.Glob(filepath.Join(sm.saveDir, pattern))
 	if err != nil {
 		return
@@ -661,49 +530,18 @@ func (sm *SaveManager) GetSaveDirectory() string {
 	return sm.saveDir
 }
 
-// GetAvailableSlots returns a list of available save slots
-func (sm *SaveManager) GetAvailableSlots() []int {
-	var available []int
-	for slot := 0; slot < MaxSaveSlots; slot++ {
-		if !sm.FileExists(slot) {
-			available = append(available, slot)
-		}
-	}
-	return available
-}
-
-// GetUsedSlots returns a list of used save slots
-func (sm *SaveManager) GetUsedSlots() []int {
-	var used []int
-	for slot := 0; slot < MaxSaveSlots; slot++ {
-		if sm.FileExists(slot) {
-			used = append(used, slot)
-		}
-	}
-	return used
-}
-
-// ValidateSlot validates a save slot number
-func (sm *SaveManager) ValidateSlot(slot int) error {
-	if slot < 0 || (slot >= MaxSaveSlots && slot != AutoSaveSlot) {
-		return fmt.Errorf("invalid save slot: %d (valid range: 0-%d or %d for auto-save)",
-			slot, MaxSaveSlots-1, AutoSaveSlot)
-	}
-	return nil
-}
-
-// GetSaveInfo returns detailed information about a save file
-func (sm *SaveManager) GetSaveInfo(slot int) (map[string]interface{}, error) {
-	if !sm.FileExists(slot) {
-		return nil, fmt.Errorf("save file does not exist for slot %d", slot)
+// GetDetailedSaveInfo returns detailed information about the save file
+func (sm *SaveManager) GetDetailedSaveInfo() (map[string]interface{}, error) {
+	if !sm.FileExists() {
+		return nil, fmt.Errorf("save file does not exist")
 	}
 
-	metadata, err := sm.GetSaveMetadata(slot)
+	metadata, err := sm.GetSaveMetadata()
 	if err != nil {
 		return nil, err
 	}
 
-	saveFile := sm.getSaveFilePath(slot)
+	saveFile := sm.getSaveFilePath()
 	info, err := os.Stat(saveFile)
 	if err != nil {
 		return nil, err
@@ -715,7 +553,6 @@ func (sm *SaveManager) GetSaveInfo(slot int) (map[string]interface{}, error) {
 	}
 
 	return map[string]interface{}{
-		"slot":         slot,
 		"char_name":    metadata.CharName,
 		"level":        metadata.Level,
 		"floor":        metadata.Floor,
@@ -732,16 +569,16 @@ func (sm *SaveManager) GetSaveInfo(slot int) (map[string]interface{}, error) {
 }
 
 // RepairSave attempts to repair a corrupted save file using backup
-func (sm *SaveManager) RepairSave(slot int) error {
+func (sm *SaveManager) RepairSave() error {
 	if !sm.backupEnabled {
 		return fmt.Errorf("backup is disabled, cannot repair save")
 	}
 
 	// Find the most recent backup
-	pattern := fmt.Sprintf("save_%d_*%s", slot, BackupExtension)
+	pattern := fmt.Sprintf("rogue_*%s", BackupExtension)
 	matches, err := filepath.Glob(filepath.Join(sm.saveDir, pattern))
 	if err != nil || len(matches) == 0 {
-		return fmt.Errorf("no backup files found for slot %d", slot)
+		return fmt.Errorf("no backup files found")
 	}
 
 	// Sort by modification time (newest first)
@@ -756,7 +593,7 @@ func (sm *SaveManager) RepairSave(slot int) error {
 
 	// Try to restore from the most recent backup
 	mostRecentBackup := matches[0]
-	saveFile := sm.getSaveFilePath(slot)
+	saveFile := sm.getSaveFilePath()
 
 	if err := sm.copyFile(mostRecentBackup, saveFile); err != nil {
 		return fmt.Errorf("failed to restore from backup: %w", err)
@@ -773,7 +610,6 @@ func (sm *SaveManager) RepairSave(slot int) error {
 	}
 
 	logger.Info("Save file repaired successfully",
-		"slot", slot,
 		"backup_file", mostRecentBackup,
 	)
 
@@ -795,10 +631,7 @@ func (sm *SaveManager) GetDiskUsage() (int64, error) {
 		}
 
 		name := entry.Name()
-		if strings.HasSuffix(name, SaveFileExtension) ||
-			strings.HasSuffix(name, MetadataExtension) ||
-			strings.HasSuffix(name, BackupExtension) {
-
+		if name == SaveFileName || strings.HasSuffix(name, BackupExtension) {
 			info, err := entry.Info()
 			if err != nil {
 				continue

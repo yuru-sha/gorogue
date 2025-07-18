@@ -684,3 +684,79 @@ func TestSaveConverter_ErrorHandling(t *testing.T) {
 		t.Error("convertStringToAIState should fail with invalid AI state")
 	}
 }
+
+// Helper functions for testing
+
+// createTestSaveData creates a test save data structure
+func createTestSaveData(t *testing.T) *SaveData {
+	return &SaveData{
+		Version: SaveVersion,
+		GameInfo: GameInfo{
+			CharName:  "TestPlayer",
+			PlayTime:  3600,
+			TurnCount: 100,
+			Seed:      12345,
+		},
+		PlayerData: Player{
+			X:         10,
+			Y:         10,
+			Level:     5,
+			HP:        50,
+			MaxHP:     100,
+			Gold:      200,
+			Exp:       150,
+			Hunger:    80,
+			Inventory: []InventoryItem{},
+		},
+		DungeonData: Dungeon{
+			CurrentFloor: 1,
+			Floors:       make(map[int]*Floor),
+		},
+		GameStats: Stats{
+			MonstersKilled: 10,
+			GoldCollected:  200,
+			DamageDealt:    500,
+			DamageTaken:    300,
+		},
+		Settings: Settings{
+			AutoSave: true,
+		},
+	}
+}
+
+// createBenchmarkTestSaveData creates a benchmark test save data structure
+func createBenchmarkTestSaveData() *SaveData {
+	return &SaveData{
+		Version: SaveVersion,
+		GameInfo: GameInfo{
+			CharName:  "BenchmarkPlayer",
+			PlayTime:  7200,
+			TurnCount: 500,
+			Seed:      54321,
+		},
+		PlayerData: Player{
+			X:         20,
+			Y:         20,
+			Level:     10,
+			HP:        80,
+			MaxHP:     150,
+			Gold:      1000,
+			Exp:       800,
+			Hunger:    60,
+			Inventory: []InventoryItem{},
+		},
+		DungeonData: Dungeon{
+			CurrentFloor: 5,
+			Floors:       make(map[int]*Floor),
+		},
+		GameStats: Stats{
+			MonstersKilled: 100,
+			GoldCollected:  1000,
+			DamageDealt:    2000,
+			DamageTaken:    1500,
+		},
+		Settings: Settings{
+			AutoSave: true,
+		},
+	}
+}

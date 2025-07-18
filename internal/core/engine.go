@@ -5,6 +5,7 @@ import (
 	"github.com/yuru-sha/gorogue/internal/core/state"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
+	"github.com/yuru-sha/gorogue/internal/game/score"
 	uiscreen "github.com/yuru-sha/gorogue/internal/ui/screen"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
@@ -23,6 +24,8 @@ type Engine struct {
 	gameScreen     *uiscreen.GameScreen
 	menuScreen     *uiscreen.MenuScreen
 	helpScreen     *uiscreen.HelpScreen
+	gameOverScreen *uiscreen.GameOverScreen
+	victoryScreen  *uiscreen.VictoryScreen
 	msgs           []gruid.Msg
 }
 
@@ -61,6 +64,11 @@ func NewEngine() *Engine {
 	gameScreen.SetDungeonManager(dungeonManager) // ダンジョンマネージャーを設定
 	menuScreen := uiscreen.NewMenuScreen(screenWidth, screenHeight)
 	helpScreen := uiscreen.NewHelpScreen(screenWidth, screenHeight)
+	
+	// ゲームオーバー・勝利画面（初期は空のスコアエントリーで作成）
+	gameOverScreen := uiscreen.NewGameOverScreen(screenWidth, screenHeight, nil)
+	victoryScreen := uiscreen.NewVictoryScreen(screenWidth, screenHeight, nil)
+	
 	logger.Debug("Created screens")
 
 	// ステートマネージャーの初期化
@@ -68,9 +76,11 @@ func NewEngine() *Engine {
 	stateManager.RegisterState(state.StateMenu, menuScreen)
 	stateManager.RegisterState(state.StateGame, gameScreen)
 	stateManager.RegisterState(state.StateHelp, helpScreen)
+	stateManager.RegisterState(state.StateGameOver, gameOverScreen)
+	stateManager.RegisterState(state.StateVictory, victoryScreen)
 
-	// ゲーム状態で開始
-	stateManager.SetState(state.StateGame)
+	// メニュー状態で開始
+	stateManager.SetState(state.StateMenu)
 
 	engine := &Engine{
 		grid:           grid,
@@ -80,6 +90,8 @@ func NewEngine() *Engine {
 		gameScreen:     gameScreen,
 		menuScreen:     menuScreen,
 		helpScreen:     helpScreen,
+		gameOverScreen: gameOverScreen,
+		victoryScreen:  victoryScreen,
 		msgs:           make([]gruid.Msg, 0),
 	}
 
@@ -119,4 +131,18 @@ func (e *Engine) Draw() gruid.Grid {
 // Model returns the game's model configuration
 func (e *Engine) Model() gruid.Model {
 	return e
+}
+
+// ShowGameOver transitions to the game over screen with the given score entry
+func (e *Engine) ShowGameOver(scoreEntry *score.ScoreEntry) {
+	e.gameOverScreen = uiscreen.NewGameOverScreen(screenWidth, screenHeight, scoreEntry)
+	e.stateManager.RegisterState(state.StateGameOver, e.gameOverScreen)
+	e.stateManager.SetState(state.StateGameOver)
+}
+
+// ShowVictory transitions to the victory screen with the given score entry
+func (e *Engine) ShowVictory(scoreEntry *score.ScoreEntry) {
+	e.victoryScreen = uiscreen.NewVictoryScreen(screenWidth, screenHeight, scoreEntry)
+	e.stateManager.RegisterState(state.StateVictory, e.victoryScreen)
+	e.stateManager.SetState(state.StateVictory)
 }
