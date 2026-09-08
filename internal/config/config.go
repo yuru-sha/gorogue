@@ -117,9 +117,6 @@ func GetAutoSaveEnabled() bool {
 	return GetBool(EnvAutoSaveEnabled, DefaultAutoSaveEnabled)
 }
 
-
-
-
 // Config 設定値を構造体として提供する
 type Config struct {
 	DebugMode       bool   `json:"debug_mode"`

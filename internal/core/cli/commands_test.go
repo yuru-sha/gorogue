@@ -44,6 +44,22 @@ func TestNewCLIMode(t *testing.T) {
 	}
 }
 
+func TestCLIModeLevelCommandUsesDungeonManager(t *testing.T) {
+	player := actor.NewPlayerWithSeed(0, 0, 12345)
+	manager := dungeon.NewDungeonManagerWithSeed(player, 12345)
+	cli := NewCLIModeWithDungeonManager(manager, player)
+	cli.IsActive = true
+
+	result := cli.ExecuteCommand("level 2")
+
+	if manager.GetCurrentFloor() != 2 || cli.Level != manager.GetCurrentLevel() {
+		t.Fatalf("CLI did not switch to floor 2: floor=%d level_matches=%t", manager.GetCurrentFloor(), cli.Level == manager.GetCurrentLevel())
+	}
+	if !strings.Contains(result, "Moved to floor 2") {
+		t.Fatalf("unexpected level command result: %s", result)
+	}
+}
+
 func TestCLIModeToggle(t *testing.T) {
 	player := actor.NewPlayer(5, 5)
 	level := &dungeon.Level{}

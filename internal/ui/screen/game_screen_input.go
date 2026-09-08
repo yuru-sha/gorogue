@@ -27,8 +27,12 @@ func (s *GameScreen) HandleInput(msg gruid.Msg) state.GameState {
 			return s.handleQuaffInput(msg.Key)
 		case ModeRead:
 			return s.handleReadInput(msg.Key)
+		case ModeEat:
+			return s.handleEatInput(msg.Key)
 		case ModeCLI:
 			return s.handleCLIInput(msg.Key)
+		case ModeDirection:
+			return s.handleDirectionInput(msg.Key)
 		default: // ModeNormal
 			return s.handleNormalInput(msg.Key)
 		}
@@ -58,6 +62,16 @@ func (s *GameScreen) handleNormalInput(key gruid.Key) state.GameState {
 		s.enterDropMode()
 	case command.CmdUse:
 		s.enterUseMode() // PyRogue unified use interface
+	case command.CmdQuaff:
+		s.enterQuaffMode()
+	case command.CmdRead:
+		s.enterReadMode()
+	case command.CmdWield, command.CmdEquip:
+		s.enterEquipMode()
+	case command.CmdTakeOff, command.CmdUnequip:
+		s.enterUnequipMode()
+	case command.CmdEat:
+		s.enterEatMode()
 	case command.CmdWait:
 		s.handleWait()
 	case command.CmdSearch:
@@ -70,16 +84,12 @@ func (s *GameScreen) handleNormalInput(key gruid.Key) state.GameState {
 		s.handleFight()
 	case command.CmdDisarm:
 		s.handleDisarm()
-	case command.CmdEquip:
-		s.enterEquipMode()
-	case command.CmdUnequip:
-		s.enterUnequipMode()
 	case command.CmdToggleFOV:
 		s.handleToggleFOV()
 
 	// Stair commands
 	case command.CmdGoUpstairs:
-		s.handleStairs(true)
+		return s.handleStairs(true)
 	case command.CmdGoDownstairs:
 		// Check if we're on stairs - if so, go down, otherwise wait
 		if s.canGoDownstairs() {
@@ -94,6 +104,8 @@ func (s *GameScreen) handleNormalInput(key gruid.Key) state.GameState {
 		return state.StateMenu
 	case command.CmdHelp:
 		return state.StateHelp
+	case command.CmdSymbol:
+		return state.StateSymbol
 	case command.CmdEscape:
 		logger.Info("Returning to menu")
 		return state.StateMenu
@@ -120,10 +132,10 @@ func (s *GameScreen) handleNormalInput(key gruid.Key) state.GameState {
 }
 
 // handleStairs handles stair movement
-func (s *GameScreen) handleStairs(goUp bool) {
+func (s *GameScreen) handleStairs(goUp bool) state.GameState {
 	if s.dungeonManager == nil {
 		s.AddMessage("Dungeon manager not available")
-		return
+		return state.StateGame
 	}
 
 	if goUp {
@@ -132,6 +144,9 @@ func (s *GameScreen) handleStairs(goUp bool) {
 				s.level = s.dungeonManager.GetCurrentLevel()
 				s.wizardMode.SetLevel(s.level)
 				s.AddMessage(fmt.Sprintf("階層 %d へ上がった", s.dungeonManager.GetCurrentFloor()))
+				if s.dungeonManager.CheckVictoryCondition() {
+					return state.StateVictory
+				}
 			}
 		} else {
 			s.AddMessage("ここには上り階段がない")
@@ -153,6 +168,7 @@ func (s *GameScreen) handleStairs(goUp bool) {
 			s.AddMessage("ここには下り階段がない")
 		}
 	}
+	return state.StateGame
 }
 
 // handleEquipInput handles input in equip mode
@@ -213,6 +229,22 @@ func (s *GameScreen) handleUnequipInput(key gruid.Key) state.GameState {
 
 // unequipSlot unequips an item from a specific slot
 func (s *GameScreen) unequipSlot(slot, displaySlot string) {
+	var equipped *gameitem.Item
+	switch slot {
+	case "weapon":
+		equipped = s.player.Equipment.Weapon
+	case "armor":
+		equipped = s.player.Equipment.Armor
+	case "ring_left":
+		equipped = s.player.Equipment.RingLeft
+	case "ring_right":
+		equipped = s.player.Equipment.RingRight
+	}
+	if equipped != nil && equipped.IsCursed {
+		s.AddMessage(fmt.Sprintf("You can't remove the cursed %s.", displaySlot))
+		return
+	}
+
 	if item := s.player.Equipment.UnequipItem(slot); item != nil {
 		if s.player.Inventory.AddItem(item) {
 			displayName := s.player.IdentifyMgr.GetDisplayName(item)
@@ -318,6 +350,34 @@ func (s *GameScreen) handleReadInput(key gruid.Key) state.GameState {
 	return state.StateGame
 }
 
+// handleEatInput handles food selection.
+func (s *GameScreen) handleEatInput(key gruid.Key) state.GameState {
+	switch key {
+	case gruid.KeyEscape:
+		s.inputMode = ModeNormal
+		s.AddMessage("Canceled.")
+		return state.StateGame
+	default:
+		if len(string(key)) == 1 && string(key)[0] >= 'a' && string(key)[0] <= 'z' {
+			index := int(string(key)[0] - 'a')
+			if item := s.player.Inventory.GetItem(index); item != nil {
+				if item.Type == gameitem.ItemFood {
+					s.player.EatFood(item.Value)
+					s.player.Inventory.RemoveItem(index)
+					s.AddMessage(fmt.Sprintf("You ate %s.", s.player.IdentifyMgr.GetDisplayName(item)))
+					s.level.UpdateMonsters(s.player)
+				} else {
+					s.AddMessage("You can't eat that!")
+				}
+			} else {
+				s.AddMessage("Invalid selection.")
+			}
+			s.inputMode = ModeNormal
+		}
+	}
+	return state.StateGame
+}
+
 // handleCLIInput handles input in CLI mode
 func (s *GameScreen) handleCLIInput(key gruid.Key) state.GameState {
 	switch key {
@@ -332,6 +392,10 @@ func (s *GameScreen) handleCLIInput(key gruid.Key) state.GameState {
 			result := s.cliMode.ExecuteCommand(s.cliBuffer)
 			s.AddMessage(fmt.Sprintf("> %s", s.cliBuffer))
 			s.AddMessage(result)
+			if s.dungeonManager != nil {
+				s.level = s.dungeonManager.GetCurrentLevel()
+				s.wizardMode.SetLevel(s.level)
+			}
 
 			// Add to history
 			s.cliHistory = append(s.cliHistory, s.cliBuffer)
@@ -358,4 +422,29 @@ func (s *GameScreen) handleCLIInput(key gruid.Key) state.GameState {
 		}
 		return state.StateGame
 	}
+}
+
+// handleDirectionInput handles input in direction mode
+func (s *GameScreen) handleDirectionInput(key gruid.Key) state.GameState {
+	// Parse the key into a command
+	cmd := s.cmdParser.Parse(key)
+
+	switch cmd.Type {
+	case command.CmdMoveWest, command.CmdMoveEast, command.CmdMoveNorth, command.CmdMoveSouth,
+		command.CmdMoveNorthWest, command.CmdMoveNorthEast, command.CmdMoveSouthWest, command.CmdMoveSouthEast:
+		// Call the callback with the direction
+		if s.directionCallback != nil {
+			s.directionCallback(cmd.Direction.X, cmd.Direction.Y)
+		}
+		s.inputMode = ModeNormal
+		s.directionCallback = nil
+	case command.CmdEscape:
+		s.AddMessage("Canceled.")
+		s.inputMode = ModeNormal
+		s.directionCallback = nil
+	default:
+		s.AddMessage("Invalid direction. Use hjklybnu or arrow keys.")
+	}
+
+	return state.StateGame
 }

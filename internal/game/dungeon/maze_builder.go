@@ -13,6 +13,7 @@ type MazeBuilder struct {
 	width      int
 	height     int
 	floorNum   int
+	rng        *rand.Rand
 	level      *Level
 	visited    [][]bool
 	complexity float64 // 迷路の複雑さ（0.0-1.0）
@@ -20,6 +21,14 @@ type MazeBuilder struct {
 
 // NewMazeBuilder creates a new maze builder
 func NewMazeBuilder(width, height, floorNum int) *MazeBuilder {
+	return NewMazeBuilderWithRand(width, height, floorNum, newRandom())
+}
+
+func NewMazeBuilderWithRand(width, height, floorNum int, rng *rand.Rand) *MazeBuilder {
+	if rng == nil {
+		rng = newRandom()
+	}
+
 	// 階層に応じた迷路の複雑さを設定
 	complexity := 0.3 // 基本複雑さ
 	switch floorNum {
@@ -35,6 +44,7 @@ func NewMazeBuilder(width, height, floorNum int) *MazeBuilder {
 		width:      width,
 		height:     height,
 		floorNum:   floorNum,
+		rng:        rng,
 		complexity: complexity,
 		visited:    make([][]bool, height),
 	}
@@ -51,6 +61,7 @@ func (mb *MazeBuilder) Build() *Level {
 		FloorNumber: mb.floorNum,
 		Monsters:    make([]*actor.Monster, 0),
 		Items:       make([]*item.Item, 0),
+		rng:         mb.rng,
 	}
 
 	// visited配列を初期化
@@ -118,7 +129,7 @@ func (mb *MazeBuilder) carvePath(x, y int) {
 
 	// 方向をランダムにシャッフル
 	for i := len(directions) - 1; i > 0; i-- {
-		j := rand.Intn(i + 1)
+		j := mb.rng.Intn(i + 1)
 		directions[i], directions[j] = directions[j], directions[i]
 	}
 
@@ -149,8 +160,8 @@ func (mb *MazeBuilder) addComplexity() {
 
 	for i := 0; i < numExtraPassages; i++ {
 		// ランダムな壁を選択
-		x := 1 + rand.Intn(mb.width-2)
-		y := 1 + rand.Intn(mb.height-2)
+		x := 1 + mb.rng.Intn(mb.width-2)
+		y := 1 + mb.rng.Intn(mb.height-2)
 
 		// 壁の場合、通路に変更する可能性がある
 		if mb.level.GetTile(x, y).Type == TileWall {
@@ -226,8 +237,8 @@ func (mb *MazeBuilder) placeStairs() {
 		return
 	}
 
-	// 上り階段の配置（最初の階層を除く）
-	if mb.floorNum > 1 {
+	// 上り階段は1階では地上への出口になる。
+	if mb.floorNum >= 1 {
 		firstRoom := mb.level.Rooms[0]
 		mb.level.SetTile(
 			firstRoom.X+firstRoom.Width/2,
@@ -248,7 +259,7 @@ func (mb *MazeBuilder) placeStairs() {
 
 	logger.Debug("Placed stairs in maze",
 		"floor", mb.floorNum,
-		"up_stairs", mb.floorNum > 1,
+		"up_stairs", mb.floorNum >= 1,
 		"down_stairs", mb.floorNum < 26,
 	)
 }

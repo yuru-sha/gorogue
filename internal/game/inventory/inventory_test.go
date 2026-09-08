@@ -330,12 +330,13 @@ func TestEquipmentGetAttackBonus(t *testing.T) {
 		t.Errorf("Initial attack bonus = %d, want 0", bonus)
 	}
 
-	// 武器を装備（Value=100なので攻撃ボーナス=10）
+	// 武器を装備
 	weapon := item.NewItem(0, 0, item.ItemWeapon, "Sword", 100)
+	weapon.Damage = 8
+	weapon.Enchantment = 1
 	eq.EquipItem(weapon)
 
-	// 武器ボーナス = Value / 10 = 100 / 10 = 10
-	expectedBonus := 10
+	expectedBonus := 9
 	if bonus := eq.GetAttackBonus(); bonus != expectedBonus {
 		t.Errorf("Attack bonus with weapon = %d, want %d", bonus, expectedBonus)
 	}
@@ -349,13 +350,28 @@ func TestEquipmentGetDefenseBonus(t *testing.T) {
 		t.Errorf("Initial defense bonus = %d, want 0", bonus)
 	}
 
-	// 防具を装備（Value=200なので防御ボーナス=20）
+	// 防具を装備
 	armor := item.NewItem(0, 0, item.ItemArmor, "Chain Mail", 200)
+	armor.Defense = 6
+	armor.Enchantment = 1
 	eq.EquipItem(armor)
 
-	// 防具ボーナス = Value / 10 = 200 / 10 = 20
-	expectedBonus := 20
+	expectedBonus := 7
 	if bonus := eq.GetDefenseBonus(); bonus != expectedBonus {
 		t.Errorf("Defense bonus with armor = %d, want %d", bonus, expectedBonus)
+	}
+}
+
+func TestEquipmentCannotUnequipCursedItem(t *testing.T) {
+	eq := NewEquipment()
+	weapon := item.NewItem(0, 0, item.ItemWeapon, "Cursed Sword", 100)
+	weapon.IsCursed = true
+	eq.EquipItem(weapon)
+
+	if removed := eq.UnequipItem("weapon"); removed != nil {
+		t.Fatalf("UnequipItem() returned cursed item %v", removed.Name)
+	}
+	if eq.Weapon != weapon {
+		t.Fatal("cursed weapon was removed")
 	}
 }

@@ -16,7 +16,7 @@ const (
 	CmdMoveSouthEast
 
 	// Action commands
-	CmdLook      // Look around (l or x)
+	CmdLook      // Look around (x)
 	CmdInventory // Show inventory (i)
 	CmdPickUp    // Pick up item (,)
 	CmdDrop      // Drop item (d)
@@ -25,6 +25,7 @@ const (
 	CmdRead      // Read scroll (r)
 	CmdWield     // Wield/wear item (w)
 	CmdTakeOff   // Take off item (t)
+	CmdEat       // Eat food (e)
 	CmdWait      // Wait/Rest (.)
 	CmdSearch    // Search (s)
 	CmdOpen      // Open door (o)
@@ -45,6 +46,7 @@ const (
 	CmdEscape  // Cancel/Back (ESC)
 	CmdWizard  // Toggle wizard mode (^W)
 	CmdCLI     // Enter CLI mode (:)
+	CmdSymbol  // Show symbol explanation (/)
 	CmdUnknown // Unknown command
 )
 
@@ -97,6 +99,8 @@ func (t Type) String() string {
 		return "Wield/Wear"
 	case CmdTakeOff:
 		return "Take Off"
+	case CmdEat:
+		return "Eat"
 	case CmdWait:
 		return "Wait/Rest"
 	case CmdSearch:
@@ -129,6 +133,8 @@ func (t Type) String() string {
 		return "Wizard Mode"
 	case CmdCLI:
 		return "CLI Mode"
+	case CmdSymbol:
+		return "Symbol Explanation"
 	default:
 		return "Unknown"
 	}
