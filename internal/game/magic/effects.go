@@ -2,7 +2,6 @@ package magic
 
 import (
 	"fmt"
-	"math/rand"
 
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
@@ -113,8 +112,8 @@ func useScrollOfIdentify(player *actor.Player) *EffectResult {
 func useScrollOfTeleportation(player *actor.Player, level *dungeon.Level) *EffectResult {
 	// Find a random walkable tile
 	for attempts := 0; attempts < 100; attempts++ {
-		x := rand.Intn(level.Width)
-		y := rand.Intn(level.Height)
+		x := player.RandomSource().Intn(level.Width)
+		y := player.RandomSource().Intn(level.Height)
 
 		tile := level.GetTile(x, y)
 		if tile.Walkable() {
@@ -361,7 +360,7 @@ func usePotionOfGainStrength(player *actor.Player) *EffectResult {
 
 // usePotionOfGainExperience grants experience points
 func usePotionOfGainExperience(player *actor.Player) *EffectResult {
-	expGain := 100 + rand.Intn(200)
+	expGain := 100 + player.RandomSource().Intn(200)
 	player.GainExp(expGain)
 	return &EffectResult{
 		Message:    fmt.Sprintf("You feel more experienced! (%d exp)", expGain),
@@ -412,7 +411,7 @@ func usePotionOfConfusion(player *actor.Player) *EffectResult {
 
 // usePotionOfPoison poisons the player
 func usePotionOfPoison(player *actor.Player) *EffectResult {
-	damage := 3 + rand.Intn(5)
+	damage := 3 + player.RandomSource().Intn(5)
 	player.TakeDamage(damage)
 	return &EffectResult{
 		Message:    fmt.Sprintf("You feel very sick. (%d damage)", damage),

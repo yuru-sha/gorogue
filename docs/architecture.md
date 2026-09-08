@@ -7,6 +7,15 @@ cache_control: {"type": "ephemeral"}
 
 GoRogueは、Go言語のシンプルさと並行処理の強みを活かした、モダンなソフトウェアアーキテクチャの原則に基づいて設計されたローグライクゲームです。責務分離、テスト可能性、拡張性、保守性を重視した設計により、高品質なゲーム体験と継続的な開発を可能にしています。
 
+## v0.3.0 現在の実装契約
+
+現行の要件と受け入れ条件は `SPEC.md` を正とします。この文書に残る旧設計図や旧パスの説明は、現行コードの仕様を上書きしません。
+
+- ゲーム状態とルールは `internal/core` と `internal/game` に置き、GUI/CLI は入力変換と表示を担当します。
+- `DungeonManager` がシード、階層、プレイヤー位置、階段移動を管理し、Engine/CLI/API から固定シードを渡せます。
+- JSON セーブは `SaveVersion 1.1.0` として、ダンジョン、階層、アイテム、識別状態を保存します。
+- 乱数状態の完全な復元、FOV/探索済み状態と表示セルの分離、GUI/CLI の全コマンド共有は未完了です。これらを実装済みとは扱いません。
+
 ## アーキテクチャの基本原則
 
 ### 1. 責務分離 (Separation of Concerns)
@@ -72,34 +81,43 @@ GoRogueは、Go言語のシンプルさと並行処理の強みを活かした�
 
 ```
 game/
-├── game.go               # メインゲームループ
+├── game.go              # メインゲームループ
 ├── state.go             # ゲーム状態管理
 ├── input.go             # 入力処理
 ├── world.go             # ワールド管理
-├── save.go              # セーブ・ロード
+├── save/                # セーブ・ロード
+│   ├── save.go          # セーブ機能
+│   ├── save_converter.go # データ変換
+│   └── save_converter_test.go # テスト
 ├── score/               # スコアシステム
 │   ├── score.go         # スコア計算
 │   └── ranking.go       # ランキング管理
-└── managers/            # 各種マネージャー
-    ├── turn.go         # ターン管理
-    ├── combat.go       # 戦闘管理
-    └── ai.go           # AI管理
+└── manager/             # 各種マネージャー
+    ├── turn.go          # ターン管理
+    ├── combat.go        # 戦闘管理
+    └── ai.go            # AI管理
 ```
 
 #### 2. Entities (エンティティ)
 **役割**: ゲーム内オブジェクトの定義と管理
-**場所**: `internal/entity/`
+**場所**: `internal/game/`
 
 ```
-entity/
-├── entity.go            # エンティティインターフェース
-├── player.go            # プレイヤー実装
-├── monster.go           # モンスター実装
-├── item.go              # アイテム実装
-├── inventory.go         # インベントリ管理
-├── effects.go           # 状態効果システム
-├── magic.go             # 魔法システム
-└── trap.go              # トラップシステム
+game/
+├── actor/               # アクターシステム
+│   ├── actor.go         # アクターインターフェース
+│   ├── player.go        # プレイヤー実装
+│   ├── monster.go       # モンスター実装
+│   ├── monster_ai.go    # モンスターAI
+│   └── monster_ai_test.go # AI テスト
+├── item/                # アイテムシステム
+│   ├── item.go          # アイテム実装
+│   ├── inventory.go     # インベントリ管理
+│   └── effect.go        # アイテム効果
+├── magic/               # 魔法システム
+│   └── magic.go         # 魔法実装
+└── trap/                # トラップシステム
+    └── trap.go          # トラップ実装
 ```
 
 #### 3. Map (マップ)
@@ -114,10 +132,11 @@ dungeon/
 ├── tile.go              # タイル定義
 ├── room.go              # 部屋定義
 ├── corridor.go          # 通路生成
+├── fov.go               # 視界計算
 └── builders/            # 各種ビルダー
-    ├── bsp.go          # BSPダンジョン生成
-    ├── maze.go         # 迷路生成
-    └── cave.go         # 洞窟生成
+    ├── bsp.go           # BSPダンジョン生成
+    ├── maze.go          # 迷路生成
+    └── cave.go          # 洞窟生成
 ```
 
 #### 4. UI (ユーザーインターフェース)
@@ -134,7 +153,9 @@ ui/
 ├── status.go            # ステータス表示
 ├── render.go            # 描画処理
 ├── input.go             # 入力処理
-└── fov.go               # 視界計算
+└── terminal/            # ターミナル描画
+    ├── terminal.go      # gruid ターミナル
+    └── color.go         # 色定義
 ```
 
 ## 設計パターンの活用
@@ -652,14 +673,21 @@ Entity Layer ──────────────────▶ Data Laye
 
 ### 2. 依存関係注入の例
 
-```python
-class GameScreen:
-    def __init__(self, game_logic: GameLogic):
-        self.game_logic = game_logic  # 依存関係注入
+```go
+type GameScreen struct {
+    gameLogic *GameLogic  // 依存関係注入
+}
 
-    def process_input(self, action: Action):
-        # UIがビジネスロジックを呼び出す
-        self.game_logic.process_action(action)
+func NewGameScreen(gameLogic *GameLogic) *GameScreen {
+    return &GameScreen{
+        gameLogic: gameLogic,
+    }
+}
+
+func (gs *GameScreen) ProcessInput(action Action) {
+    // UIがビジネスロジックを呼び出す
+    gs.gameLogic.ProcessAction(action)
+}
 ```
 
 ## テストアーキテクチャ
@@ -683,24 +711,33 @@ class GameScreen:
 
 ### 2. テストダブルの活用
 
-```python
-class MockDungeon:
-    """テスト用のダンジョンモック"""
-    def __init__(self):
-        self.width = 80
-        self.height = 50
-        self.tiles = self.create_test_tiles()
+```go
+type MockDungeon struct {
+    width  int
+    height int
+    tiles  [][]Tile
+}
 
-class TestCombatManager:
-    def test_combat_calculation(self):
-        # モックを使用したテスト
-        mock_player = MockPlayer(attack=10, defense=5)
-        mock_monster = MockMonster(attack=8, defense=3)
+func NewMockDungeon() *MockDungeon {
+    return &MockDungeon{
+        width:  80,
+        height: 50,
+        tiles:  createTestTiles(),
+    }
+}
 
-        combat_manager = CombatManager()
-        result = combat_manager.calculate_damage(mock_player, mock_monster)
-
-        assert result == 5  # 10 - 5 = 5
+func TestCombatCalculation(t *testing.T) {
+    // モックを使用したテスト
+    mockPlayer := &MockPlayer{attack: 10, defense: 5}
+    mockMonster := &MockMonster{attack: 8, defense: 3}
+    
+    combatManager := NewCombatManager()
+    result := combatManager.CalculateDamage(mockPlayer, mockMonster)
+    
+    if result != 5 { // 10 - 5 = 5
+        t.Errorf("Expected damage 5, got %d", result)
+    }
+}
 ```
 
 ## 性能に関する考慮
@@ -845,16 +882,24 @@ type CombatEvent struct {
 ```
 
 #### 2. CommonCommandHandler (共通処理レイヤー)
-```python
-class CommonCommandHandler:
-    """GUIとCLIで共通のコマンド処理"""
-    def handle_command(self, command: str, args: list[str]) -> CommandResult:
-        # 統一されたコマンド処理ロジック
-        if command in ["move", "north", "south", "east", "west"]:
-            return self._handle_move_command(command, args)
-        elif command in ["get", "pickup", "g"]:
-            return self._handle_get_item()
-        # ... 他のコマンド処理
+```go
+type CommonCommandHandler struct {
+    game *Game
+}
+
+// GUIとCLIで共通のコマンド処理
+func (h *CommonCommandHandler) HandleCommand(command string, args []string) (*CommandResult, error) {
+    // 統一されたコマンド処理ロジック
+    switch command {
+    case "move", "north", "south", "east", "west":
+        return h.handleMoveCommand(command, args)
+    case "get", "pickup", "g":
+        return h.handleGetItem()
+    default:
+        return nil, fmt.Errorf("unknown command: %s", command)
+    }
+    // ... 他のコマンド処理
+}
 ```
 
 #### 3. 実装クラス
@@ -908,17 +953,24 @@ func (s *ScoreSystem) CalculateScore(player *Player) int {
 ### キー入力の統一化
 
 #### GUI環境でのキー→コマンド変換
-```python
-def _key_to_command(self, event: tcod.event.KeyDown) -> str | None:
-    """キーイベントをコマンド文字列に変換"""
-    key = event.sym
-
-    # viキー + 矢印キー対応
-    if key in (ord('h'), tcod.event.KeySym.LEFT):
-        return "west"
-    elif key in (ord('j'), tcod.event.KeySym.DOWN):
-        return "south"
-    # ... 他のキーマッピング
+```go
+// キーイベントをコマンド文字列に変換
+func (h *InputHandler) KeyToCommand(key ebiten.Key) (string, bool) {
+    // viキー + 矢印キー対応
+    switch key {
+    case ebiten.KeyH, ebiten.KeyArrowLeft:
+        return "west", true
+    case ebiten.KeyJ, ebiten.KeyArrowDown:
+        return "south", true
+    case ebiten.KeyK, ebiten.KeyArrowUp:
+        return "north", true
+    case ebiten.KeyL, ebiten.KeyArrowRight:
+        return "east", true
+    default:
+        return "", false
+    }
+    // ... 他のキーマッピング
+}
 ```
 
 ### 利点
@@ -1199,21 +1251,24 @@ func (s *BaseScreen) calculateScreenSize() (int, int) {
 #### GameStates列挙型
 
 ```python
-class GameStates(Enum):
-    MENU = auto()                # メインメニュー表示中
-    PLAYERS_TURN = auto()        # プレイヤーの入力待ち
-    ENEMY_TURN = auto()          # 敵の行動処理中
-    PLAYER_DEAD = auto()         # プレイヤー死亡時の処理
-    GAME_OVER = auto()           # ゲームオーバー画面表示
-    VICTORY = auto()             # ゲーム勝利画面表示
-    SHOW_INVENTORY = auto()      # インベントリ一覧表示
-    DROP_INVENTORY = auto()      # アイテム破棄モード
-    SHOW_MAGIC = auto()          # 魔法一覧表示
-    TARGETING = auto()           # ターゲット選択モード
-    DIALOGUE = auto()            # NPC対話状態
-    LEVEL_UP = auto()           # レベルアップ時の選択
-    CHARACTER_SCREEN = auto()    # キャラクター情報表示
-    EXIT = auto()               # ゲーム終了シグナル
+type GameState int
+
+const (
+    StateMenu GameState = iota      // メインメニュー表示中
+    StatePlayersTurn                // プレイヤーの入力待ち
+    StateEnemyTurn                  // 敵の行動処理中
+    StatePlayerDead                 // プレイヤー死亡時の処理
+    StateGameOver                   // ゲームオーバー画面表示
+    StateVictory                    // ゲーム勝利画面表示
+    StateShowInventory              // インベントリ一覧表示
+    StateDropInventory              // アイテム破棄モード
+    StateShowMagic                  // 魔法一覧表示
+    StateTargeting                  // ターゲット選択モード
+    StateDialogue                   // NPC対話状態
+    StateLevelUp                    // レベルアップ時の選択
+    StateCharacterScreen            // キャラクター情報表示
+    StateExit                       // ゲーム終了シグナル
+)
 ```
 
 #### ScreenManager
@@ -1267,15 +1322,18 @@ func (sm *ScreenManager) Draw(screen *ebiten.Image) {
 #### 1. GameRenderer（描画システム）
 
 ```python
-class GameRenderer:
-    """ゲーム画面の描画処理を担当するクラス"""
+type GameRenderer struct {
+    font     *Font
+    tileSize int
+}
 
-    def render(self, console: tcod.Console) -> None:
-        """レイヤー化描画"""
-        console.clear()
-        self._render_map(console)      # マップ層
-        self._render_status(console)   # ステータス層
-        self._render_messages(console) # メッセージ層
+// レイヤー化描画
+func (r *GameRenderer) Render(screen *ebiten.Image) {
+    screen.Clear()
+    r.renderMap(screen)      // マップ層
+    r.renderStatus(screen)   // ステータス層
+    r.renderMessages(screen) // メッセージ層
+}
 ```
 
 **主要機能**:
@@ -1285,23 +1343,39 @@ class GameRenderer:
 - **エンティティ描画**: アイテム、モンスター、NPCの統合描画
 
 **色彩システム**:
-```python
-# 視界状態による色彩変化
-color = (130, 110, 50) if visible else (0, 0, 100)  # 壁
-color = (192, 192, 192) if visible else (64, 64, 64)  # 床
+```go
+// 視界状態による色彩変化
+var wallColor color.Color
+if visible {
+    wallColor = color.RGBA{130, 110, 50, 255}
+} else {
+    wallColor = color.RGBA{0, 0, 100, 255}
+}
+
+var floorColor color.Color  
+if visible {
+    floorColor = color.RGBA{192, 192, 192, 255}
+} else {
+    floorColor = color.RGBA{64, 64, 64, 255}
+}
 ```
 
 #### 2. InputHandler（入力処理システム）
 
 ```python
-class InputHandler:
-    """入力処理システムの管理クラス"""
+type InputHandler struct {
+    targetingMode bool
+    game         *Game
+}
 
-    def handle_key(self, event: tcod.event.KeyDown) -> None:
-        if self.targeting_mode:
-            self._handle_targeting_key(event)
-        else:
-            self._handle_normal_key(event)
+// 入力処理システムの管理
+func (h *InputHandler) HandleKey(key ebiten.Key) {
+    if h.targetingMode {
+        h.handleTargetingKey(key)
+    } else {
+        h.handleNormalKey(key)
+    }
+}
 ```
 
 **入力マッピング**:
@@ -1425,34 +1499,40 @@ func (fov *FOVSystem) castLight(world *World, cx, cy, row int,
 ```
 
 **効果的FOV半径計算**:
-```python
-def _calculate_effective_fov_radius(self, x: int, y: int) -> int:
-    # 基本半径: 8
-    # 暗い部屋での制限: 2-3
-    # 光源アイテム使用時: 基本半径復帰
-    return dark_room_builder.get_visibility_range_at(
-        x, y, rooms, has_light, light_radius
-    )
+```go
+func (fov *FOVSystem) calculateEffectiveFOVRadius(x, y int) int {
+    // 基本半径: 8
+    // 暗い部屋での制限: 2-3  
+    // 光源アイテム使用時: 基本半径復帰
+    if fov.isDarkRoom(x, y) && !fov.hasLight {
+        return 3
+    }
+    return fov.baseRadius
+}
 ```
 
 #### 4. SaveLoadManager（状態永続化システム）
 
 ```python
-class SaveLoadManager:
-    """セーブ・ロード処理の管理クラス"""
+type SaveLoadManager struct {
+    saveManager *SaveManager
+}
 
-    def save_game(self) -> bool:
-        save_data = self._create_save_data()
-        return self.save_manager.save_game(save_data)
+// セーブ・ロード処理の管理
+func (m *SaveLoadManager) SaveGame() error {
+    saveData := m.createSaveData()
+    return m.saveManager.SaveGame(saveData)
+}
 
-    def _create_save_data(self) -> dict[str, Any]:
-        return {
-            "player": self._serialize_player(player),
-            "inventory": self._serialize_inventory(inventory),
-            "current_floor": dungeon_manager.current_floor,
-            "floor_data": dungeon_manager.floor_data,
-            "message_log": game_logic.message_log,
-        }
+func (m *SaveLoadManager) createSaveData() *SaveData {
+    return &SaveData{
+        Player:       m.serializePlayer(m.game.Player),
+        Inventory:    m.serializeInventory(m.game.Inventory),
+        CurrentFloor: m.game.DungeonManager.CurrentFloor,
+        FloorData:    m.game.DungeonManager.FloorData,
+        MessageLog:   m.game.GameLogic.MessageLog,
+    }
+}
 ```
 
 **シリアライゼーション機能**:
@@ -1461,9 +1541,9 @@ class SaveLoadManager:
 - フロアデータの遅延読み込み対応
 - メッセージログの継続性確保
 
-### TCODライブラリ統合
+### gruidライブラリ統合
 
-#### Ebitenの初期化と設定
+#### gruidの初期化と設定
 
 ```go
 type Game struct {
@@ -1510,20 +1590,25 @@ func main() {
 #### ウィンドウリサイズ対応
 
 ```python
-def handle_resize(self, event: tcod.event.WindowEvent) -> None:
-    pixel_width = getattr(event, "width", 800)
-    pixel_height = getattr(event, "height", 600)
+func (g *Game) HandleResize(width, height int) {
+    // 文字数計算
+    g.screenWidth = max(MinScreenWidth, width/g.fontWidth)
+    g.screenHeight = max(MinScreenHeight, height/g.fontHeight)
+    
+    // グリッド再作成
+    g.grid = gruid.NewGrid(g.screenWidth, g.screenHeight)
+    
+    // 各画面のグリッド参照更新
+    g.menuScreen.UpdateGrid(g.grid)
+    g.gameScreen.UpdateGrid(g.grid)
+}
 
-    # 文字数計算
-    self.screen_width = max(MIN_SCREEN_WIDTH, pixel_width // font_width)
-    self.screen_height = max(MIN_SCREEN_HEIGHT, pixel_height // font_height)
-
-    # コンソール再作成
-    self.console = tcod.console.Console(self.screen_width, self.screen_height)
-
-    # 各画面のコンソール参照更新
-    self.menu_screen.update_console(self.console)
-    self.game_screen.update_console(self.console)
+func max(a, b int) int {
+    if a > b {
+        return a
+    }
+    return b
+}
 ```
 
 ### パフォーマンス最適化
@@ -1563,7 +1648,7 @@ def handle_resize(self, event: tcod.event.WindowEvent) -> None:
 ### 既知の技術的課題
 
 #### 1. 入力処理の修正中問題
-- **場所**: `src/pyrogue/ui/components/input_handler.py`
+- **場所**: `internal/ui/input.go`
 - **問題**: キーボード入力処理の一部で不具合
 - **影響**: 特定のキー組み合わせで期待通りの動作がしない
 

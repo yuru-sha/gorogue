@@ -49,8 +49,8 @@ func (sgi *SaveGameIntegration) Initialize() error {
 	return nil
 }
 
-// SaveGame saves the current game state to the specified slot
-func (sgi *SaveGameIntegration) SaveGame(slot int) error {
+// SaveGame saves the current game state (PyRogue style - single save)
+func (sgi *SaveGameIntegration) SaveGame() error {
 	if sgi.player == nil || sgi.dungeonManager == nil {
 		return fmt.Errorf("game state not set")
 	}
@@ -68,13 +68,12 @@ func (sgi *SaveGameIntegration) SaveGame(slot int) error {
 		sgi.settings,
 	)
 
-	// Save to slot
-	if err := sgi.saveManager.SaveGame(saveData, slot); err != nil {
+	// Save to file
+	if err := sgi.saveManager.SaveGame(saveData); err != nil {
 		return fmt.Errorf("failed to save game: %w", err)
 	}
 
 	logger.Info("Game saved successfully",
-		"slot", slot,
 		"char_name", sgi.gameInfo.CharName,
 		"level", sgi.player.Level,
 		"floor", sgi.dungeonManager.GetCurrentFloor(),
@@ -83,10 +82,10 @@ func (sgi *SaveGameIntegration) SaveGame(slot int) error {
 	return nil
 }
 
-// LoadGame loads the game state from the specified slot
-func (sgi *SaveGameIntegration) LoadGame(slot int) error {
+// LoadGame loads the game state (PyRogue style - single save)
+func (sgi *SaveGameIntegration) LoadGame() error {
 	// Load save data
-	saveData, err := sgi.saveManager.LoadGame(slot)
+	saveData, err := sgi.saveManager.LoadGame()
 	if err != nil {
 		return fmt.Errorf("failed to load game: %w", err)
 	}
@@ -107,7 +106,6 @@ func (sgi *SaveGameIntegration) LoadGame(slot int) error {
 	sgi.gameStats.LoadStats(saveData.GameStats)
 
 	logger.Info("Game loaded successfully",
-		"slot", slot,
 		"char_name", sgi.gameInfo.CharName,
 		"level", sgi.player.Level,
 		"floor", sgi.dungeonManager.GetCurrentFloor(),
@@ -117,16 +115,14 @@ func (sgi *SaveGameIntegration) LoadGame(slot int) error {
 	return nil
 }
 
-// QuickSave performs a quick save to a designated slot
+// QuickSave performs a quick save (PyRogue style - same as normal save)
 func (sgi *SaveGameIntegration) QuickSave() error {
-	const quickSaveSlot = 0
-	return sgi.SaveGame(quickSaveSlot)
+	return sgi.SaveGame()
 }
 
-// QuickLoad performs a quick load from a designated slot
+// QuickLoad performs a quick load (PyRogue style - same as normal load)
 func (sgi *SaveGameIntegration) QuickLoad() error {
-	const quickSaveSlot = 0
-	return sgi.LoadGame(quickSaveSlot)
+	return sgi.LoadGame()
 }
 
 // AutoSave performs an automatic save
@@ -228,44 +224,29 @@ func (sgi *SaveGameIntegration) GetGameStats() *GameStats {
 	return sgi.gameStats
 }
 
-// DeleteSave deletes a save file
-func (sgi *SaveGameIntegration) DeleteSave(slot int) error {
-	return sgi.saveManager.DeleteSave(slot)
+// DeleteSave deletes the save file (PyRogue style - single save)
+func (sgi *SaveGameIntegration) DeleteSave() error {
+	return sgi.saveManager.DeleteSave()
 }
 
-// HasSave checks if a save file exists
-func (sgi *SaveGameIntegration) HasSave(slot int) bool {
-	return sgi.saveManager.FileExists(slot)
+// HasSave checks if a save file exists (PyRogue style - single save)
+func (sgi *SaveGameIntegration) HasSave() bool {
+	return sgi.saveManager.FileExists()
 }
 
-// GetSaveInfo returns information about a save file
-func (sgi *SaveGameIntegration) GetSaveInfo(slot int) (string, error) {
-	return sgi.saveManager.GetSaveSlotInfo(slot)
+// GetSaveInfo returns information about the save file (PyRogue style - single save)
+func (sgi *SaveGameIntegration) GetSaveInfo() (string, error) {
+	return sgi.saveManager.GetSaveInfo()
 }
 
-// GetAllSaveInfo returns information about all save files
-func (sgi *SaveGameIntegration) GetAllSaveInfo() map[int]string {
-	result := make(map[int]string)
-
-	for slot := 0; slot < MaxSaveSlots; slot++ {
-		if info, err := sgi.saveManager.GetSaveSlotInfo(slot); err == nil {
-			result[slot] = info
-		} else {
-			result[slot] = "Empty"
-		}
-	}
-
-	return result
+// ExportSave exports the save file (PyRogue style - single save)
+func (sgi *SaveGameIntegration) ExportSave(path string) error {
+	return sgi.saveManager.ExportSave(path)
 }
 
-// ExportSave exports a save file
-func (sgi *SaveGameIntegration) ExportSave(slot int, path string) error {
-	return sgi.saveManager.ExportSave(slot, path)
-}
-
-// ImportSave imports a save file
-func (sgi *SaveGameIntegration) ImportSave(path string, slot int) error {
-	return sgi.saveManager.ImportSave(path, slot)
+// ImportSave imports a save file (PyRogue style - single save)
+func (sgi *SaveGameIntegration) ImportSave(path string) error {
+	return sgi.saveManager.ImportSave(path)
 }
 
 // ShouldAutoSave checks if auto-save should be performed
@@ -403,8 +384,7 @@ func (sgi *SaveGameIntegration) GetStatus() map[string]interface{} {
 		"auto_save_enabled": sgi.settings.AutoSave,
 		"has_auto_save":     sgi.HasAutoSave(),
 		"save_directory":    sgi.saveManager.GetSaveDirectory(),
-		"used_slots":        sgi.saveManager.GetUsedSlots(),
-		"available_slots":   sgi.saveManager.GetAvailableSlots(),
+		"has_save_file":     sgi.saveManager.FileExists(),
 	}
 
 	if sgi.player != nil {
@@ -424,9 +404,9 @@ func (sgi *SaveGameIntegration) GetStatus() map[string]interface{} {
 	return status
 }
 
-// RepairSave attempts to repair a corrupted save file
-func (sgi *SaveGameIntegration) RepairSave(slot int) error {
-	return sgi.saveManager.RepairSave(slot)
+// RepairSave attempts to repair a corrupted save file (PyRogue style - single save)
+func (sgi *SaveGameIntegration) RepairSave() error {
+	return sgi.saveManager.RepairSave()
 }
 
 // CreateNewGame creates a new game with the specified parameters
@@ -435,7 +415,7 @@ func (sgi *SaveGameIntegration) CreateNewGame(charName string, seed int64) error
 	player := actor.NewPlayer(0, 0)
 
 	// Create new dungeon manager
-	dungeonManager := dungeon.NewDungeonManager(player)
+	dungeonManager := dungeon.NewDungeonManagerWithSeed(player, seed)
 
 	// Set initial position
 	level := dungeonManager.GetCurrentLevel()

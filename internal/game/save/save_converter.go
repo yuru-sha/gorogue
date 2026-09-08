@@ -4,7 +4,6 @@ package save
 
 import (
 	"fmt"
-	"math/rand"
 
 	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/entity"
@@ -34,7 +33,7 @@ func NewSaveConverter() *SaveConverter {
 // FromSaveData converts save data to game objects
 func (sc *SaveConverter) FromSaveData(saveData *SaveData) (*actor.Player, *dungeon.DungeonManager, error) {
 	// Convert player
-	player, err := sc.convertSavePlayer(saveData.PlayerData)
+	player, err := sc.convertSavePlayer(saveData.PlayerData, saveData.DungeonData.Seed)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to convert player: %w", err)
 	}
@@ -73,9 +72,9 @@ func (sc *SaveConverter) FromSaveData(saveData *SaveData) (*actor.Player, *dunge
 }
 
 // convertSavePlayer converts save player data to player object
-func (sc *SaveConverter) convertSavePlayer(savePlayer Player) (*actor.Player, error) {
+func (sc *SaveConverter) convertSavePlayer(savePlayer Player, seed int64) (*actor.Player, error) {
 	// Create player with base stats
-	player := actor.NewPlayer(savePlayer.X, savePlayer.Y)
+	player := actor.NewPlayerWithSeed(savePlayer.X, savePlayer.Y, seed)
 
 	// Set stats
 	player.Level = savePlayer.Level
@@ -203,6 +202,12 @@ func (sc *SaveConverter) convertSaveItemToGameItem(saveItem InventoryItem) (*ite
 		IsIdentified: saveItem.IsIdentified,
 		IsCursed:     saveItem.IsCursed,
 		IsBlessed:    saveItem.IsBlessed,
+		Damage:       saveItem.Damage,
+		Defense:      saveItem.Defense,
+		Enchantment:  saveItem.Enchantment,
+		Charges:      saveItem.Charges,
+		MaxCharges:   saveItem.MaxCharges,
+		ItemID:       saveItem.ItemID,
 	}
 
 	return gameItem, nil
@@ -227,6 +232,12 @@ func (sc *SaveConverter) convertFloorItemToGameItem(saveItem Item) (*item.Item, 
 		IsIdentified: saveItem.IsIdentified,
 		IsCursed:     saveItem.IsCursed,
 		IsBlessed:    saveItem.IsBlessed,
+		Damage:       saveItem.Damage,
+		Defense:      saveItem.Defense,
+		Enchantment:  saveItem.Enchantment,
+		Charges:      saveItem.Charges,
+		MaxCharges:   saveItem.MaxCharges,
+		ItemID:       saveItem.ItemID,
 	}
 
 	return gameItem, nil
@@ -245,6 +256,8 @@ func (sc *SaveConverter) convertStringToItemType(itemTypeStr string) (item.ItemT
 		return item.ItemScroll, nil
 	case "potion":
 		return item.ItemPotion, nil
+	case "wand":
+		return item.ItemWand, nil
 	case "food":
 		return item.ItemFood, nil
 	case "gold":
@@ -258,20 +271,17 @@ func (sc *SaveConverter) convertStringToItemType(itemTypeStr string) (item.ItemT
 
 // convertIdentifiedItems converts identified items map to identification manager
 func (sc *SaveConverter) convertIdentifiedItems(identifiedItems map[string]bool, identifyMgr *identification.IdentificationManager) error {
-	// The identification manager would need methods to load identified items
-	// For now, we'll just log this as a placeholder
 	logger.Debug("Loading identified items",
 		"count", len(identifiedItems),
 	)
-
-	// TODO: Implement identification manager loading
+	identifyMgr.LoadState(identifiedItems)
 	return nil
 }
 
 // convertSaveDungeon converts save dungeon to dungeon manager
 func (sc *SaveConverter) convertSaveDungeon(saveDungeon Dungeon, player *actor.Player) (*dungeon.DungeonManager, error) {
 	// Create dungeon manager
-	dungeonManager := dungeon.NewDungeonManager(player)
+	dungeonManager := dungeon.NewDungeonManagerWithSeed(player, saveDungeon.Seed)
 
 	// Convert each floor
 	for floorNum, saveFloor := range saveDungeon.Floors {
@@ -290,6 +300,9 @@ func (sc *SaveConverter) convertSaveDungeon(saveDungeon Dungeon, player *actor.P
 
 		// Set the level in the dungeon manager
 		dungeonManager.SetLevel(floorNum, level)
+		if floorSeed, ok := saveDungeon.FloorSeeds[floorNum]; ok {
+			dungeonManager.SetFloorSeed(floorNum, floorSeed)
+		}
 	}
 
 	// Set current floor
@@ -307,6 +320,7 @@ func (sc *SaveConverter) convertSaveFloor(saveFloor Floor) (*dungeon.Level, erro
 		Width:       saveFloor.Width,
 		Height:      saveFloor.Height,
 		FloorNumber: saveFloor.FloorNumber,
+		Seed:        saveFloor.Seed,
 		Tiles:       make([][]*dungeon.Tile, saveFloor.Height),
 		Rooms:       make([]*dungeon.Room, 0),
 		Monsters:    make([]*actor.Monster, 0),
@@ -329,7 +343,10 @@ func (sc *SaveConverter) convertSaveFloor(saveFloor Floor) (*dungeon.Level, erro
 					)
 					tileType = dungeon.TileWall // Default to wall
 				}
-				level.Tiles[y][x] = dungeon.NewTile(tileType)
+				tile := dungeon.NewTile(tileType)
+				tile.Explored = saveTile.Explored
+				tile.Visible = saveTile.Visible
+				level.Tiles[y][x] = tile
 			} else {
 				level.Tiles[y][x] = dungeon.NewTile(dungeon.TileWall)
 			}
@@ -389,6 +406,14 @@ func (sc *SaveConverter) convertStringToTileType(tileTypeStr string) (dungeon.Ti
 		return dungeon.TileDoor, nil
 	case "secret_door":
 		return dungeon.TileSecretDoor, nil
+	case "door_closed":
+		return dungeon.TileDoorClosed, nil
+	case "door_open":
+		return dungeon.TileDoorOpen, nil
+	case "water":
+		return dungeon.TileWater, nil
+	case "lava":
+		return dungeon.TileLava, nil
 	case "stairs_up":
 		return dungeon.TileStairsUp, nil
 	case "stairs_down":
@@ -718,7 +743,7 @@ func (sc *SaveConverter) GenerateSeeds(dungeonData *Dungeon) {
 
 	for floorNum := 1; floorNum <= 26; floorNum++ {
 		if _, exists := dungeonData.FloorSeeds[floorNum]; !exists {
-			dungeonData.FloorSeeds[floorNum] = rand.Int63()
+			dungeonData.FloorSeeds[floorNum] = dungeonData.Seed + int64(floorNum)*1000003
 		}
 	}
 }

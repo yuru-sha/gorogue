@@ -152,7 +152,7 @@ func TestDungeonBuilderSpecialRoomGeneration(t *testing.T) {
 }
 
 func TestDungeonBuilderStairPlacement(t *testing.T) {
-	// 1階のテスト（上り階段なし、下り階段あり）
+	// 1階のテスト（地上出口と下り階段あり）
 	builder1 := NewDungeonBuilder(80, 41, 1)
 	level1 := builder1.Build()
 
@@ -169,8 +169,8 @@ func TestDungeonBuilderStairPlacement(t *testing.T) {
 		}
 	}
 
-	if upStairs != 0 {
-		t.Errorf("Floor 1 should have no up stairs, found %d", upStairs)
+	if upStairs != 1 {
+		t.Errorf("Floor 1 should have 1 up stair, found %d", upStairs)
 	}
 
 	if downStairs != 1 {

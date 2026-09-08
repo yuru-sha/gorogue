@@ -1,10 +1,6 @@
 package dungeon
 
-import (
-	"math/rand"
-
-	"github.com/yuru-sha/gorogue/internal/utils/logger"
-)
+import "github.com/yuru-sha/gorogue/internal/utils/logger"
 
 // BSPNode represents a node in the binary space partitioning tree
 type BSPNode struct {
@@ -74,7 +70,7 @@ func (g *BSPGenerator) splitNode(node *BSPNode, depth int) {
 	// Prefer splitting the longer dimension
 	splitVertical := node.Width > node.Height
 	if node.Width == node.Height {
-		splitVertical = rand.Float64() < 0.5
+		splitVertical = g.level.random().Float64() < 0.5
 	}
 
 	var splitPos int
@@ -85,7 +81,7 @@ func (g *BSPGenerator) splitNode(node *BSPNode, depth int) {
 		if minSplit >= maxSplit {
 			return // Can't split
 		}
-		splitPos = minSplit + rand.Intn(maxSplit-minSplit)
+		splitPos = minSplit + g.level.random().Intn(maxSplit-minSplit)
 
 		// Create left and right children
 		node.LeftChild = &BSPNode{
@@ -109,7 +105,7 @@ func (g *BSPGenerator) splitNode(node *BSPNode, depth int) {
 		if minSplit >= maxSplit {
 			return // Can't split
 		}
-		splitPos = minSplit + rand.Intn(maxSplit-minSplit)
+		splitPos = minSplit + g.level.random().Intn(maxSplit-minSplit)
 
 		// Create top and bottom children
 		node.LeftChild = &BSPNode{
@@ -181,8 +177,8 @@ func (g *BSPGenerator) createRoomInNode(node *BSPNode) *Room {
 	}
 
 	// PyRogue style: room size within available space (with some randomization)
-	width := minRoomSize + rand.Intn(availableWidth-minRoomSize+1)
-	height := minRoomSize + rand.Intn(availableHeight-minRoomSize+1)
+	width := minRoomSize + g.level.random().Intn(availableWidth-minRoomSize+1)
+	height := minRoomSize + g.level.random().Intn(availableHeight-minRoomSize+1)
 
 	// Ensure room doesn't exceed available space
 	if width > availableWidth {
@@ -201,8 +197,8 @@ func (g *BSPGenerator) createRoomInNode(node *BSPNode) *Room {
 	if maxYOffset < 0 {
 		maxYOffset = 0
 	}
-	x := node.X + margin + rand.Intn(maxXOffset+1)
-	y := node.Y + margin + rand.Intn(maxYOffset+1)
+	x := node.X + margin + g.level.random().Intn(maxXOffset+1)
+	y := node.Y + margin + g.level.random().Intn(maxYOffset+1)
 
 	room := &Room{
 		X:         x,
@@ -402,7 +398,7 @@ func (g *BSPGenerator) placeDoors(node *BSPNode) {
 
 // selectDoorType selects door type based on PyRogue probabilities
 func (g *BSPGenerator) selectDoorType() TileType {
-	rand_val := rand.Float64()
+	rand_val := g.level.random().Float64()
 
 	if rand_val < 0.1 {
 		return TileSecretDoor // 10% secret doors

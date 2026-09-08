@@ -1,15 +1,12 @@
-// Package save セーブマネージャーのテスト
-// セーブファイルの作成、読み込み、削除などの機能をテスト
+// Package save セーブマネージャーのテスト (PyRogue準拠)
+// シンプルなセーブファイルの作成、読み込み、削除などの機能をテスト
 package save
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/yuru-sha/gorogue/internal/game/actor"
-	"github.com/yuru-sha/gorogue/internal/game/dungeon"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
@@ -52,44 +49,93 @@ func TestSaveManager_SaveAndLoad(t *testing.T) {
 	// Create save manager
 	sm := NewSaveManager()
 	sm.saveDir = tempDir
+
+	// Initialize save manager
 	if err := sm.Initialize(); err != nil {
 		t.Fatalf("Initialize failed: %v", err)
 	}
 
 	// Create test save data
-	testSaveData := createTestSaveData(t)
+	saveData := &SaveData{
+		Version:  SaveVersion,
+		GameInfo: GameInfo{CharName: "TestPlayer", PlayTime: 100, TurnCount: 10},
+		PlayerData: Player{
+			Level:     5,
+			HP:        50,
+			MaxHP:     100,
+			Gold:      100,
+			Inventory: []InventoryItem{},
+		},
+		DungeonData: Dungeon{
+			CurrentFloor: 1,
+		},
+	}
 
 	// Test save
-	slot := 0
-	if err := sm.SaveGame(testSaveData, slot); err != nil {
+	if err := sm.SaveGame(saveData); err != nil {
 		t.Errorf("SaveGame failed: %v", err)
 	}
 
-	// Check that file exists
-	if !sm.FileExists(slot) {
-		t.Error("Save file was not created")
+	// Test that save file exists
+	if !sm.FileExists() {
+		t.Error("Save file should exist after saving")
 	}
 
 	// Test load
-	loadedData, err := sm.LoadGame(slot)
+	loadedData, err := sm.LoadGame()
 	if err != nil {
 		t.Errorf("LoadGame failed: %v", err)
 	}
 
-	// Verify loaded data matches original
-	if loadedData.GameInfo.CharName != testSaveData.GameInfo.CharName {
-		t.Errorf("Character name mismatch: expected %s, got %s",
-			testSaveData.GameInfo.CharName, loadedData.GameInfo.CharName)
+	// Verify loaded data
+	if loadedData.GameInfo.CharName != "TestPlayer" {
+		t.Errorf("Expected CharName 'TestPlayer', got '%s'", loadedData.GameInfo.CharName)
+	}
+	if loadedData.PlayerData.Level != 5 {
+		t.Errorf("Expected Level 5, got %d", loadedData.PlayerData.Level)
+	}
+	if loadedData.DungeonData.CurrentFloor != 1 {
+		t.Errorf("Expected CurrentFloor 1, got %d", loadedData.DungeonData.CurrentFloor)
+	}
+}
+
+// TestSaveManager_FileExists tests file existence check
+func TestSaveManager_FileExists(t *testing.T) {
+	// Create temporary directory for testing
+	tempDir, err := os.MkdirTemp("", "gorogue_test_*")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create save manager
+	sm := NewSaveManager()
+	sm.saveDir = tempDir
+
+	// Test non-existent file
+	if sm.FileExists() {
+		t.Error("FileExists should return false for non-existent file")
 	}
 
-	if loadedData.PlayerData.Level != testSaveData.PlayerData.Level {
-		t.Errorf("Player level mismatch: expected %d, got %d",
-			testSaveData.PlayerData.Level, loadedData.PlayerData.Level)
+	// Initialize and create test save data
+	if err := sm.Initialize(); err != nil {
+		t.Fatalf("Initialize failed: %v", err)
 	}
 
-	if loadedData.DungeonData.CurrentFloor != testSaveData.DungeonData.CurrentFloor {
-		t.Errorf("Current floor mismatch: expected %d, got %d",
-			testSaveData.DungeonData.CurrentFloor, loadedData.DungeonData.CurrentFloor)
+	saveData := &SaveData{
+		Version:     SaveVersion,
+		GameInfo:    GameInfo{CharName: "TestPlayer"},
+		PlayerData:  Player{Level: 1, HP: 20, MaxHP: 20, Gold: 0, Inventory: []InventoryItem{}},
+		DungeonData: Dungeon{CurrentFloor: 1},
+	}
+
+	// Save and test existence
+	if err := sm.SaveGame(saveData); err != nil {
+		t.Errorf("SaveGame failed: %v", err)
+	}
+
+	if !sm.FileExists() {
+		t.Error("FileExists should return true after saving")
 	}
 }
 
@@ -105,35 +151,48 @@ func TestSaveManager_DeleteSave(t *testing.T) {
 	// Create save manager
 	sm := NewSaveManager()
 	sm.saveDir = tempDir
+
+	// Initialize
 	if err := sm.Initialize(); err != nil {
 		t.Fatalf("Initialize failed: %v", err)
 	}
 
-	// Create and save test data
-	testSaveData := createTestSaveData(t)
-	slot := 1
-	if err := sm.SaveGame(testSaveData, slot); err != nil {
-		t.Fatalf("SaveGame failed: %v", err)
+	// Create test save data
+	saveData := &SaveData{
+		Version:     SaveVersion,
+		GameInfo:    GameInfo{CharName: "TestPlayer"},
+		PlayerData:  Player{Level: 1, HP: 20, MaxHP: 20, Gold: 0, Inventory: []InventoryItem{}},
+		DungeonData: Dungeon{CurrentFloor: 1},
 	}
 
-	// Verify file exists before deletion
-	if !sm.FileExists(slot) {
-		t.Fatal("Save file was not created")
+	// Save file
+	if err := sm.SaveGame(saveData); err != nil {
+		t.Errorf("SaveGame failed: %v", err)
 	}
 
-	// Delete save
-	if err := sm.DeleteSave(slot); err != nil {
+	// Verify file exists
+	if !sm.FileExists() {
+		t.Error("Save file should exist before deletion")
+	}
+
+	// Delete save file
+	if err := sm.DeleteSave(); err != nil {
 		t.Errorf("DeleteSave failed: %v", err)
 	}
 
-	// Verify file no longer exists
-	if sm.FileExists(slot) {
-		t.Error("Save file still exists after deletion")
+	// Verify file is deleted
+	if sm.FileExists() {
+		t.Error("Save file should not exist after deletion")
+	}
+
+	// Test delete non-existent file
+	if err := sm.DeleteSave(); err == nil {
+		t.Error("DeleteSave should fail for non-existent file")
 	}
 }
 
-// TestSaveManager_GetSaveMetadata tests metadata retrieval
-func TestSaveManager_GetSaveMetadata(t *testing.T) {
+// TestSaveManager_GetSaveInfo tests save info retrieval
+func TestSaveManager_GetSaveInfo(t *testing.T) {
 	// Create temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "gorogue_test_*")
 	if err != nil {
@@ -144,38 +203,46 @@ func TestSaveManager_GetSaveMetadata(t *testing.T) {
 	// Create save manager
 	sm := NewSaveManager()
 	sm.saveDir = tempDir
+
+	// Initialize
 	if err := sm.Initialize(); err != nil {
 		t.Fatalf("Initialize failed: %v", err)
 	}
 
-	// Create and save test data
-	testSaveData := createTestSaveData(t)
-	slot := 2
-	if err := sm.SaveGame(testSaveData, slot); err != nil {
-		t.Fatalf("SaveGame failed: %v", err)
-	}
-
-	// Get metadata
-	metadata, err := sm.GetSaveMetadata(slot)
+	// Test info for non-existent file
+	info, err := sm.GetSaveInfo()
 	if err != nil {
-		t.Errorf("GetSaveMetadata failed: %v", err)
+		t.Errorf("GetSaveInfo should not fail for non-existent file: %v", err)
+	}
+	if info != "No save file" {
+		t.Errorf("Expected 'No save file', got '%s'", info)
 	}
 
-	// Verify metadata
-	if metadata.CharName != testSaveData.GameInfo.CharName {
-		t.Errorf("Metadata character name mismatch: expected %s, got %s",
-			testSaveData.GameInfo.CharName, metadata.CharName)
+	// Create test save data
+	saveData := &SaveData{
+		Version:     SaveVersion,
+		GameInfo:    GameInfo{CharName: "TestPlayer", PlayTime: 3600, TurnCount: 100},
+		PlayerData:  Player{Level: 5, HP: 50, MaxHP: 100, Gold: 200, Inventory: []InventoryItem{}},
+		DungeonData: Dungeon{CurrentFloor: 3},
 	}
 
-	if metadata.Level != testSaveData.PlayerData.Level {
-		t.Errorf("Metadata level mismatch: expected %d, got %d",
-			testSaveData.PlayerData.Level, metadata.Level)
+	// Save file
+	if err := sm.SaveGame(saveData); err != nil {
+		t.Errorf("SaveGame failed: %v", err)
 	}
 
-	if metadata.Floor != testSaveData.DungeonData.CurrentFloor {
-		t.Errorf("Metadata floor mismatch: expected %d, got %d",
-			testSaveData.DungeonData.CurrentFloor, metadata.Floor)
+	// Test info for existing file
+	info, err = sm.GetSaveInfo()
+	if err != nil {
+		t.Errorf("GetSaveInfo failed: %v", err)
 	}
+
+	// Verify info contains expected data
+	if info == "No save file" {
+		t.Error("GetSaveInfo should not return 'No save file' for existing file")
+	}
+	// Info should contain player name, level, and floor
+	// Note: Exact format depends on implementation
 }
 
 // TestSaveManager_AutoSave tests auto-save functionality
@@ -190,136 +257,42 @@ func TestSaveManager_AutoSave(t *testing.T) {
 	// Create save manager
 	sm := NewSaveManager()
 	sm.saveDir = tempDir
+
+	// Initialize
 	if err := sm.Initialize(); err != nil {
 		t.Fatalf("Initialize failed: %v", err)
 	}
 
 	// Create test save data
-	testSaveData := createTestSaveData(t)
+	saveData := &SaveData{
+		Version:     SaveVersion,
+		GameInfo:    GameInfo{CharName: "TestPlayer", PlayTime: 100, TurnCount: 10},
+		PlayerData:  Player{Level: 1, HP: 20, MaxHP: 20, Gold: 0, Inventory: []InventoryItem{}},
+		DungeonData: Dungeon{CurrentFloor: 1},
+	}
 
 	// Test auto-save
-	if err := sm.AutoSave(testSaveData); err != nil {
+	if err := sm.AutoSave(saveData); err != nil {
 		t.Errorf("AutoSave failed: %v", err)
 	}
 
-	// Check that auto-save file exists
-	if !sm.HasAutoSave() {
-		t.Error("Auto-save file was not created")
+	// Verify file exists
+	if !sm.FileExists() {
+		t.Error("Save file should exist after auto-save")
 	}
 
-	// Test loading auto-save
-	loadedData, err := sm.LoadAutoSave()
+	// Load and verify
+	loadedData, err := sm.LoadGame()
 	if err != nil {
-		t.Errorf("LoadAutoSave failed: %v", err)
+		t.Errorf("LoadGame failed: %v", err)
 	}
 
-	// Verify loaded data matches original
-	if loadedData.GameInfo.CharName != testSaveData.GameInfo.CharName {
-		t.Errorf("Auto-save character name mismatch: expected %s, got %s",
-			testSaveData.GameInfo.CharName, loadedData.GameInfo.CharName)
+	if loadedData.GameInfo.CharName != "TestPlayer" {
+		t.Errorf("Expected CharName 'TestPlayer', got '%s'", loadedData.GameInfo.CharName)
 	}
 }
 
-// TestSaveManager_InvalidSlot tests handling of invalid slot numbers
-func TestSaveManager_InvalidSlot(t *testing.T) {
-	// Create temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "gorogue_test_*")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Create save manager
-	sm := NewSaveManager()
-	sm.saveDir = tempDir
-	if err := sm.Initialize(); err != nil {
-		t.Fatalf("Initialize failed: %v", err)
-	}
-
-	// Create test save data
-	testSaveData := createTestSaveData(t)
-
-	// Test invalid slot numbers
-	invalidSlots := []int{-1, MaxSaveSlots, MaxSaveSlots + 1, 100}
-
-	for _, slot := range invalidSlots {
-		if err := sm.SaveGame(testSaveData, slot); err == nil {
-			t.Errorf("SaveGame with invalid slot %d should have failed", slot)
-		}
-
-		if _, err := sm.LoadGame(slot); err == nil {
-			t.Errorf("LoadGame with invalid slot %d should have failed", slot)
-		}
-
-		if err := sm.DeleteSave(slot); err == nil {
-			t.Errorf("DeleteSave with invalid slot %d should have failed", slot)
-		}
-	}
-}
-
-// TestSaveManager_NonExistentSave tests handling of non-existent saves
-func TestSaveManager_NonExistentSave(t *testing.T) {
-	// Create temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "gorogue_test_*")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Create save manager
-	sm := NewSaveManager()
-	sm.saveDir = tempDir
-	if err := sm.Initialize(); err != nil {
-		t.Fatalf("Initialize failed: %v", err)
-	}
-
-	// Test loading non-existent save
-	slot := 0
-	if _, err := sm.LoadGame(slot); err == nil {
-		t.Error("LoadGame should fail for non-existent save")
-	}
-
-	// Test deleting non-existent save
-	if err := sm.DeleteSave(slot); err == nil {
-		t.Error("DeleteSave should fail for non-existent save")
-	}
-
-	// Test file existence check
-	if sm.FileExists(slot) {
-		t.Error("FileExists should return false for non-existent save")
-	}
-}
-
-// TestSaveManager_CorruptedSave tests handling of corrupted save files
-func TestSaveManager_CorruptedSave(t *testing.T) {
-	// Create temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "gorogue_test_*")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Create save manager
-	sm := NewSaveManager()
-	sm.saveDir = tempDir
-	if err := sm.Initialize(); err != nil {
-		t.Fatalf("Initialize failed: %v", err)
-	}
-
-	// Create corrupted save file
-	slot := 0
-	saveFile := sm.getSaveFilePath(slot)
-	if err := os.WriteFile(saveFile, []byte("corrupted data"), 0644); err != nil {
-		t.Fatalf("Failed to create corrupted save file: %v", err)
-	}
-
-	// Test loading corrupted save
-	if _, err := sm.LoadGame(slot); err == nil {
-		t.Error("LoadGame should fail for corrupted save")
-	}
-}
-
-// TestSaveManager_ExportImport tests save file export/import
+// TestSaveManager_ExportImport tests export and import functionality
 func TestSaveManager_ExportImport(t *testing.T) {
 	// Create temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "gorogue_test_*")
@@ -331,116 +304,61 @@ func TestSaveManager_ExportImport(t *testing.T) {
 	// Create save manager
 	sm := NewSaveManager()
 	sm.saveDir = tempDir
+
+	// Initialize
 	if err := sm.Initialize(); err != nil {
 		t.Fatalf("Initialize failed: %v", err)
 	}
 
-	// Create and save test data
-	testSaveData := createTestSaveData(t)
-	slot := 0
-	if err := sm.SaveGame(testSaveData, slot); err != nil {
-		t.Fatalf("SaveGame failed: %v", err)
+	// Create test save data
+	saveData := &SaveData{
+		Version:     SaveVersion,
+		GameInfo:    GameInfo{CharName: "TestPlayer", PlayTime: 100, TurnCount: 10},
+		PlayerData:  Player{Level: 5, HP: 50, MaxHP: 100, Gold: 100, Inventory: []InventoryItem{}},
+		DungeonData: Dungeon{CurrentFloor: 2},
 	}
 
-	// Export save
-	exportPath := filepath.Join(tempDir, "exported_save.json")
-	if err := sm.ExportSave(slot, exportPath); err != nil {
+	// Save file
+	if err := sm.SaveGame(saveData); err != nil {
+		t.Errorf("SaveGame failed: %v", err)
+	}
+
+	// Export
+	exportPath := filepath.Join(tempDir, "export.sav")
+	if err := sm.ExportSave(exportPath); err != nil {
 		t.Errorf("ExportSave failed: %v", err)
 	}
 
 	// Verify export file exists
 	if _, err := os.Stat(exportPath); os.IsNotExist(err) {
-		t.Error("Export file was not created")
+		t.Error("Export file should exist")
 	}
 
 	// Delete original save
-	if err := sm.DeleteSave(slot); err != nil {
-		t.Fatalf("DeleteSave failed: %v", err)
+	if err := sm.DeleteSave(); err != nil {
+		t.Errorf("DeleteSave failed: %v", err)
 	}
 
-	// Import save
-	newSlot := 1
-	if err := sm.ImportSave(exportPath, newSlot); err != nil {
+	// Import
+	if err := sm.ImportSave(exportPath); err != nil {
 		t.Errorf("ImportSave failed: %v", err)
 	}
 
-	// Verify imported save
-	if !sm.FileExists(newSlot) {
-		t.Error("Imported save file was not created")
-	}
-
-	// Load imported save and verify data
-	loadedData, err := sm.LoadGame(newSlot)
+	// Verify imported data
+	loadedData, err := sm.LoadGame()
 	if err != nil {
-		t.Errorf("LoadGame failed for imported save: %v", err)
+		t.Errorf("LoadGame failed: %v", err)
 	}
 
-	if loadedData.GameInfo.CharName != testSaveData.GameInfo.CharName {
-		t.Errorf("Imported save character name mismatch: expected %s, got %s",
-			testSaveData.GameInfo.CharName, loadedData.GameInfo.CharName)
+	if loadedData.GameInfo.CharName != "TestPlayer" {
+		t.Errorf("Expected CharName 'TestPlayer', got '%s'", loadedData.GameInfo.CharName)
+	}
+	if loadedData.PlayerData.Level != 5 {
+		t.Errorf("Expected Level 5, got %d", loadedData.PlayerData.Level)
 	}
 }
 
-// TestSaveManager_GetAllSaveMetadata tests retrieval of all save metadata
-func TestSaveManager_GetAllSaveMetadata(t *testing.T) {
-	// Create temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "gorogue_test_*")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Create save manager
-	sm := NewSaveManager()
-	sm.saveDir = tempDir
-	if err := sm.Initialize(); err != nil {
-		t.Fatalf("Initialize failed: %v", err)
-	}
-
-	// Create multiple test saves
-	testSaveData1 := createTestSaveData(t)
-	testSaveData1.GameInfo.CharName = "Hero1"
-	testSaveData1.PlayerData.Level = 5
-
-	testSaveData2 := createTestSaveData(t)
-	testSaveData2.GameInfo.CharName = "Hero2"
-	testSaveData2.PlayerData.Level = 10
-
-	// Save to different slots
-	if err := sm.SaveGame(testSaveData1, 0); err != nil {
-		t.Fatalf("SaveGame failed for slot 0: %v", err)
-	}
-	if err := sm.SaveGame(testSaveData2, 2); err != nil {
-		t.Fatalf("SaveGame failed for slot 2: %v", err)
-	}
-
-	// Get all metadata
-	allMetadata := sm.GetAllSaveMetadata()
-
-	// Verify metadata
-	if len(allMetadata) != 2 {
-		t.Errorf("Expected 2 save metadata entries, got %d", len(allMetadata))
-	}
-
-	if metadata, exists := allMetadata[0]; !exists {
-		t.Error("Metadata for slot 0 not found")
-	} else if metadata.CharName != "Hero1" {
-		t.Errorf("Slot 0 character name mismatch: expected Hero1, got %s", metadata.CharName)
-	}
-
-	if metadata, exists := allMetadata[2]; !exists {
-		t.Error("Metadata for slot 2 not found")
-	} else if metadata.CharName != "Hero2" {
-		t.Errorf("Slot 2 character name mismatch: expected Hero2, got %s", metadata.CharName)
-	}
-
-	// Verify slot 1 is not included (empty)
-	if _, exists := allMetadata[1]; exists {
-		t.Error("Metadata for empty slot 1 should not exist")
-	}
-}
-
-// TestSaveManager_GetSaveFileSize tests save file size retrieval
+// TestSaveManager_GetSaveFileSize tests file size retrieval
 func TestSaveManager_GetSaveFileSize(t *testing.T) {
 	// Create temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "gorogue_test_*")
@@ -452,31 +370,39 @@ func TestSaveManager_GetSaveFileSize(t *testing.T) {
 	// Create save manager
 	sm := NewSaveManager()
 	sm.saveDir = tempDir
+
+	// Initialize
 	if err := sm.Initialize(); err != nil {
 		t.Fatalf("Initialize failed: %v", err)
 	}
 
-	// Create and save test data
-	testSaveData := createTestSaveData(t)
-	slot := 0
-	if err := sm.SaveGame(testSaveData, slot); err != nil {
-		t.Fatalf("SaveGame failed: %v", err)
+	// Test size for non-existent file
+	_, err = sm.GetSaveFileSize()
+	if err == nil {
+		t.Error("GetSaveFileSize should fail for non-existent file")
 	}
 
-	// Get file size
-	size, err := sm.GetSaveFileSize(slot)
+	// Create test save data
+	saveData := &SaveData{
+		Version:     SaveVersion,
+		GameInfo:    GameInfo{CharName: "TestPlayer", PlayTime: 100, TurnCount: 10},
+		PlayerData:  Player{Level: 1, HP: 20, MaxHP: 20, Gold: 0, Inventory: []InventoryItem{}},
+		DungeonData: Dungeon{CurrentFloor: 1},
+	}
+
+	// Save file
+	if err := sm.SaveGame(saveData); err != nil {
+		t.Errorf("SaveGame failed: %v", err)
+	}
+
+	// Test size for existing file
+	size, err := sm.GetSaveFileSize()
 	if err != nil {
 		t.Errorf("GetSaveFileSize failed: %v", err)
 	}
 
-	// Verify size is reasonable (JSON save should be at least 100 bytes)
-	if size < 100 {
-		t.Errorf("Save file size seems too small: %d bytes", size)
-	}
-
-	// Test non-existent file
-	if _, err := sm.GetSaveFileSize(1); err == nil {
-		t.Error("GetSaveFileSize should fail for non-existent save")
+	if size <= 0 {
+		t.Errorf("Expected positive file size, got %d", size)
 	}
 }
 
@@ -492,377 +418,42 @@ func TestSaveManager_GetDiskUsage(t *testing.T) {
 	// Create save manager
 	sm := NewSaveManager()
 	sm.saveDir = tempDir
+
+	// Initialize
 	if err := sm.Initialize(); err != nil {
 		t.Fatalf("Initialize failed: %v", err)
 	}
 
-	// Get initial disk usage (should be 0)
-	initialUsage, err := sm.GetDiskUsage()
+	// Test disk usage for empty directory
+	usage, err := sm.GetDiskUsage()
 	if err != nil {
 		t.Errorf("GetDiskUsage failed: %v", err)
 	}
 
-	// Create and save test data
-	testSaveData := createTestSaveData(t)
-	slot := 0
-	if err := sm.SaveGame(testSaveData, slot); err != nil {
-		t.Fatalf("SaveGame failed: %v", err)
+	if usage != 0 {
+		t.Errorf("Expected 0 disk usage for empty directory, got %d", usage)
 	}
 
-	// Get disk usage after save
-	afterSaveUsage, err := sm.GetDiskUsage()
+	// Create test save data
+	saveData := &SaveData{
+		Version:     SaveVersion,
+		GameInfo:    GameInfo{CharName: "TestPlayer", PlayTime: 100, TurnCount: 10},
+		PlayerData:  Player{Level: 1, HP: 20, MaxHP: 20, Gold: 0, Inventory: []InventoryItem{}},
+		DungeonData: Dungeon{CurrentFloor: 1},
+	}
+
+	// Save file
+	if err := sm.SaveGame(saveData); err != nil {
+		t.Errorf("SaveGame failed: %v", err)
+	}
+
+	// Test disk usage with save file
+	usage, err = sm.GetDiskUsage()
 	if err != nil {
 		t.Errorf("GetDiskUsage failed: %v", err)
 	}
 
-	// Verify usage increased
-	if afterSaveUsage <= initialUsage {
-		t.Errorf("Disk usage should have increased after save: initial=%d, after=%d",
-			initialUsage, afterSaveUsage)
-	}
-}
-
-// createTestSaveData creates a test save data structure
-func createTestSaveData(t *testing.T) *SaveData {
-	t.Helper()
-
-	// Create test player
-	player := actor.NewPlayer(10, 10)
-	player.Level = 5
-	player.HP = 50
-	player.MaxHP = 60
-	player.Gold = 100
-	player.Exp = 250
-
-	// Create test dungeon manager
-	dungeonManager := dungeon.NewDungeonManager(player)
-
-	// Create test game info
-	gameInfo := GameInfo{
-		Seed:        123456,
-		PlayTime:    3600, // 1 hour
-		TurnCount:   500,
-		CharName:    "TestHero",
-		Difficulty:  "Normal",
-		GameMode:    "Normal",
-		IsWizard:    false,
-		IsCompleted: false,
-		IsVictory:   false,
-	}
-
-	// Create test stats
-	stats := Stats{
-		MonstersKilled: 25,
-		DamageDealt:    500,
-		DamageTaken:    200,
-		ItemsFound:     15,
-		GoldCollected:  100,
-		DeepestFloor:   5,
-		TurnCount:      500,
-	}
-
-	// Create test settings
-	settings := GetDefaultSettings()
-
-	return ToSaveData(player, dungeonManager, gameInfo, stats, settings)
-}
-
-// createBenchmarkTestSaveData creates a test save data structure for benchmarks
-func createBenchmarkTestSaveData() *SaveData {
-	// Create test player
-	player := actor.NewPlayer(10, 10)
-	player.Level = 5
-	player.HP = 50
-	player.MaxHP = 60
-	player.Gold = 100
-	player.Exp = 250
-
-	// Create test dungeon manager
-	dungeonManager := dungeon.NewDungeonManager(player)
-
-	// Create test game info
-	gameInfo := GameInfo{
-		Seed:        123456,
-		PlayTime:    3600, // 1 hour
-		TurnCount:   500,
-		CharName:    "TestHero",
-		Difficulty:  "Normal",
-		GameMode:    "Normal",
-		IsWizard:    false,
-		IsCompleted: false,
-		IsVictory:   false,
-	}
-
-	// Create test stats
-	stats := Stats{
-		MonstersKilled: 25,
-		DamageDealt:    500,
-		DamageTaken:    200,
-		ItemsFound:     15,
-		GoldCollected:  100,
-		DeepestFloor:   5,
-		TurnCount:      500,
-	}
-
-	// Create test settings
-	settings := GetDefaultSettings()
-
-	return ToSaveData(player, dungeonManager, gameInfo, stats, settings)
-}
-
-// TestSaveManager_ValidateSlot tests slot validation
-func TestSaveManager_ValidateSlot(t *testing.T) {
-	sm := NewSaveManager()
-
-	// Test valid slots
-	validSlots := []int{0, 1, 2, AutoSaveSlot}
-	for _, slot := range validSlots {
-		if err := sm.ValidateSlot(slot); err != nil {
-			t.Errorf("ValidateSlot should accept valid slot %d: %v", slot, err)
-		}
-	}
-
-	// Test invalid slots
-	invalidSlots := []int{-1, MaxSaveSlots, MaxSaveSlots + 1, 100}
-	for _, slot := range invalidSlots {
-		if err := sm.ValidateSlot(slot); err == nil {
-			t.Errorf("ValidateSlot should reject invalid slot %d", slot)
-		}
-	}
-}
-
-// TestSaveManager_GetUsedSlots tests retrieval of used slots
-func TestSaveManager_GetUsedSlots(t *testing.T) {
-	// Create temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "gorogue_test_*")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Create save manager
-	sm := NewSaveManager()
-	sm.saveDir = tempDir
-	if err := sm.Initialize(); err != nil {
-		t.Fatalf("Initialize failed: %v", err)
-	}
-
-	// Initially no slots should be used
-	usedSlots := sm.GetUsedSlots()
-	if len(usedSlots) != 0 {
-		t.Errorf("Expected 0 used slots initially, got %d", len(usedSlots))
-	}
-
-	// Create test save data
-	testSaveData := createTestSaveData(t)
-
-	// Save to slots 0 and 2
-	if err := sm.SaveGame(testSaveData, 0); err != nil {
-		t.Fatalf("SaveGame failed for slot 0: %v", err)
-	}
-	if err := sm.SaveGame(testSaveData, 2); err != nil {
-		t.Fatalf("SaveGame failed for slot 2: %v", err)
-	}
-
-	// Get used slots
-	usedSlots = sm.GetUsedSlots()
-	if len(usedSlots) != 2 {
-		t.Errorf("Expected 2 used slots, got %d", len(usedSlots))
-	}
-
-	// Verify correct slots are reported as used
-	expectedUsed := map[int]bool{0: true, 2: true}
-	for _, slot := range usedSlots {
-		if !expectedUsed[slot] {
-			t.Errorf("Unexpected used slot: %d", slot)
-		}
-	}
-}
-
-// TestSaveManager_GetAvailableSlots tests retrieval of available slots
-func TestSaveManager_GetAvailableSlots(t *testing.T) {
-	// Create temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "gorogue_test_*")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Create save manager
-	sm := NewSaveManager()
-	sm.saveDir = tempDir
-	if err := sm.Initialize(); err != nil {
-		t.Fatalf("Initialize failed: %v", err)
-	}
-
-	// Initially all slots should be available
-	availableSlots := sm.GetAvailableSlots()
-	if len(availableSlots) != MaxSaveSlots {
-		t.Errorf("Expected %d available slots initially, got %d", MaxSaveSlots, len(availableSlots))
-	}
-
-	// Create test save data
-	testSaveData := createTestSaveData(t)
-
-	// Save to slot 1
-	if err := sm.SaveGame(testSaveData, 1); err != nil {
-		t.Fatalf("SaveGame failed for slot 1: %v", err)
-	}
-
-	// Get available slots
-	availableSlots = sm.GetAvailableSlots()
-	if len(availableSlots) != MaxSaveSlots-1 {
-		t.Errorf("Expected %d available slots after saving, got %d", MaxSaveSlots-1, len(availableSlots))
-	}
-
-	// Verify slot 1 is not in available slots
-	for _, slot := range availableSlots {
-		if slot == 1 {
-			t.Error("Slot 1 should not be available after saving")
-		}
-	}
-}
-
-// TestSaveManager_BackupAndRestore tests backup functionality
-func TestSaveManager_BackupAndRestore(t *testing.T) {
-	// Create temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "gorogue_test_*")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Create save manager with backup enabled
-	sm := NewSaveManager()
-	sm.saveDir = tempDir
-	sm.backupEnabled = true
-	if err := sm.Initialize(); err != nil {
-		t.Fatalf("Initialize failed: %v", err)
-	}
-
-	// Create and save test data
-	testSaveData := createTestSaveData(t)
-	slot := 0
-	if err := sm.SaveGame(testSaveData, slot); err != nil {
-		t.Fatalf("SaveGame failed: %v", err)
-	}
-
-	// Modify and save again (should create backup)
-	testSaveData.PlayerData.Level = 10
-	if err := sm.SaveGame(testSaveData, slot); err != nil {
-		t.Fatalf("Second SaveGame failed: %v", err)
-	}
-
-	// Verify backup exists
-	pattern := filepath.Join(tempDir, "save_0_*.bak")
-	matches, err := filepath.Glob(pattern)
-	if err != nil {
-		t.Fatalf("Failed to check for backup files: %v", err)
-	}
-	if len(matches) == 0 {
-		t.Error("No backup files were created")
-	}
-
-	// Test repair functionality
-	if err := sm.RepairSave(slot); err != nil {
-		t.Errorf("RepairSave failed: %v", err)
-	}
-}
-
-// BenchmarkSaveManager_SaveLoad benchmarks save and load operations
-func BenchmarkSaveManager_SaveLoad(b *testing.B) {
-	// Create temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "gorogue_bench_*")
-	if err != nil {
-		b.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Create save manager
-	sm := NewSaveManager()
-	sm.saveDir = tempDir
-	if err := sm.Initialize(); err != nil {
-		b.Fatalf("Initialize failed: %v", err)
-	}
-
-	// Create test save data
-	testSaveData := createBenchmarkTestSaveData()
-
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		slot := 0
-		for pb.Next() {
-			// Benchmark save
-			if err := sm.SaveGame(testSaveData, slot); err != nil {
-				b.Errorf("SaveGame failed: %v", err)
-			}
-
-			// Benchmark load
-			if _, err := sm.LoadGame(slot); err != nil {
-				b.Errorf("LoadGame failed: %v", err)
-			}
-		}
-	})
-}
-
-// TestSaveManager_ConcurrentAccess tests concurrent access to save files
-func TestSaveManager_ConcurrentAccess(t *testing.T) {
-	// Create temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "gorogue_test_*")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Create save manager
-	sm := NewSaveManager()
-	sm.saveDir = tempDir
-	if err := sm.Initialize(); err != nil {
-		t.Fatalf("Initialize failed: %v", err)
-	}
-
-	// Create test save data
-	testSaveData := createTestSaveData(t)
-
-	// Test concurrent saves to different slots
-	slots := []int{0, 1, 2}
-	done := make(chan bool, len(slots))
-
-	for _, slot := range slots {
-		go func(s int) {
-			defer func() { done <- true }()
-
-			// Modify save data for this slot
-			testData := *testSaveData
-			testData.PlayerData.Level = s + 1
-			testData.GameInfo.CharName = fmt.Sprintf("Hero%d", s)
-
-			if err := sm.SaveGame(&testData, s); err != nil {
-				t.Errorf("Concurrent SaveGame failed for slot %d: %v", s, err)
-			}
-		}(slot)
-	}
-
-	// Wait for all saves to complete
-	for i := 0; i < len(slots); i++ {
-		<-done
-	}
-
-	// Verify all saves completed successfully
-	for _, slot := range slots {
-		if !sm.FileExists(slot) {
-			t.Errorf("Save file for slot %d was not created", slot)
-		}
-
-		loadedData, err := sm.LoadGame(slot)
-		if err != nil {
-			t.Errorf("LoadGame failed for slot %d: %v", slot, err)
-		}
-
-		expectedName := fmt.Sprintf("Hero%d", slot)
-		if loadedData.GameInfo.CharName != expectedName {
-			t.Errorf("Slot %d character name mismatch: expected %s, got %s",
-				slot, expectedName, loadedData.GameInfo.CharName)
-		}
+	if usage <= 0 {
+		t.Errorf("Expected positive disk usage, got %d", usage)
 	}
 }

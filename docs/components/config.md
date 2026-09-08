@@ -1,10 +1,10 @@
 # Config コンポーネント
 
-PyRogueの設定管理システム。環境変数とゲーム設定の統合管理を担当します。
+GoRogueの設定管理システム。環境変数とゲーム設定の統合管理を担当します。
 
 ## 概要
 
-`src/pyrogue/config/`は、現代的な環境変数管理と後方互換性を両立した設定システムです。`.env`ファイルによる外部設定、型安全なアクセスAPI、レガシーシステムとの統合を提供します。
+`internal/config/`は、現代的な環境変数管理と後方互換性を両立した設定システムです。`.env`ファイルによる外部設定、型安全なアクセスAPI、レガシーシステムとの統合を提供します。
 
 ## アーキテクチャ
 
@@ -12,9 +12,9 @@ PyRogueの設定管理システム。環境変数とゲーム設定の統合管�
 
 ```
 config/
-├── __init__.py      # 統合APIの提供
-├── env.py           # 現代的な環境変数管理
-└── legacy.py        # 後方互換性維持
+├── config.go        # 統合APIの提供
+├── env.go           # 現代的な環境変数管理
+└── legacy.go        # 後方互換性維持
 ```
 
 ### 設計原則
@@ -27,80 +27,97 @@ config/
 
 ## 主要コンポーネント
 
-### EnvConfig クラス (env.py)
+### EnvConfig 構造体 (env.go)
 
-環境変数の読み込みと型安全なアクセスを提供する中核クラス。
+環境変数の読み込みと型安全なアクセスを提供する中核構造体。
 
 #### 機能
 
 **自動的な.envファイル探索**
-```python
-def load_env(self, env_file: str | Path | None = None) -> None:
-    """
-    .envファイルを自動探索・読み込み
-    指定がない場合、現在ディレクトリから親に向かって探索
-    """
+```go
+func (e *EnvConfig) LoadEnv(envFile string) error {
+    // .envファイルを自動探索・読み込み
+    // 指定がない場合、現在ディレクトリから親に向かって探索
+    return nil
+}
 ```
 
 **型安全な値取得API**
-```python
-def get_bool(self, key: str, default: bool = False) -> bool:
-    """真偽値として取得（true/1/yes/onを真として認識）"""
+```go
+func (e *EnvConfig) GetBool(key string, defaultValue bool) bool {
+    // 真偽値として取得（true/1/yes/onを真として認識）
+    return defaultValue
+}
 
-def get_int(self, key: str, default: int = 0) -> int:
-    """整数値として取得（変換エラー時はdefault返却）"""
+func (e *EnvConfig) GetInt(key string, defaultValue int) int {
+    // 整数値として取得（変換エラー時はdefault返却）
+    return defaultValue
+}
 
-def get_float(self, key: str, default: float = 0.0) -> float:
-    """浮動小数点値として取得（変換エラー時はdefault返却）"""
+func (e *EnvConfig) GetFloat(key string, defaultValue float64) float64 {
+    // 浮動小数点値として取得（変換エラー時はdefault返却）
+    return defaultValue
+}
 ```
 
 #### 実装例
 
-```python
-from pyrogue.config.env import env_config
+```go
+import "github.com/yuru-sha/gorogue/internal/config"
 
-# 環境変数の読み込み
-env_config.load_env()
+// 環境変数の読み込み
+envConfig := config.NewEnvConfig()
+if err := envConfig.LoadEnv(""); err != nil {
+    log.Fatal(err)
+}
 
-# 型安全なアクセス
-debug_mode = env_config.get_bool("DEBUG", False)
-window_width = env_config.get_int("WINDOW_WIDTH", 80)
-log_level = env_config.get("LOG_LEVEL", "INFO")
+// 型安全なアクセス
+debugMode := envConfig.GetBool("DEBUG", false)
+windowWidth := envConfig.GetInt("WINDOW_WIDTH", 80)
+logLevel := envConfig.Get("LOG_LEVEL", "INFO")
 ```
 
 ### アクセサー関数
 
 設定項目ごとの専用アクセサー関数を提供し、タイポ防止と一元管理を実現。
 
-```python
-def get_debug_mode() -> bool:
-    """デバッグモードの設定を取得"""
-    return env_config.get_bool("DEBUG", False)
+```go
+func GetDebugMode() bool {
+    // デバッグモードの設定を取得
+    return envConfig.GetBool("DEBUG", false)
+}
 
-def get_log_level() -> str:
-    """ログレベルの設定を取得"""
-    return env_config.get("LOG_LEVEL", "INFO")
+func GetLogLevel() string {
+    // ログレベルの設定を取得
+    return envConfig.Get("LOG_LEVEL", "INFO")
+}
 
-def get_auto_save_enabled() -> bool:
-    """オートセーブ機能の設定を取得"""
-    return env_config.get_bool("AUTO_SAVE_ENABLED", True)
+func GetAutoSaveEnabled() bool {
+    // オートセーブ機能の設定を取得
+    return envConfig.GetBool("AUTO_SAVE_ENABLED", true)
+}
 ```
 
-### レガシー設定 (legacy.py)
+### レガシー設定 (legacy.go)
 
-後方互換性を維持するため、既存のDataClass構造とグローバル`CONFIG`インスタンスを提供。
+後方互換性を維持するため、既存の構造体とグローバル`CONFIG`インスタンスを提供。
 
-```python
-@dataclass
-class GameConfig:
-    """メインゲーム設定"""
-    display: DisplayConfig = field(default_factory=DisplayConfig)
-    player: PlayerConfig = field(default_factory=PlayerConfig)
-    monster: MonsterConfig = field(default_factory=MonsterConfig)
-    item: ItemConfig = field(default_factory=ItemConfig)
+```go
+type GameConfig struct {
+    // メインゲーム設定
+    Display DisplayConfig
+    Player  PlayerConfig
+    Monster MonsterConfig
+    Item    ItemConfig
+}
 
-# グローバル設定インスタンス
-CONFIG = GameConfig()
+// グローバル設定インスタンス
+var CONFIG = GameConfig{
+    Display: DefaultDisplayConfig(),
+    Player:  DefaultPlayerConfig(),
+    Monster: DefaultMonsterConfig(),
+    Item:    DefaultItemConfig(),
+}
 ```
 
 ## 対応設定項目
@@ -129,31 +146,33 @@ CONFIG = GameConfig()
 
 ### 基本的な使用方法
 
-```python
-from pyrogue.config.env import (
-    env_config,
-    get_debug_mode,
-    get_auto_save_enabled,
-    get_log_level
+```go
+import (
+    "github.com/yuru-sha/gorogue/internal/config"
+    "fmt"
 )
 
-# 環境設定の初期化
-env_config.load_env()
+// 環境設定の初期化
+envConfig := config.NewEnvConfig()
+if err := envConfig.LoadEnv(""); err != nil {
+    log.Fatal(err)
+}
 
-# 型安全なアクセス
-if get_debug_mode():
-    print(f"Debug mode enabled, auto save: {get_auto_save_enabled()}")
-    print(f"Log level: {get_log_level()}")
+// 型安全なアクセス
+if config.GetDebugMode() {
+    fmt.Printf("Debug mode enabled, auto save: %t\n", config.GetAutoSaveEnabled())
+    fmt.Printf("Log level: %s\n", config.GetLogLevel())
+}
 ```
 
 ### レガシーAPIの継続利用
 
-```python
-from pyrogue.config import CONFIG
+```go
+import "github.com/yuru-sha/gorogue/internal/config"
 
-# 既存コードとの互換性
-display_config = CONFIG.display
-player_config = CONFIG.player
+// 既存コードとの互換性
+displayConfig := config.CONFIG.Display
+playerConfig := config.CONFIG.Player
 ```
 
 ### .envファイル設定例
@@ -169,33 +188,42 @@ AUTO_SAVE_ENABLED=false
 
 ### 型変換エラーの安全な処理
 
-```python
-# 不正な値が設定されていてもクラッシュしない
-window_width = env_config.get_int("WINDOW_WIDTH", 80)  # 変換エラー時は80を返却
-debug_mode = env_config.get_bool("DEBUG", False)       # 不正値時はFalseを返却
+```go
+// 不正な値が設定されていてもクラッシュしない
+windowWidth := envConfig.GetInt("WINDOW_WIDTH", 80)  // 変換エラー時は80を返却
+debugMode := envConfig.GetBool("DEBUG", false)       // 不正値時はfalseを返却
 ```
 
 ### ファイル不在時の処理
 
-```python
-# .envファイルが存在しなくてもエラーにならない
-env_config.load_env()  # デフォルト値で動作継続
+```go
+// .envファイルが存在しなくてもエラーにならない
+if err := envConfig.LoadEnv(""); err != nil {
+    // エラーログを出力するがデフォルト値で動作継続
+    log.Printf("Warning: %v, using default values", err)
+}
 ```
 
 ## テスト戦略
 
 ### 単体テストでの活用
 
-```python
-def test_env_config():
-    """環境設定のテスト"""
-    config = EnvConfig()
+```go
+func TestEnvConfig(t *testing.T) {
+    // 環境設定のテスト
+    config := NewEnvConfig()
 
-    # モック環境変数での検証
-    with patch.dict(os.environ, {"DEBUG": "true", "WINDOW_WIDTH": "100"}):
-        config.load_env()
-        assert config.get_bool("DEBUG") is True
-        assert config.get_int("WINDOW_WIDTH") == 100
+    // モック環境変数での検証
+    os.Setenv("DEBUG", "true")
+    os.Setenv("WINDOW_WIDTH", "100")
+    defer os.Unsetenv("DEBUG")
+    defer os.Unsetenv("WINDOW_WIDTH")
+
+    err := config.LoadEnv("")
+    assert.NoError(t, err)
+    assert.True(t, config.GetBool("DEBUG", false))
+    assert.Equal(t, 100, config.GetInt("WINDOW_WIDTH", 80))
+}
 ```
 
 ## 拡張ガイド
@@ -203,10 +231,11 @@ def test_env_config():
 ### 新しい環境変数の追加
 
 1. **アクセサー関数の定義**
-```python
-def get_new_setting() -> str:
-    """新しい設定項目の取得"""
-    return env_config.get("NEW_SETTING", "default_value")
+```go
+func GetNewSetting() string {
+    // 新しい設定項目の取得
+    return envConfig.Get("NEW_SETTING", "default_value")
+}
 ```
 
 2. **.env.exampleの更新**
@@ -219,31 +248,37 @@ NEW_SETTING=default_value
 
 ### レガシー設定の拡張
 
-```python
-@dataclass
-class NewConfig:
-    """新しい設定カテゴリ"""
-    new_option: str = "default"
+```go
+type NewConfig struct {
+    // 新しい設定カテゴリ
+    NewOption string
+}
 
-@dataclass
-class GameConfig:
-    # 既存設定...
-    new_category: NewConfig = field(default_factory=NewConfig)
+func DefaultNewConfig() NewConfig {
+    return NewConfig{
+        NewOption: "default",
+    }
+}
+
+type GameConfig struct {
+    // 既存設定...
+    NewCategory NewConfig
+}
 ```
 
 ## 技術的特徴
 
-### 現代的なPython機能
+### 現代的なGo機能
 
-- **Union型**: `str | Path | None`による型安全性
-- **dataclass**: 設定構造の簡潔な定義
-- **pathlib**: ファイルパス操作の現代的な手法
+- **ゼロ値**: 構造体の安全な初期化
+- **構造体**: 設定構造の簡潔な定義
+- **filepath**: ファイルパス操作の標準的な手法
 
 ### 依存関係
 
-- **python-dotenv**: .envファイル読み込み
-- **pathlib**: ファイルパス操作
-- **dataclasses**: 設定構造定義
+- **github.com/joho/godotenv**: .envファイル読み込み
+- **filepath**: ファイルパス操作
+- **strconv**: 型変換機能
 
 ### パフォーマンス特性
 
@@ -257,54 +292,78 @@ class GameConfig:
 
 各Handlerは環境設定を適切に参照し、機能の可用性を制御します：
 
-```python
-class DebugCommandHandler:
-    def __init__(self, context: CommandContext):
-        self.context = context
-        self.debug_enabled = get_debug_mode()
+```go
+type DebugCommandHandler struct {
+    context      *CommandContext
+    debugEnabled bool
+}
 
-    def handle_debug_command(self, args: list[str]) -> CommandResult:
-        """デバッグコマンド処理（設定依存）"""
-        if not self.debug_enabled:
-            return CommandResult.failure("Debug mode is disabled")
+func NewDebugCommandHandler(context *CommandContext) *DebugCommandHandler {
+    return &DebugCommandHandler{
+        context:      context,
+        debugEnabled: GetDebugMode(),
+    }
+}
 
-        # デバッグ機能の実行
-        return self._execute_debug_action(args)
+func (h *DebugCommandHandler) HandleDebugCommand(args []string) CommandResult {
+    // デバッグコマンド処理（設定依存）
+    if !h.debugEnabled {
+        return CommandResult{Success: false, Message: "Debug mode is disabled"}
+    }
+
+    // デバッグ機能の実行
+    return h.executeDebugAction(args)
+}
 ```
 
 ### 設定ベースの機能制御
 
-```python
-class SaveLoadHandler:
-    def handle_auto_save(self) -> CommandResult:
-        """オートセーブ処理（設定依存）"""
-        if not get_auto_save_enabled():
-            return CommandResult.success("Auto-save disabled")
+```go
+type SaveLoadHandler struct {
+    context *CommandContext
+}
 
-        # オートセーブの実行
-        return self._perform_auto_save()
+func (h *SaveLoadHandler) HandleAutoSave() CommandResult {
+    // オートセーブ処理（設定依存）
+    if !GetAutoSaveEnabled() {
+        return CommandResult{Success: true, Message: "Auto-save disabled"}
+    }
+
+    // オートセーブの実行
+    return h.performAutoSave()
+}
 ```
 
 ### ハンドラー初期化時の設定注入
 
-```python
-class CommonCommandHandler:
-    def __init__(self, context: CommandContext):
-        self.context = context
-        # 設定値に基づくハンドラー初期化制御
-        self._init_handlers_based_on_config()
+```go
+type CommonCommandHandler struct {
+    context      *CommandContext
+    debugHandler *DebugCommandHandler
+}
 
-    def _init_handlers_based_on_config(self):
-        """設定に基づくハンドラー初期化"""
-        if get_debug_mode():
-            self._debug_handler = DebugCommandHandler(self.context)
-        else:
-            self._debug_handler = None
+func NewCommonCommandHandler(context *CommandContext) *CommonCommandHandler {
+    h := &CommonCommandHandler{
+        context: context,
+    }
+    // 設定値に基づくハンドラー初期化制御
+    h.initHandlersBasedOnConfig()
+    return h
+}
+
+func (h *CommonCommandHandler) initHandlersBasedOnConfig() {
+    // 設定に基づくハンドラー初期化
+    if GetDebugMode() {
+        h.debugHandler = NewDebugCommandHandler(h.context)
+    } else {
+        h.debugHandler = nil
+    }
+}
 ```
 
 ## まとめ
 
-Config コンポーネントは、PyRogueプロジェクトの設定管理において以下の価値を提供します：
+Config コンポーネントは、GoRogueプロジェクトの設定管理において以下の価値を提供します：
 
 - **開発効率**: .envファイルによる環境依存設定の外部化
 - **型安全性**: 実行時エラーを防ぐ型安全なAPI

@@ -16,6 +16,14 @@ type DungeonBuilder struct {
 
 // NewDungeonBuilder creates a new dungeon builder
 func NewDungeonBuilder(width, height, floorNum int) *DungeonBuilder {
+	return NewDungeonBuilderWithRand(width, height, floorNum, newRandom())
+}
+
+func NewDungeonBuilderWithRand(width, height, floorNum int, rng *rand.Rand) *DungeonBuilder {
+	if rng == nil {
+		rng = newRandom()
+	}
+
 	level := &Level{
 		Width:       width,
 		Height:      height,
@@ -23,6 +31,7 @@ func NewDungeonBuilder(width, height, floorNum int) *DungeonBuilder {
 		Rooms:       make([]*Room, 0),
 		Monsters:    make([]*actor.Monster, 0),
 		Items:       make([]*item.Item, 0),
+		rng:         rng,
 	}
 
 	// Initialize tiles with walls
@@ -159,12 +168,12 @@ func (b *DungeonBuilder) generateMaze() {
 // generateIsolatedRooms generates isolated room groups (PyRogue style)
 func (b *DungeonBuilder) generateIsolatedRooms() {
 	// Simple implementation: add 1-2 small isolated rooms
-	for i := 0; i < 1+rand.Intn(2); i++ {
+	for i := 0; i < 1+b.level.random().Intn(2); i++ {
 		for attempts := 0; attempts < 50; attempts++ {
-			width := 4 + rand.Intn(4)  // 4-7 tiles wide
-			height := 4 + rand.Intn(4) // 4-7 tiles high
-			x := 2 + rand.Intn(b.level.Width-width-4)
-			y := 2 + rand.Intn(b.level.Height-height-4)
+			width := 4 + b.level.random().Intn(4)  // 4-7 tiles wide
+			height := 4 + b.level.random().Intn(4) // 4-7 tiles high
+			x := 2 + b.level.random().Intn(b.level.Width-width-4)
+			y := 2 + b.level.random().Intn(b.level.Height-height-4)
 
 			if b.canPlaceIsolatedRoom(x, y, width, height) {
 				room := &Room{
@@ -197,12 +206,12 @@ func (b *DungeonBuilder) generateIsolatedRooms() {
 // generateDarkRooms applies darkness to some rooms (PyRogue style)
 func (b *DungeonBuilder) generateDarkRooms() {
 	// Apply darkness to 30-50% of rooms
-	darkRoomCount := len(b.level.Rooms) * (30 + rand.Intn(21)) / 100
+	darkRoomCount := len(b.level.Rooms) * (30 + b.level.random().Intn(21)) / 100
 
 	// Shuffle rooms and make some of them dark
 	shuffledRooms := make([]*Room, len(b.level.Rooms))
 	copy(shuffledRooms, b.level.Rooms)
-	rand.Shuffle(len(shuffledRooms), func(i, j int) {
+	b.level.random().Shuffle(len(shuffledRooms), func(i, j int) {
 		shuffledRooms[i], shuffledRooms[j] = shuffledRooms[j], shuffledRooms[i]
 	})
 
@@ -291,19 +300,19 @@ func (b *DungeonBuilder) createSecretPassage(room *Room) {
 
 // generateRooms generates rooms for the dungeon (PyRogue style)
 func (b *DungeonBuilder) generateRooms() {
-	numRooms := MinRooms + rand.Intn(MaxRooms-MinRooms+1)
+	numRooms := MinRooms + b.level.random().Intn(MaxRooms-MinRooms+1)
 
 	for i := 0; i < numRooms; i++ {
 		for attempts := 0; attempts < 100; attempts++ {
-			width := MinRoomSize + rand.Intn(MaxRoomSize-MinRoomSize+1)
-			height := MinRoomSize + rand.Intn(MaxRoomSize-MinRoomSize+1)
-			x := 1 + rand.Intn(b.level.Width-width-2)
-			y := 1 + rand.Intn(b.level.Height-height-2)
+			width := MinRoomSize + b.level.random().Intn(MaxRoomSize-MinRoomSize+1)
+			height := MinRoomSize + b.level.random().Intn(MaxRoomSize-MinRoomSize+1)
+			x := 1 + b.level.random().Intn(b.level.Width-width-2)
+			y := 1 + b.level.random().Intn(b.level.Height-height-2)
 
 			if b.canPlaceRoom(x, y, width, height) {
 				// PyRogue風の「Gone Room」機能
 				// 10-15%の確率で通路のみの空間を作成
-				if rand.Float64() < 0.12 {
+				if b.level.random().Float64() < 0.12 {
 					b.createGoneRoom(x, y, width, height)
 				} else {
 					room := &Room{
@@ -392,11 +401,11 @@ func (b *DungeonBuilder) createGoneRoom(x, y, width, height int) {
 
 	// Add a few scattered floor tiles around the area for organic feel
 	for attempt := 0; attempt < 5; attempt++ {
-		extraX := x + rand.Intn(width)
-		extraY := y + rand.Intn(height)
+		extraX := x + b.level.random().Intn(width)
+		extraY := y + b.level.random().Intn(height)
 
 		// Extend randomly in one direction
-		direction := rand.Intn(4)
+		direction := b.level.random().Intn(4)
 		switch direction {
 		case 0: // North
 			if extraY > 0 {
@@ -448,7 +457,7 @@ func (b *DungeonBuilder) shouldGenerateSpecialRoom() bool {
 	}
 
 	// 5階ごとに10%の確率で生成
-	if b.level.FloorNumber%5 == 0 && rand.Float64() < 0.1 {
+	if b.level.FloorNumber%5 == 0 && b.level.random().Float64() < 0.1 {
 		return true
 	}
 
@@ -466,8 +475,8 @@ func (b *DungeonBuilder) generateSpecialRoom() {
 
 	// 5x5の特別な部屋を生成
 	for attempts := 0; attempts < 100; attempts++ {
-		x := 1 + rand.Intn(b.level.Width-7)
-		y := 1 + rand.Intn(b.level.Height-7)
+		x := 1 + b.level.random().Intn(b.level.Width-7)
+		y := 1 + b.level.random().Intn(b.level.Height-7)
 
 		if b.canPlaceRoom(x, y, 5, 5) {
 			room := &Room{
@@ -504,7 +513,7 @@ func (b *DungeonBuilder) placeSecretDoor(room *Room) {
 // populateSpecialRoom populates a special room with content
 func (b *DungeonBuilder) populateSpecialRoom(room *Room) {
 	// 部屋の種類をランダムに決定
-	roomType := rand.Intn(6)
+	roomType := b.level.random().Intn(6)
 
 	switch roomType {
 	case 0: // 宝物庫
@@ -532,20 +541,20 @@ func (b *DungeonBuilder) populateSpecialRoom(room *Room) {
 func (b *DungeonBuilder) populateTreasureVault(room *Room) {
 	// 部屋の中央にゴールドを配置
 	cx, cy := room.X+room.Width/2, room.Y+room.Height/2
-	goldItem := item.NewGold(cx, cy, true) // 特別な部屋のゴールド
+	goldItem := item.NewGoldWithRand(cx, cy, true, b.level.random()) // 特別な部屋のゴールド
 	if goldItem != nil {
 		goldItem.Value *= 3 // 3倍の価値
 		b.level.Items = append(b.level.Items, goldItem)
 	}
 
 	// 周囲に追加の宝物を配置
-	for i := 0; i < 2+rand.Intn(3); i++ {
-		x := room.X + 1 + rand.Intn(room.Width-2)
-		y := room.Y + 1 + rand.Intn(room.Height-2)
+	for i := 0; i < 2+b.level.random().Intn(3); i++ {
+		x := room.X + 1 + b.level.random().Intn(room.Width-2)
+		y := room.Y + 1 + b.level.random().Intn(room.Height-2)
 		if b.level.IsValidItemPosition(x, y) {
 			// 高価なアイテムを配置
 			itemTypes := []item.ItemType{item.ItemRing, item.ItemWeapon, item.ItemArmor}
-			itemType := itemTypes[rand.Intn(len(itemTypes))]
+			itemType := itemTypes[b.level.random().Intn(len(itemTypes))]
 			newItem := b.createHighValueItem(x, y, itemType)
 			if newItem != nil {
 				b.level.Items = append(b.level.Items, newItem)
@@ -557,12 +566,12 @@ func (b *DungeonBuilder) populateTreasureVault(room *Room) {
 // populateArmory populates an armory
 func (b *DungeonBuilder) populateArmory(room *Room) {
 	// 武器と防具を配置
-	for i := 0; i < 3+rand.Intn(3); i++ {
-		x := room.X + 1 + rand.Intn(room.Width-2)
-		y := room.Y + 1 + rand.Intn(room.Height-2)
+	for i := 0; i < 3+b.level.random().Intn(3); i++ {
+		x := room.X + 1 + b.level.random().Intn(room.Width-2)
+		y := room.Y + 1 + b.level.random().Intn(room.Height-2)
 		if b.level.IsValidItemPosition(x, y) {
 			var itemType item.ItemType
-			if rand.Float64() < 0.5 {
+			if b.level.random().Float64() < 0.5 {
 				itemType = item.ItemWeapon
 			} else {
 				itemType = item.ItemArmor
@@ -578,11 +587,11 @@ func (b *DungeonBuilder) populateArmory(room *Room) {
 // populateFoodStorage populates a food storage room
 func (b *DungeonBuilder) populateFoodStorage(room *Room) {
 	// 食料を大量に配置
-	for i := 0; i < 4+rand.Intn(4); i++ {
-		x := room.X + 1 + rand.Intn(room.Width-2)
-		y := room.Y + 1 + rand.Intn(room.Height-2)
+	for i := 0; i < 4+b.level.random().Intn(4); i++ {
+		x := room.X + 1 + b.level.random().Intn(room.Width-2)
+		y := room.Y + 1 + b.level.random().Intn(room.Height-2)
 		if b.level.IsValidItemPosition(x, y) {
-			newItem := item.NewFood(x, y)
+			newItem := item.NewFoodWithRand(x, y, b.level.random())
 			if newItem != nil {
 				b.level.Items = append(b.level.Items, newItem)
 			}
@@ -604,9 +613,9 @@ func (b *DungeonBuilder) populateMonsterLair(room *Room) {
 	}
 
 	// 周囲に雑魚モンスターを配置
-	for i := 0; i < 2+rand.Intn(2); i++ {
-		x := room.X + 1 + rand.Intn(room.Width-2)
-		y := room.Y + 1 + rand.Intn(room.Height-2)
+	for i := 0; i < 2+b.level.random().Intn(2); i++ {
+		x := room.X + 1 + b.level.random().Intn(room.Width-2)
+		y := room.Y + 1 + b.level.random().Intn(room.Height-2)
 		if b.level.GetMonsterAt(x, y) == nil && b.level.IsWalkable(x, y) {
 			monsterType := b.level.selectMonsterType()
 			monster := actor.NewMonster(x, y, monsterType)
@@ -619,11 +628,11 @@ func (b *DungeonBuilder) populateMonsterLair(room *Room) {
 // populateLaboratory populates a laboratory
 func (b *DungeonBuilder) populateLaboratory(room *Room) {
 	// 薬を配置
-	for i := 0; i < 3+rand.Intn(3); i++ {
-		x := room.X + 1 + rand.Intn(room.Width-2)
-		y := room.Y + 1 + rand.Intn(room.Height-2)
+	for i := 0; i < 3+b.level.random().Intn(3); i++ {
+		x := room.X + 1 + b.level.random().Intn(room.Width-2)
+		y := room.Y + 1 + b.level.random().Intn(room.Height-2)
 		if b.level.IsValidItemPosition(x, y) {
-			newItem := item.NewRandomPotion(x, y)
+			newItem := item.NewRandomPotionWithRand(x, y, b.level.random())
 			if newItem != nil {
 				b.level.Items = append(b.level.Items, newItem)
 			}
@@ -634,11 +643,11 @@ func (b *DungeonBuilder) populateLaboratory(room *Room) {
 // populateLibrary populates a library
 func (b *DungeonBuilder) populateLibrary(room *Room) {
 	// 巻物を配置
-	for i := 0; i < 3+rand.Intn(3); i++ {
-		x := room.X + 1 + rand.Intn(room.Width-2)
-		y := room.Y + 1 + rand.Intn(room.Height-2)
+	for i := 0; i < 3+b.level.random().Intn(3); i++ {
+		x := room.X + 1 + b.level.random().Intn(room.Width-2)
+		y := room.Y + 1 + b.level.random().Intn(room.Height-2)
 		if b.level.IsValidItemPosition(x, y) {
-			newItem := item.NewRandomScroll(x, y)
+			newItem := item.NewRandomScrollWithRand(x, y, b.level.random())
 			if newItem != nil {
 				b.level.Items = append(b.level.Items, newItem)
 			}
@@ -667,7 +676,7 @@ func (b *DungeonBuilder) createHighValueItem(x, y int, itemType item.ItemType) *
 	baseItem := b.level.createRandomItem(x, y, itemType)
 	if baseItem != nil {
 		// 価値を2-3倍にする
-		multiplier := 2 + rand.Float64()
+		multiplier := 2 + b.level.random().Float64()
 		baseItem.Value = int(float64(baseItem.Value) * multiplier)
 	}
 	return baseItem
@@ -679,10 +688,10 @@ func (b *DungeonBuilder) selectBossMonsterType() rune {
 	switch {
 	case b.level.FloorNumber <= 10:
 		bosses := []rune{'O', 'T'} // オーガ、トロール
-		return bosses[rand.Intn(len(bosses))]
+		return bosses[b.level.random().Intn(len(bosses))]
 	case b.level.FloorNumber <= 20:
 		bosses := []rune{'T', 'D'} // トロール、ドラゴン
-		return bosses[rand.Intn(len(bosses))]
+		return bosses[b.level.random().Intn(len(bosses))]
 	default:
 		return 'D' // ドラゴン
 	}

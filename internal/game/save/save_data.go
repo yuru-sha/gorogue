@@ -12,7 +12,7 @@ import (
 )
 
 // SaveVersion represents the save file format version
-const SaveVersion = "1.0.0"
+const SaveVersion = "1.1.0"
 
 // SaveData represents the complete game state
 type SaveData struct {
@@ -76,6 +76,12 @@ type InventoryItem struct {
 	IsIdentified bool   `json:"is_identified"`
 	IsCursed     bool   `json:"is_cursed"`
 	IsBlessed    bool   `json:"is_blessed"`
+	Damage       int    `json:"damage"`
+	Defense      int    `json:"defense"`
+	Enchantment  int    `json:"enchantment"`
+	Charges      int    `json:"charges"`
+	MaxCharges   int    `json:"max_charges"`
+	ItemID       int    `json:"item_id"`
 	Slot         int    `json:"slot"` // Inventory slot (0-25 for a-z)
 }
 
@@ -97,6 +103,7 @@ type StatusEffect struct {
 
 // Dungeon represents the complete dungeon state
 type Dungeon struct {
+	Seed          int64          `json:"seed"`
 	CurrentFloor  int            `json:"current_floor"`
 	Floors        map[int]*Floor `json:"floors"`
 	VisitedFloors map[int]bool   `json:"visited_floors"`
@@ -189,6 +196,12 @@ type Item struct {
 	IsIdentified bool   `json:"is_identified"`
 	IsCursed     bool   `json:"is_cursed"`
 	IsBlessed    bool   `json:"is_blessed"`
+	Damage       int    `json:"damage"`
+	Defense      int    `json:"defense"`
+	Enchantment  int    `json:"enchantment"`
+	Charges      int    `json:"charges"`
+	MaxCharges   int    `json:"max_charges"`
+	ItemID       int    `json:"item_id"`
 	Symbol       rune   `json:"symbol"`
 	Color        int    `json:"color"`
 }
@@ -276,6 +289,7 @@ func ToSaveData(
 	stats Stats,
 	settings Settings,
 ) *SaveData {
+	gameInfo.Seed = dungeonManager.Seed()
 	return &SaveData{
 		Version:     SaveVersion,
 		SavedAt:     time.Now(),
@@ -307,88 +321,65 @@ func ConvertPlayerToSave(player *actor.Player) Player {
 	}
 
 	// Convert inventory
-	for i, item := range player.Inventory.Items {
-		saveItem := InventoryItem{
-			Type:         ConvertItemTypeToString(item.Type),
-			Name:         item.Name,
-			RealName:     item.RealName,
-			Value:        item.Value,
-			Quantity:     item.Quantity,
-			IsIdentified: item.IsIdentified,
-			IsCursed:     item.IsCursed,
-			IsBlessed:    item.IsBlessed,
-			Slot:         i,
-		}
+	for i, gameItem := range player.Inventory.Items {
+		saveItem := convertItemToSave(gameItem)
+		saveItem.Slot = i
 		savePlayer.Inventory = append(savePlayer.Inventory, saveItem)
 	}
 
 	// Convert equipment
 	if player.Equipment.Weapon != nil {
-		savePlayer.Equipment.Weapon = &InventoryItem{
-			Type:         ConvertItemTypeToString(player.Equipment.Weapon.Type),
-			Name:         player.Equipment.Weapon.Name,
-			RealName:     player.Equipment.Weapon.RealName,
-			Value:        player.Equipment.Weapon.Value,
-			Quantity:     player.Equipment.Weapon.Quantity,
-			IsIdentified: player.Equipment.Weapon.IsIdentified,
-			IsCursed:     player.Equipment.Weapon.IsCursed,
-			IsBlessed:    player.Equipment.Weapon.IsBlessed,
-		}
+		saveItem := convertItemToSave(player.Equipment.Weapon)
+		savePlayer.Equipment.Weapon = &saveItem
 	}
 
 	if player.Equipment.Armor != nil {
-		savePlayer.Equipment.Armor = &InventoryItem{
-			Type:         ConvertItemTypeToString(player.Equipment.Armor.Type),
-			Name:         player.Equipment.Armor.Name,
-			RealName:     player.Equipment.Armor.RealName,
-			Value:        player.Equipment.Armor.Value,
-			Quantity:     player.Equipment.Armor.Quantity,
-			IsIdentified: player.Equipment.Armor.IsIdentified,
-			IsCursed:     player.Equipment.Armor.IsCursed,
-			IsBlessed:    player.Equipment.Armor.IsBlessed,
-		}
+		saveItem := convertItemToSave(player.Equipment.Armor)
+		savePlayer.Equipment.Armor = &saveItem
 	}
 
 	if player.Equipment.RingLeft != nil {
-		savePlayer.Equipment.RingLeft = &InventoryItem{
-			Type:         ConvertItemTypeToString(player.Equipment.RingLeft.Type),
-			Name:         player.Equipment.RingLeft.Name,
-			RealName:     player.Equipment.RingLeft.RealName,
-			Value:        player.Equipment.RingLeft.Value,
-			Quantity:     player.Equipment.RingLeft.Quantity,
-			IsIdentified: player.Equipment.RingLeft.IsIdentified,
-			IsCursed:     player.Equipment.RingLeft.IsCursed,
-			IsBlessed:    player.Equipment.RingLeft.IsBlessed,
-		}
+		saveItem := convertItemToSave(player.Equipment.RingLeft)
+		savePlayer.Equipment.RingLeft = &saveItem
 	}
 
 	if player.Equipment.RingRight != nil {
-		savePlayer.Equipment.RingRight = &InventoryItem{
-			Type:         ConvertItemTypeToString(player.Equipment.RingRight.Type),
-			Name:         player.Equipment.RingRight.Name,
-			RealName:     player.Equipment.RingRight.RealName,
-			Value:        player.Equipment.RingRight.Value,
-			Quantity:     player.Equipment.RingRight.Quantity,
-			IsIdentified: player.Equipment.RingRight.IsIdentified,
-			IsCursed:     player.Equipment.RingRight.IsCursed,
-			IsBlessed:    player.Equipment.RingRight.IsBlessed,
-		}
+		saveItem := convertItemToSave(player.Equipment.RingRight)
+		savePlayer.Equipment.RingRight = &saveItem
 	}
 
-	// Convert identified items
-	// This would need to be implemented based on the identification system
-	// For now, we'll leave it as an empty map
+	savePlayer.IdentifiedItems = player.IdentifyMgr.SaveState()
 
 	return savePlayer
+}
+
+func convertItemToSave(gameItem *item.Item) InventoryItem {
+	return InventoryItem{
+		Type:         ConvertItemTypeToString(gameItem.Type),
+		Name:         gameItem.Name,
+		RealName:     gameItem.RealName,
+		Value:        gameItem.Value,
+		Quantity:     gameItem.Quantity,
+		IsIdentified: gameItem.IsIdentified,
+		IsCursed:     gameItem.IsCursed,
+		IsBlessed:    gameItem.IsBlessed,
+		Damage:       gameItem.Damage,
+		Defense:      gameItem.Defense,
+		Enchantment:  gameItem.Enchantment,
+		Charges:      gameItem.Charges,
+		MaxCharges:   gameItem.MaxCharges,
+		ItemID:       gameItem.ItemID,
+	}
 }
 
 // ConvertDungeonToSave converts dungeon manager to save format
 func ConvertDungeonToSave(dungeonManager *dungeon.DungeonManager) Dungeon {
 	saveDungeon := Dungeon{
+		Seed:          dungeonManager.Seed(),
 		CurrentFloor:  dungeonManager.GetCurrentFloor(),
 		Floors:        make(map[int]*Floor),
 		VisitedFloors: make(map[int]bool),
-		FloorSeeds:    make(map[int]int64),
+		FloorSeeds:    dungeonManager.FloorSeeds(),
 	}
 
 	// Convert each floor
@@ -396,9 +387,9 @@ func ConvertDungeonToSave(dungeonManager *dungeon.DungeonManager) Dungeon {
 		if level := dungeonManager.GetFloorLevel(floorNum); level != nil {
 			saveDungeon.Floors[floorNum] = ConvertLevelToSave(level)
 			saveDungeon.VisitedFloors[floorNum] = true
-			// Floor seeds would need to be stored in the dungeon manager
-			// For now, we'll generate a placeholder
-			saveDungeon.FloorSeeds[floorNum] = int64(floorNum * 1000)
+			if floorSeed, ok := saveDungeon.FloorSeeds[floorNum]; ok {
+				saveDungeon.Floors[floorNum].Seed = floorSeed
+			}
 		}
 	}
 
@@ -416,7 +407,7 @@ func ConvertLevelToSave(level *dungeon.Level) *Floor {
 		Monsters:    make([]Monster, 0),
 		Items:       make([]Item, 0),
 		Visited:     true,
-		Seed:        int64(level.FloorNumber * 1000), // Placeholder
+		Seed:        level.Seed,
 		IsGenerated: true,
 		IsMaze:      level.FloorNumber == 7 || level.FloorNumber == 13 || level.FloorNumber == 19,
 		IsSpecial:   level.FloorNumber%5 == 0,
@@ -430,9 +421,9 @@ func ConvertLevelToSave(level *dungeon.Level) *Floor {
 			if tile != nil {
 				saveFloor.Tiles[y][x] = Tile{
 					Type:     ConvertTileTypeToString(tile.Type),
-					Explored: true, // Placeholder - would need visibility system
+					Explored: tile.Explored,
 					Lit:      true, // Placeholder - would need lighting system
-					Visible:  true, // Placeholder - would need FOV system
+					Visible:  tile.Visible,
 				}
 			}
 		}
@@ -496,6 +487,12 @@ func ConvertLevelToSave(level *dungeon.Level) *Floor {
 			IsIdentified: item.IsIdentified,
 			IsCursed:     item.IsCursed,
 			IsBlessed:    item.IsBlessed,
+			Damage:       item.Damage,
+			Defense:      item.Defense,
+			Enchantment:  item.Enchantment,
+			Charges:      item.Charges,
+			MaxCharges:   item.MaxCharges,
+			ItemID:       item.ItemID,
 			Symbol:       item.Symbol,
 			Color:        int(item.Color),
 		}
@@ -520,6 +517,8 @@ func ConvertItemTypeToString(itemType item.ItemType) string {
 		return "scroll"
 	case item.ItemPotion:
 		return "potion"
+	case item.ItemWand:
+		return "wand"
 	case item.ItemFood:
 		return "food"
 	case item.ItemGold:
@@ -546,6 +545,14 @@ func ConvertTileTypeToString(tileType dungeon.TileType) string {
 		return "stairs_up"
 	case dungeon.TileStairsDown:
 		return "stairs_down"
+	case dungeon.TileDoorClosed:
+		return "door_closed"
+	case dungeon.TileDoorOpen, dungeon.TileOpenDoor:
+		return "door_open"
+	case dungeon.TileWater:
+		return "water"
+	case dungeon.TileLava:
+		return "lava"
 	default:
 		return "unknown"
 	}

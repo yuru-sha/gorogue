@@ -41,6 +41,7 @@ type Tile struct {
 	Rune       rune
 	Color      gruid.Color
 	Visible    bool
+	Explored   bool
 	IsWalkable bool
 }
 
@@ -54,6 +55,7 @@ func NewTile(tileType TileType) *Tile {
 	t := &Tile{
 		Type:       tileType,
 		Visible:    true, // すべてのタイルを可視化（簡素化のため）
+		Explored:   true, // FOV未実装のため、現状は可視タイルを探索済みとする
 		IsWalkable: IsWalkable(tileType),
 	}
 	switch tileType {

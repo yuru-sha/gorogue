@@ -1,10 +1,6 @@
 package dungeon
 
-import (
-	"math/rand"
-
-	"github.com/yuru-sha/gorogue/internal/utils/logger"
-)
+import "github.com/yuru-sha/gorogue/internal/utils/logger"
 
 // StairsManager handles stair placement in the dungeon
 type StairsManager struct {
@@ -24,8 +20,8 @@ func (s *StairsManager) PlaceStairs() {
 		return
 	}
 
-	// 上り階段の配置（最初の階層を除く）
-	if s.level.FloorNumber > 1 {
+	// 上り階段は1階では地上への出口になる。
+	if s.level.FloorNumber >= 1 {
 		s.placeUpStairs()
 	}
 
@@ -36,7 +32,7 @@ func (s *StairsManager) PlaceStairs() {
 
 	logger.Debug("Placed stairs",
 		"floor", s.level.FloorNumber,
-		"up_stairs", s.level.FloorNumber > 1,
+		"up_stairs", s.level.FloorNumber >= 1,
 		"down_stairs", s.level.FloorNumber < 26,
 	)
 }
@@ -102,8 +98,8 @@ func (s *StairsManager) placeStairsInRoom(room *Room, stairType TileType) {
 
 	for attempts := 0; attempts < maxAttempts; attempts++ {
 		// 部屋の境界から1マス内側の範囲でランダムな位置を選択
-		x := room.X + 1 + rand.Intn(room.Width-2)
-		y := room.Y + 1 + rand.Intn(room.Height-2)
+		x := room.X + 1 + s.level.random().Intn(room.Width-2)
+		y := room.Y + 1 + s.level.random().Intn(room.Height-2)
 
 		if s.isValidStairPosition(x, y) {
 			s.level.SetTile(x, y, stairType)

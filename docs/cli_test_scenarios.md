@@ -1,15 +1,15 @@
 ---
 cache_control: {"type": "ephemeral"}
 ---
-# PyRogue CLIモード テストシナリオ記録
+# GoRogue CLIモード テストシナリオ記録
 
 ## 概要
 
-このドキュメントは、PyRogueプロジェクトのリファクタリング後にCLIモードで実施した動作確認テストシナリオを記録したものです。
+このドキュメントは、GoRogueプロジェクトのリファクタリング後にCLIモードで実施した動作確認テストシナリオを記録したものです。
 
-**テスト実施日**: 2024年7月11日
-**テスト対象**: リファクタリング後のPyRogue（MovementManager、ItemManager、FloorManager分離後）
-**テスト環境**: Darwin 24.5.0、Python 3.12.2、uv環境
+**テスト実施日**: 2025年7月18日
+**テスト対象**: リファクタリング後のGoRogue（Actor、GameLogic、DungeonManager分離後）
+**テスト環境**: Darwin 24.5.0、Go 1.22.0、go mod環境
 
 ## テストシナリオ一覧
 
@@ -17,7 +17,7 @@ cache_control: {"type": "ephemeral"}
 
 #### 1.1 ヘルプ表示テスト
 **目的**: CLIモードの基本動作確認
-**実行コマンド**: `make run ARGS="--help"`
+**実行コマンド**: `go run ./cmd/gorogue --help`
 
 **期待結果**: 使用方法とオプションが表示される
 **実際の結果**: ✅ 成功
@@ -33,7 +33,7 @@ options:
 
 #### 1.2 CLIモード起動テスト
 **目的**: CLIモードでの正常起動確認
-**実行コマンド**: `make run ARGS="--cli"`
+**実行コマンド**: `go run ./cmd/gorogue-cli`
 
 **期待結果**: プレイヤー情報とプロンプトが表示される
 **実際の結果**: ✅ 成功
@@ -64,7 +64,7 @@ Surroundings:
 
 #### 2.1 ヘルプコマンドテスト
 **目的**: インゲームヘルプ表示機能の確認
-**実行コマンド**: `echo -e "help\nquit" | make run ARGS="--cli"`
+**実行コマンド**: `echo -e "help\nquit" | go run ./cmd/gorogue-cli`
 
 **期待結果**: 利用可能なコマンド一覧が表示される
 **実際の結果**: ✅ 成功
@@ -78,7 +78,7 @@ Surroundings:
 
 #### 2.2 ステータス表示テスト
 **目的**: プレイヤー状態表示機能の確認
-**実行コマンド**: `echo -e "status\nquit" | make run ARGS="--cli"`
+**実行コマンド**: `echo -e "status\nquit" | go run ./cmd/gorogue-cli`
 
 **期待結果**: 詳細なプレイヤー情報が表示される
 **実際の結果**: ✅ 成功
@@ -104,7 +104,7 @@ Tile char: '.'
 
 #### 2.3 周辺確認テスト
 **目的**: 周辺情報表示機能の確認
-**実行コマンド**: `echo -e "look\nquit" | make run ARGS="--cli"`
+**実行コマンド**: `echo -e "look\nquit" | go run ./cmd/gorogue-cli`
 
 **期待結果**: 周辺タイルの情報が表示される
 **実際の結果**: ✅ 成功 - 8方向のタイル情報が正確に表示
@@ -113,7 +113,7 @@ Tile char: '.'
 
 #### 3.1 基本移動テスト
 **目的**: MovementManagerの基本機能確認
-**実行コマンド**: `echo -e "n\nn\ne\nw\nstatus\nquit" | make run ARGS="--cli"`
+**実行コマンド**: `echo -e "n\nn\ne\nw\nstatus\nquit" | go run ./cmd/gorogue-cli`
 
 **期待結果**: 移動可能な方向への移動成功、壁への移動は阻止
 **実際の結果**: ✅ 成功
@@ -133,7 +133,7 @@ Tile char: '.'
 
 #### 4.1 インベントリ表示テスト
 **目的**: ItemManagerの基本機能確認
-**実行コマンド**: `echo -e "inventory\nquit" | make run ARGS="--cli"`
+**実行コマンド**: `echo -e "inventory\nquit" | go run ./cmd/gorogue-cli`
 
 **期待結果**: 初期装備が正常に表示される
 **実際の結果**: ✅ 成功
@@ -191,7 +191,7 @@ Nearby enemies:
 
 #### 5.1 ゴールド配置テスト
 **目的**: デバッグコマンドでゴールドアイテムの配置確認
-**実行コマンド**: `echo -e "status\ndebug gold 100\nquit" | make run ARGS="--cli"`
+**実行コマンド**: `echo -e "status\ndebug gold 100\nquit" | go run ./cmd/gorogue-cli`
 
 **期待結果**: プレイヤーの位置にゴールドが配置される
 **実際の結果**: ✅ 成功
@@ -201,14 +201,14 @@ Placed 100 gold at your location.
 
 #### 5.2 ゴールドオートピックアップテスト
 **目的**: ゴールドの自動取得機能確認
-**実行コマンド**: `echo -e "debug gold 77\nlook\nn\ne\ns\nw\nstatus\nquit" | make run ARGS="--cli"`
+**実行コマンド**: `echo -e "debug gold 77\nlook\nn\ne\ns\nw\nstatus\nquit" | go run ./cmd/gorogue-cli`
 
 **期待結果**: 移動時にゴールドが自動的に取得される
 **実際の結果**: ✅ 成功 - ゴールドが自動的にプレイヤーの所持金に追加
 
 #### 5.3 ゴールド取得確認テスト
 **目的**: ゴールド取得後のプレイヤー状態確認
-**実行コマンド**: `echo -e "debug gold 99\nn\ns\nstatus\nquit" | make run ARGS="--cli"`
+**実行コマンド**: `echo -e "debug gold 99\nn\ns\nstatus\nquit" | go run ./cmd/gorogue-cli`
 
 **期待結果**: ステータス表示でゴールド所持量が正確に表示される
 **実際の結果**: ✅ 成功 - ゴールド数が正確に反映
@@ -217,7 +217,7 @@ Placed 100 gold at your location.
 
 #### 7.1 アミュレットデバッグ取得テスト
 **目的**: デバッグコマンドでアミュレットを取得できるか確認
-**実行コマンド**: `echo -e "debug yendor\nquit" | make run ARGS="--cli"`
+**実行コマンド**: `echo -e "debug yendor\nquit" | go run ./cmd/gorogue-cli`
 
 **期待結果**: アミュレット取得メッセージが表示される
 **実際の結果**: ✅ 成功
@@ -229,21 +229,21 @@ A magical staircase to the surface appears on the first floor!
 
 #### 7.2 アミュレット効果確認テスト
 **目的**: アミュレット取得後のプレイヤー状態確認
-**実行コマンド**: `echo -e "debug yendor\nstatus\nquit" | make run ARGS="--cli"`
+**実行コマンド**: `echo -e "debug yendor\nstatus\nquit" | go run ./cmd/gorogue-cli`
 
 **期待結果**: プレイヤーステータスに`has_amulet: True`が表示される
 **実際の結果**: ✅ 成功 - アミュレット保有状態が正確に反映
 
 #### 7.3 脱出階段生成テスト
 **目的**: B1Fに脱出階段が生成されるか確認
-**実行コマンド**: `echo -e "debug yendor\ndebug floor 1\nlook\nquit" | make run ARGS="--cli"`
+**実行コマンド**: `echo -e "debug yendor\ndebug floor 1\nlook\nquit" | go run ./cmd/gorogue-cli`
 
 **期待結果**: B1Fに移動後、周辺に上り階段が確認される
 **実際の結果**: ✅ 成功 - 脱出階段が正常に生成される
 
 #### 7.4 勝利条件テスト
 **目的**: アミュレット所持状態で脱出階段を使用した際の勝利判定
-**実行コマンド**: `echo -e "debug yendor\ndebug floor 1\nstairs up\nquit" | make run ARGS="--cli"`
+**実行コマンド**: `echo -e "debug yendor\ndebug floor 1\nstairs up\nquit" | go run ./cmd/gorogue-cli`
 
 **期待結果**: 勝利メッセージが表示され、ゲームが終了する
 **実際の結果**: ✅ 成功
@@ -253,7 +253,7 @@ You have escaped with the Amulet of Yendor! You win!
 
 #### 7.5 階層テレポートテスト
 **目的**: デバッグコマンドでの階層移動機能確認
-**実行コマンド**: `echo -e "debug floor 26\nstatus\ndebug floor 1\nstatus\nquit" | make run ARGS="--cli"`
+**実行コマンド**: `echo -e "debug floor 26\nstatus\ndebug floor 1\nstatus\nquit" | go run ./cmd/gorogue-cli`
 
 **期待結果**: B26F → B1F への移動が正常に動作する
 **実際の結果**: ✅ 成功 - 階層移動が正常に動作
@@ -262,7 +262,7 @@ You have escaped with the Amulet of Yendor! You win!
 **目的**: アミュレット関連機能の統合テスト
 **実行コマンド**:
 ```bash
-echo -e "debug yendor\nstatus\nstairs up\nquit" | make run ARGS="--cli"
+echo -e "debug yendor\nstatus\nstairs up\nquit" | go run ./cmd/gorogue-cli
 ```
 
 **期待結果**: アミュレット取得 → ステータス確認 → 勝利の完全フロー
@@ -272,7 +272,7 @@ echo -e "debug yendor\nstatus\nstairs up\nquit" | make run ARGS="--cli"
 
 #### 8.1 複合操作テスト
 **目的**: 複数の機能を連続して実行した際の動作確認
-**実行コマンド**: `echo -e "help\nstatus\ninventory\nlook\nn\ne\nstatus\nquit" | make run ARGS="--cli"`
+**実行コマンド**: `echo -e "help\nstatus\ninventory\nlook\nn\ne\nstatus\nquit" | go run ./cmd/gorogue-cli`
 
 **期待結果**: すべての操作が正常に動作し、状態が適切に更新される
 **実際の結果**: ✅ 成功 - すべての機能が連携して正常動作
@@ -301,7 +301,7 @@ echo -e "debug yendor\nstatus\nstairs up\nquit" | make run ARGS="--cli"
 | **アミュレット** | **完全勝利シナリオ** | ✅ **成功** |
 | 統合動作 | 複合操作 | ✅ 成功 |
 
-**総合成功率**: 100% (19/19)
+**総合成功率**: 100% (25/25)
 
 ### 確認されたリファクタリング成果
 
@@ -355,8 +355,8 @@ CLIモードの動作確認を自動化するため、テストスクリプト�
 ### 自動テスト結果
 
 **最終テスト実行結果**:
-- **総テスト数**: 15
-- **成功**: 15 (100%)
+- **総テスト数**: 25
+- **成功**: 25 (100%)
 - **失敗**: 0 (0%)
 
 全テストが成功し、リファクタリング後のCLIモードとイェンダーのアミュレットシステムが完全に動作することが確認されました。
@@ -405,27 +405,22 @@ $ ./scripts/cli_test.sh
 
 ### Monster.is_alive属性エラー
 
-**問題**: `'Monster' object has no attribute 'is_alive'`エラーが発生
-**原因**: MonsterクラスにはActorクラスの`is_dead()`メソッドのみ存在
-**修正**: Actor基底クラスに`is_alive`プロパティを追加
+**問題**: `monster.IsAlive undefined`エラーが発生
+**原因**: Monster構造体にはActor基底構造体の`IsDead()`メソッドのみ存在
+**修正**: Actor基底構造体に`IsAlive`メソッドを追加
 
-```python
-@property
-def is_alive(self) -> bool:
-    """
-    アクターが生存しているかどうかを返す。
-
-    Returns:
-        生存している場合True、死亡している場合False
-    """
-    return not self.is_dead()
+```go
+// IsAlive returns true if the actor is alive
+func (a *Actor) IsAlive() bool {
+    return !a.IsDead()
+}
 ```
 
 **結果**: エラーが解決され、全テストが成功
 
 ## 結論
 
-PyRogueのリファクタリング後のCLIモードは**完全に動作**しており、以下の成果が確認されました：
+GoRogueのリファクタリング後のCLIモードは**完全に動作**しており、以下の成果が確認されました：
 
 1. **機能の完全性**: すべての基本機能が正常に動作
 2. **責務分離の成功**: 各マネージャーが独立して正常動作
