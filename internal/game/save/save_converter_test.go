@@ -91,6 +91,7 @@ func TestSaveConverter_ConvertItemTypeToString(t *testing.T) {
 		{item.ItemRing, "ring"},
 		{item.ItemScroll, "scroll"},
 		{item.ItemPotion, "potion"},
+		{item.ItemWand, "wand"},
 		{item.ItemFood, "food"},
 		{item.ItemGold, "gold"},
 		{item.ItemAmulet, "amulet"},
@@ -113,7 +114,11 @@ func TestSaveConverter_ConvertTileTypeToString(t *testing.T) {
 		{dungeon.TileWall, "wall"},
 		{dungeon.TileFloor, "floor"},
 		{dungeon.TileDoor, "door"},
+		{dungeon.TileDoorClosed, "door_closed"},
+		{dungeon.TileDoorOpen, "door_open"},
 		{dungeon.TileSecretDoor, "secret_door"},
+		{dungeon.TileWater, "water"},
+		{dungeon.TileLava, "lava"},
 		{dungeon.TileStairsUp, "stairs_up"},
 		{dungeon.TileStairsDown, "stairs_down"},
 	}
@@ -123,6 +128,29 @@ func TestSaveConverter_ConvertTileTypeToString(t *testing.T) {
 		if result != tc.expected {
 			t.Errorf("ConvertTileTypeToString(%v) = %s, expected %s", tc.tileType, result, tc.expected)
 		}
+	}
+}
+
+func TestSaveConverterPreservesExploredState(t *testing.T) {
+	level := &dungeon.Level{
+		Width:       1,
+		Height:      1,
+		FloorNumber: 1,
+		Tiles:       [][]*dungeon.Tile{{dungeon.NewTile(dungeon.TileFloor)}},
+	}
+	level.Tiles[0][0].Explored = false
+
+	saved := ConvertLevelToSave(level)
+	if saved.Tiles[0][0].Explored {
+		t.Fatal("unexplored tile was saved as explored")
+	}
+
+	restored, err := NewSaveConverter().convertSaveFloor(*saved)
+	if err != nil {
+		t.Fatalf("convertSaveFloor() error = %v", err)
+	}
+	if restored.Tiles[0][0].Explored {
+		t.Fatal("unexplored tile was restored as explored")
 	}
 }
 
@@ -162,6 +190,7 @@ func TestSaveConverter_StringToItemType(t *testing.T) {
 		{"ring", item.ItemRing, false},
 		{"scroll", item.ItemScroll, false},
 		{"potion", item.ItemPotion, false},
+		{"wand", item.ItemWand, false},
 		{"food", item.ItemFood, false},
 		{"gold", item.ItemGold, false},
 		{"amulet", item.ItemAmulet, false},
@@ -198,7 +227,11 @@ func TestSaveConverter_StringToTileType(t *testing.T) {
 		{"wall", dungeon.TileWall, false},
 		{"floor", dungeon.TileFloor, false},
 		{"door", dungeon.TileDoor, false},
+		{"door_closed", dungeon.TileDoorClosed, false},
+		{"door_open", dungeon.TileDoorOpen, false},
 		{"secret_door", dungeon.TileSecretDoor, false},
+		{"water", dungeon.TileWater, false},
+		{"lava", dungeon.TileLava, false},
 		{"stairs_up", dungeon.TileStairsUp, false},
 		{"stairs_down", dungeon.TileStairsDown, false},
 		{"unknown", 0, true},
@@ -319,6 +352,9 @@ func TestSaveConverter_ConvertSaveItem(t *testing.T) {
 		IsIdentified: true,
 		IsCursed:     false,
 		IsBlessed:    true,
+		Damage:       12,
+		Enchantment:  2,
+		ItemID:       101,
 		Slot:         0,
 	}
 
@@ -355,6 +391,9 @@ func TestSaveConverter_ConvertSaveItem(t *testing.T) {
 
 	if !gameItem.IsBlessed {
 		t.Error("Item should be blessed")
+	}
+	if gameItem.Damage != 12 || gameItem.Enchantment != 2 || gameItem.ItemID != 101 {
+		t.Errorf("combat fields were not restored: damage=%d enchantment=%d item_id=%d", gameItem.Damage, gameItem.Enchantment, gameItem.ItemID)
 	}
 }
 
@@ -653,8 +692,8 @@ func TestSaveConverter_ErrorHandling(t *testing.T) {
 
 	// Test conversion with invalid monster type
 	saveMonster := Monster{
-		Type:   "INVALID",
-		Symbol: 'X',
+		Type:   "?", // ? は定義されていないモンスタータイプ
+		Symbol: '?',
 	}
 
 	_, err := converter.convertSaveMonster(saveMonster)
@@ -682,5 +721,81 @@ func TestSaveConverter_ErrorHandling(t *testing.T) {
 	_, err = converter.convertStringToAIState("invalid_state")
 	if err == nil {
 		t.Error("convertStringToAIState should fail with invalid AI state")
+	}
+}
+
+// Helper functions for testing
+
+// createTestSaveData creates a test save data structure
+func createTestSaveData(t *testing.T) *SaveData {
+	return &SaveData{
+		Version: SaveVersion,
+		GameInfo: GameInfo{
+			CharName:  "TestPlayer",
+			PlayTime:  3600,
+			TurnCount: 100,
+			Seed:      12345,
+		},
+		PlayerData: Player{
+			X:         10,
+			Y:         10,
+			Level:     5,
+			HP:        50,
+			MaxHP:     100,
+			Gold:      200,
+			Exp:       150,
+			Hunger:    80,
+			Inventory: []InventoryItem{},
+		},
+		DungeonData: Dungeon{
+			CurrentFloor: 1,
+			Floors:       make(map[int]*Floor),
+		},
+		GameStats: Stats{
+			MonstersKilled: 10,
+			GoldCollected:  200,
+			DamageDealt:    500,
+			DamageTaken:    300,
+		},
+		Settings: Settings{
+			AutoSave: true,
+		},
+	}
+}
+
+// createBenchmarkTestSaveData creates a benchmark test save data structure
+func createBenchmarkTestSaveData() *SaveData {
+	return &SaveData{
+		Version: SaveVersion,
+		GameInfo: GameInfo{
+			CharName:  "BenchmarkPlayer",
+			PlayTime:  7200,
+			TurnCount: 500,
+			Seed:      54321,
+		},
+		PlayerData: Player{
+			X:         20,
+			Y:         20,
+			Level:     10,
+			HP:        80,
+			MaxHP:     150,
+			Gold:      1000,
+			Exp:       800,
+			Hunger:    60,
+			Inventory: []InventoryItem{},
+		},
+		DungeonData: Dungeon{
+			CurrentFloor: 5,
+			Floors:       make(map[int]*Floor),
+		},
+		GameStats: Stats{
+			MonstersKilled: 100,
+			GoldCollected:  1000,
+			DamageDealt:    2000,
+			DamageTaken:    1500,
+		},
+		Settings: Settings{
+			AutoSave: true,
+		},
 	}
 }

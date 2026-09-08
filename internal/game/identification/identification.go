@@ -3,6 +3,8 @@ package identification
 import (
 	"fmt"
 	"math/rand"
+	"strings"
+	"time"
 
 	"github.com/yuru-sha/gorogue/internal/game/item"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
@@ -61,6 +63,14 @@ var WandMaterials = []string{
 
 // NewIdentificationManager creates a new identification manager
 func NewIdentificationManager() *IdentificationManager {
+	return NewIdentificationManagerWithRand(rand.New(rand.NewSource(time.Now().UnixNano())))
+}
+
+// NewIdentificationManagerWithRand creates deterministic unidentified appearances.
+func NewIdentificationManagerWithRand(rng *rand.Rand) *IdentificationManager {
+	if rng == nil {
+		rng = rand.New(rand.NewSource(time.Now().UnixNano()))
+	}
 	mgr := &IdentificationManager{
 		identifiedScrolls: make(map[string]bool),
 		identifiedPotions: make(map[string]bool),
@@ -73,13 +83,13 @@ func NewIdentificationManager() *IdentificationManager {
 	}
 
 	// Initialize random appearances
-	mgr.initializeAppearances()
+	mgr.initializeAppearances(rng)
 
 	return mgr
 }
 
 // initializeAppearances sets up random appearances for items
-func (im *IdentificationManager) initializeAppearances() {
+func (im *IdentificationManager) initializeAppearances(rng *rand.Rand) {
 	// Assign random scroll titles
 	scrollNames := []string{
 		"identify", "teleportation", "sleep", "enchant armor", "enchant weapon",
@@ -93,7 +103,7 @@ func (im *IdentificationManager) initializeAppearances() {
 
 	shuffledTitles := make([]string, len(ScrollTitles))
 	copy(shuffledTitles, ScrollTitles)
-	rand.Shuffle(len(shuffledTitles), func(i, j int) {
+	rng.Shuffle(len(shuffledTitles), func(i, j int) {
 		shuffledTitles[i], shuffledTitles[j] = shuffledTitles[j], shuffledTitles[i]
 	})
 
@@ -115,7 +125,7 @@ func (im *IdentificationManager) initializeAppearances() {
 
 	shuffledColors := make([]string, len(PotionColors))
 	copy(shuffledColors, PotionColors)
-	rand.Shuffle(len(shuffledColors), func(i, j int) {
+	rng.Shuffle(len(shuffledColors), func(i, j int) {
 		shuffledColors[i], shuffledColors[j] = shuffledColors[j], shuffledColors[i]
 	})
 
@@ -135,13 +145,30 @@ func (im *IdentificationManager) initializeAppearances() {
 
 	shuffledMaterials := make([]string, len(RingMaterials))
 	copy(shuffledMaterials, RingMaterials)
-	rand.Shuffle(len(shuffledMaterials), func(i, j int) {
+	rng.Shuffle(len(shuffledMaterials), func(i, j int) {
 		shuffledMaterials[i], shuffledMaterials[j] = shuffledMaterials[j], shuffledMaterials[i]
 	})
 
 	for i, name := range ringNames {
 		if i < len(shuffledMaterials) {
 			im.ringMaterials[name] = shuffledMaterials[i]
+		}
+	}
+
+	// Assign random wand materials
+	wandNames := []string{
+		"light", "lightning", "fire", "cold", "polymorph", "magic missile",
+		"haste monster", "slow monster", "invisibility", "teleportation", "sleep", "drain life",
+	}
+	shuffledWandMaterials := make([]string, len(WandMaterials))
+	copy(shuffledWandMaterials, WandMaterials)
+	rng.Shuffle(len(shuffledWandMaterials), func(i, j int) {
+		shuffledWandMaterials[i], shuffledWandMaterials[j] = shuffledWandMaterials[j], shuffledWandMaterials[i]
+	})
+
+	for i, name := range wandNames {
+		if i < len(shuffledWandMaterials) {
+			im.wandMaterials[name] = shuffledWandMaterials[i]
 		}
 	}
 
@@ -178,6 +205,15 @@ func (im *IdentificationManager) GetDisplayName(itm *item.Item) string {
 		}
 		return "unknown ring"
 
+	case item.ItemWand:
+		if im.IsIdentified(itm) {
+			return itm.Name
+		}
+		if material, exists := im.wandMaterials[wandKey(itm.Name)]; exists {
+			return fmt.Sprintf("%s wand", material)
+		}
+		return "unknown wand"
+
 	case item.ItemWeapon:
 		// Weapons are usually identified
 		return itm.Name
@@ -212,6 +248,8 @@ func (im *IdentificationManager) IsIdentified(itm *item.Item) bool {
 		return im.identifiedPotions[itm.Name]
 	case item.ItemRing:
 		return im.identifiedRings[itm.Name]
+	case item.ItemWand:
+		return im.identifiedWands[wandKey(itm.Name)]
 	case item.ItemWeapon, item.ItemArmor, item.ItemFood, item.ItemGold, item.ItemAmulet:
 		// These are always identified
 		return true
@@ -232,7 +270,14 @@ func (im *IdentificationManager) IdentifyItem(itm *item.Item) {
 	case item.ItemRing:
 		im.identifiedRings[itm.Name] = true
 		logger.Debug("Identified ring", "name", itm.Name)
+	case item.ItemWand:
+		im.identifiedWands[wandKey(itm.Name)] = true
+		logger.Debug("Identified wand", "name", itm.Name)
 	}
+}
+
+func wandKey(name string) string {
+	return strings.TrimPrefix(strings.ToLower(name), "wand of ")
 }
 
 // IdentifyByUse identifies an item when used
@@ -240,6 +285,55 @@ func (im *IdentificationManager) IdentifyByUse(itm *item.Item) {
 	if !im.IsIdentified(itm) {
 		im.IdentifyItem(itm)
 		logger.Info("Item identified by use", "item", itm.Name, "type", itm.Type)
+	}
+}
+
+// SaveState returns the identified item types in a stable, category-qualified form.
+func (im *IdentificationManager) SaveState() map[string]bool {
+	state := make(map[string]bool)
+	for name, identified := range im.identifiedScrolls {
+		if identified {
+			state["scroll:"+name] = true
+		}
+	}
+	for name, identified := range im.identifiedPotions {
+		if identified {
+			state["potion:"+name] = true
+		}
+	}
+	for name, identified := range im.identifiedRings {
+		if identified {
+			state["ring:"+name] = true
+		}
+	}
+	for name, identified := range im.identifiedWands {
+		if identified {
+			state["wand:"+name] = true
+		}
+	}
+	return state
+}
+
+// LoadState restores identified item types saved by SaveState.
+func (im *IdentificationManager) LoadState(state map[string]bool) {
+	for key, identified := range state {
+		if !identified {
+			continue
+		}
+		category, name, ok := strings.Cut(key, ":")
+		if !ok {
+			continue
+		}
+		switch category {
+		case "scroll":
+			im.identifiedScrolls[name] = true
+		case "potion":
+			im.identifiedPotions[name] = true
+		case "ring":
+			im.identifiedRings[name] = true
+		case "wand":
+			im.identifiedWands[name] = true
+		}
 	}
 }
 

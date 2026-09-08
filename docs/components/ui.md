@@ -1,10 +1,10 @@
 # UI コンポーネント
 
-PyRogueのユーザーインターフェースシステム。画面管理、描画処理、入力制御を統合し、直感的で応答性の高いゲーム体験を提供します。
+GoRogueのユーザーインターフェースシステム。画面管理、描画処理、入力制御を統合し、直感的で応答性の高いゲーム体験を提供します。
 
 ## 概要
 
-`src/pyrogue/ui/`は、PyRogueのフロントエンドを担当するユーザーインターフェースシステムです。TCODライブラリとの効率的な統合により、文字ベースながら高度な描画機能と包括的な入力処理を実現しています。
+`internal/ui/`は、GoRogueのフロントエンドを担当するユーザーインターフェースシステムです。gruidライブラリとの効率的な統合により、文字ベースながら高度な描画機能と包括的な入力処理を実現しています。
 
 ## アーキテクチャ
 
@@ -12,22 +12,19 @@ PyRogueのユーザーインターフェースシステム。画面管理、描�
 
 ```
 ui/
-├── __init__.py
 ├── screens/                    # 画面システム
-│   ├── __init__.py
-│   ├── screen.py              # Screen基底クラス
-│   ├── menu_screen.py         # メニュー画面
-│   ├── game_screen.py         # メインゲーム画面
-│   ├── inventory_screen.py    # インベントリ画面
-│   ├── magic_screen.py        # 魔法画面
-│   ├── game_over_screen.py    # ゲームオーバー画面
-│   └── victory_screen.py      # 勝利画面
+│   ├── screen.go              # Screenインターフェース
+│   ├── menu_screen.go         # メニュー画面
+│   ├── game_screen.go         # メインゲーム画面
+│   ├── inventory_screen.go    # インベントリ画面
+│   ├── magic_screen.go        # 魔法画面
+│   ├── game_over_screen.go    # ゲームオーバー画面
+│   └── victory_screen.go      # 勝利画面
 └── components/                 # UIコンポーネント
-    ├── __init__.py
-    ├── game_renderer.py       # 描画処理
-    ├── input_handler.py       # 入力処理
-    ├── fov_manager.py         # 視界管理
-    └── save_load_manager.py   # セーブ・ロード管理
+    ├── game_renderer.go       # 描画処理
+    ├── input_handler.go       # 入力処理
+    ├── fov_manager.go         # 視界管理
+    └── save_load_manager.go   # セーブ・ロード管理
 ```
 
 ### 設計原則
@@ -39,25 +36,16 @@ ui/
 
 ## 画面システム (screens/)
 
-### Screen基底クラス
+### Screenインターフェース
 
 全画面の共通インターフェースを定義。
 
-```python
-class Screen(ABC):
-    """画面の抽象基底クラス"""
-
-    @abstractmethod
-    def render(self, root_console: tcod.Console,
-               game_context: GameContext) -> None:
-        """画面のレンダリング"""
-        pass
-
-    @abstractmethod
-    def handle_key(self, key: tcod.event.KeyDown,
-                   game_context: GameContext) -> Optional[Action]:
-        """キー入力の処理"""
-        pass
+```go
+type Screen interface {
+    // 画面のインターフェース
+    Render(rootConsole gruid.Grid, gameContext *GameContext) error
+    HandleKey(key gruid.Key, gameContext *GameContext) *Action
+}
 ```
 
 **設計思想:**
@@ -779,7 +767,7 @@ class KeyRepeatHandler:
 
 ## まとめ
 
-UI コンポーネントは、PyRogueプロジェクトのユーザー体験において以下の価値を提供します：
+UI コンポーネントは、GoRogueプロジェクトのユーザー体験において以下の価値を提供します：
 
 - **直感的操作**: 3種類の入力方式による包括的なサポート
 - **視覚的魅力**: 文字ベースながら豊富な視覚情報

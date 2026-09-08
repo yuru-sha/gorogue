@@ -7,13 +7,12 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/yuru-sha/gorogue/internal/config"
-	"github.com/yuru-sha/gorogue/internal/core"
 	"github.com/yuru-sha/gorogue/internal/core/cli"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
-	"github.com/yuru-sha/gorogue/internal/game/item"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
@@ -21,6 +20,7 @@ var (
 	debugMode   = flag.Bool("debug", false, "Enable debug mode")
 	helpFlag    = flag.Bool("help", false, "Show help information")
 	interactive = flag.Bool("interactive", true, "Run in interactive mode")
+	seedFlag    = flag.Int64("seed", 0, "Random seed (0 selects one automatically)")
 )
 
 func main() {
@@ -39,7 +39,7 @@ func main() {
 
 	// 環境変数で設定されていればそれを使用、フラグで上書き
 	debugEnabled := config.GetDebugMode() || *debugMode
-	
+
 	if debugEnabled {
 		logger.Info("Starting GoRogue CLI in debug mode",
 			"env_debug", config.GetDebugMode(),
@@ -52,26 +52,17 @@ func main() {
 		logger.Info("Starting GoRogue CLI")
 	}
 
-	// Initialize game engine
-	engine := core.NewEngine()
-	if engine == nil {
-		fmt.Println("Failed to initialize game engine")
-		os.Exit(1)
+	seed := *seedFlag
+	if seed == 0 {
+		seed = time.Now().UnixNano()
 	}
 
-	// Initialize game world for CLI commands
-	player := actor.NewPlayer(1, 1)
-	level := &dungeon.Level{
-		Width:    80,
-		Height:   24,
-		Tiles:    make([][]*dungeon.Tile, 80),
-		Monsters: make([]*actor.Monster, 0),
-		Items:    make([]*item.Item, 0),
-		Rooms:    make([]*dungeon.Room, 0),
-	}
+	// Initialize the same generated game world used by the GUI.
+	player := actor.NewPlayerWithSeed(1, 1, seed)
+	dungeonManager := dungeon.NewDungeonManagerWithSeed(player, seed)
 
 	// Initialize CLI mode
-	cliMode := cli.NewCLIMode(level, player)
+	cliMode := cli.NewCLIModeWithDungeonManager(dungeonManager, player)
 	cliMode.IsActive = true
 
 	if *interactive {
@@ -91,6 +82,7 @@ func showHelp() {
 	fmt.Println("  -debug         Enable debug mode")
 	fmt.Println("  -help          Show this help")
 	fmt.Println("  -interactive   Run in interactive mode (default: true)")
+	fmt.Println("  -seed          Set the random seed (0 selects one automatically)")
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Println("  gorogue-cli                    # Start interactive CLI")
@@ -112,7 +104,7 @@ func showHelp() {
 func runInteractiveMode(cliMode *cli.CLIMode) {
 	fmt.Println("╔══════════════════════════════════════════════════════════════════════════════╗")
 	fmt.Println("║                            GoRogue CLI Mode                                 ║")
-	fmt.Println("║                      PyRogue-compatible CLI Interface                       ║")
+	fmt.Println("║                         GoRogue CLI Interface                              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════════════════════╝")
 	fmt.Println()
 	fmt.Println("Welcome to GoRogue CLI! Type 'help' for commands, 'quit' to exit.")

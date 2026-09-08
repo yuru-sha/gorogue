@@ -1,40 +1,39 @@
 # Entities コンポーネント
 
-PyRogueのゲームエンティティシステム。プレイヤー、モンスター、アイテム、魔法、トラップを統合管理し、オリジナルRogueの忠実な再現を実現します。
+GoRogueのゲームエンティティシステム。プレイヤー、モンスター、アイテム、魔法、トラップを統合管理し、オリジナルRogueの忠実な再現を実現します。
 
 ## 概要
 
-`src/pyrogue/entities/`は、PyRogueの心臓部となるゲームエンティティシステムです。オリジナルRogueの26階層構造を忠実に再現し、現代的なソフトウェア設計パターンにより高い拡張性と保守性を実現しています。
+`internal/game/entity/`は、GoRogueの心臓部となるゲームエンティティシステムです。オリジナルRogueの26階層構造を忠実に再現し、現代的なソフトウェア設計パターンにより高い拡張性と保守性を実現しています。
 
 ## アーキテクチャ
 
 ### ディレクトリ構成
 
 ```
-entities/
-├── __init__.py
-├── actors/                    # アクターシステム
-│   ├── actor.py              # Actor基底クラス
-│   ├── player.py             # プレイヤーシステム
-│   ├── monster.py            # モンスターシステム
-│   ├── inventory.py          # インベントリ管理
-│   ├── status_effects.py     # 状態異常システム
-│   └── npc.py               # NPCシステム（現在無効化）
-├── items/                     # アイテムシステム
-│   ├── item.py              # 基本アイテムクラス
-│   ├── identification.py    # アイテム識別システム
-│   ├── cursed_items.py      # 呪われたアイテム
-│   ├── effects.py           # アイテム効果システム
-│   └── item_spawner.py      # アイテム生成システム
+entity/
+├── actor/                     # アクターシステム
+│   ├── actor.go              # Actorインターフェース
+│   ├── player.go             # プレイヤーシステム
+│   ├── monster.go            # モンスターシステム
+│   ├── inventory.go          # インベントリ管理
+│   ├── status_effects.go     # 状態異常システム
+│   └── npc.go               # NPCシステム（現在無効化）
+├── item/                      # アイテムシステム
+│   ├── item.go              # 基本アイテム構造体
+│   ├── identification.go    # アイテム識別システム
+│   ├── cursed_items.go      # 呪われたアイテム
+│   ├── effects.go           # アイテム効果システム
+│   └── item_spawner.go      # アイテム生成システム
 ├── magic/                     # 魔法システム
-│   └── spells.py            # 呪文実装
-└── traps/                     # トラップシステム
-    └── trap.py              # トラップ実装
+│   └── spells.go            # 呪文実装
+└── trap/                      # トラップシステム
+    └── trap.go              # トラップ実装
 ```
 
 ### 設計原則
 
-- **継承ベース設計**: Actor基底クラスによる共通機能の提供
+- **インターフェースベース設計**: Actorインターフェースによる共通機能の提供
 - **Command Pattern**: 状態異常・魔法・アイテム効果の統一実行
 - **Strategy Pattern**: モンスターAI・魔法効果・トラップ動作の動的切り替え
 - **オリジナル忠実性**: Rogue本来のゲームメカニクスの厳密な再現

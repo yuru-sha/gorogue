@@ -524,12 +524,26 @@ func (c *CLIMode) stairsCommand(args []string) string {
 	}
 
 	direction := strings.ToLower(args[0])
+	if c.Dungeon == nil {
+		return "Dungeon navigation is unavailable"
+	}
 
 	switch direction {
 	case "up", "u":
-		return "Climbed up the stairs. (TODO: implement level changing)"
+		if !c.Dungeon.CanGoUpstairs() || !c.Dungeon.GoUpstairs() {
+			return "There are no usable up stairs here."
+		}
+		c.Level = c.Dungeon.GetCurrentLevel()
+		if c.Dungeon.CheckVictoryCondition() {
+			return "You returned to the surface and won."
+		}
+		return fmt.Sprintf("Climbed to floor %d.", c.Dungeon.GetCurrentFloor())
 	case "down", "d":
-		return "Descended down the stairs. (TODO: implement level changing)"
+		if !c.Dungeon.CanGoDownstairs() || !c.Dungeon.GoDownstairs() {
+			return "There are no usable down stairs here."
+		}
+		c.Level = c.Dungeon.GetCurrentLevel()
+		return fmt.Sprintf("Descended to floor %d.", c.Dungeon.GetCurrentFloor())
 	default:
 		return "Usage: stairs <up|down>"
 	}

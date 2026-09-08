@@ -201,28 +201,28 @@ func (eq *Equipment) EquipItem(itm *item.Item) bool {
 func (eq *Equipment) UnequipItem(slot string) *item.Item {
 	switch slot {
 	case "weapon":
-		if eq.Weapon != nil {
+		if eq.Weapon != nil && !eq.Weapon.IsCursed {
 			item := eq.Weapon
 			eq.Weapon = nil
 			logger.Debug("Unequipped weapon", "weapon", item.Name)
 			return item
 		}
 	case "armor":
-		if eq.Armor != nil {
+		if eq.Armor != nil && !eq.Armor.IsCursed {
 			item := eq.Armor
 			eq.Armor = nil
 			logger.Debug("Unequipped armor", "armor", item.Name)
 			return item
 		}
 	case "ring_left":
-		if eq.RingLeft != nil {
+		if eq.RingLeft != nil && !eq.RingLeft.IsCursed {
 			item := eq.RingLeft
 			eq.RingLeft = nil
 			logger.Debug("Unequipped left ring", "ring", item.Name)
 			return item
 		}
 	case "ring_right":
-		if eq.RingRight != nil {
+		if eq.RingRight != nil && !eq.RingRight.IsCursed {
 			item := eq.RingRight
 			eq.RingRight = nil
 			logger.Debug("Unequipped right ring", "ring", item.Name)
@@ -260,7 +260,7 @@ func (eq *Equipment) GetEquippedNames() (string, string, string, string) {
 // GetAttackBonus returns attack bonus from equipped weapon
 func (eq *Equipment) GetAttackBonus() int {
 	if eq.Weapon != nil {
-		return eq.Weapon.Value / 10 // Simple calculation
+		return eq.Weapon.Damage + eq.Weapon.Enchantment
 	}
 	return 0
 }
@@ -269,7 +269,7 @@ func (eq *Equipment) GetAttackBonus() int {
 func (eq *Equipment) GetDefenseBonus() int {
 	bonus := 0
 	if eq.Armor != nil {
-		bonus += eq.Armor.Value / 10
+		bonus += eq.Armor.Defense + eq.Armor.Enchantment
 	}
 	if eq.RingLeft != nil && eq.RingLeft.Type == item.ItemRing {
 		bonus += eq.RingLeft.Value / 20

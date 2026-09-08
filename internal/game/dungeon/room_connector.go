@@ -2,7 +2,6 @@ package dungeon
 
 import (
 	"math"
-	"math/rand"
 
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
@@ -190,7 +189,7 @@ func (c *RoomConnector) connectAdjacentRooms(r1, r2 *Room) {
 
 		if minY <= maxY {
 			// ランダムな位置に通路を作成
-			y := minY + rand.Intn(maxY-minY+1)
+			y := minY + c.level.random().Intn(maxY-minY+1)
 
 			if r1.X+r1.Width+1 == r2.X {
 				// r1が左、r2が右
@@ -209,7 +208,7 @@ func (c *RoomConnector) connectAdjacentRooms(r1, r2 *Room) {
 
 		if minX <= maxX {
 			// ランダムな位置に通路を作成
-			x := minX + rand.Intn(maxX-minX+1)
+			x := minX + c.level.random().Intn(maxX-minX+1)
 
 			if r1.Y+r1.Height+1 == r2.Y {
 				// r1が上、r2が下

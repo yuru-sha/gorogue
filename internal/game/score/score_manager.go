@@ -16,10 +16,10 @@ import (
 const (
 	// ScoreFileName はスコアファイル名
 	ScoreFileName = "scores.json"
-	
+
 	// MaxScoreEntries は保存する最大スコア数
 	MaxScoreEntries = 100
-	
+
 	// ScoreVersion はスコアファイルのバージョン
 	ScoreVersion = "1.0.0"
 )
@@ -30,7 +30,7 @@ type ScoreEntry struct {
 	Score          int       `json:"score"`
 	Level          int       `json:"level"`
 	DeepestFloor   int       `json:"deepest_floor"`
-	PlayTime       int64     `json:"play_time"`        // 秒数
+	PlayTime       int64     `json:"play_time"` // 秒数
 	TurnCount      int       `json:"turn_count"`
 	MonstersKilled int       `json:"monsters_killed"`
 	GoldCollected  int       `json:"gold_collected"`
@@ -59,10 +59,10 @@ func NewScoreManager() *ScoreManager {
 	if err != nil {
 		homeDir = "."
 	}
-	
+
 	scoreDir := filepath.Join(homeDir, ".gorogue")
 	scoreFilePath := filepath.Join(scoreDir, ScoreFileName)
-	
+
 	return &ScoreManager{
 		scoreFilePath: scoreFilePath,
 	}
@@ -75,18 +75,18 @@ func (sm *ScoreManager) Initialize() error {
 	if err := os.MkdirAll(scoreDir, 0755); err != nil {
 		return fmt.Errorf("failed to create score directory: %w", err)
 	}
-	
+
 	// スコアファイルが存在しない場合は作成
 	if _, err := os.Stat(sm.scoreFilePath); os.IsNotExist(err) {
 		if err := sm.createEmptyScoreFile(); err != nil {
 			return fmt.Errorf("failed to create empty score file: %w", err)
 		}
 	}
-	
-	logger.Info("Score manager initialized", 
+
+	logger.Info("Score manager initialized",
 		"score_file", sm.scoreFilePath,
 	)
-	
+
 	return nil
 }
 
@@ -97,7 +97,7 @@ func (sm *ScoreManager) createEmptyScoreFile() error {
 		Updated: time.Now(),
 		Entries: make([]ScoreEntry, 0),
 	}
-	
+
 	return sm.writeScoreFile(&scoreFile)
 }
 
@@ -107,39 +107,39 @@ func (sm *ScoreManager) AddScore(entry ScoreEntry) error {
 	if err != nil {
 		return fmt.Errorf("failed to read score file: %w", err)
 	}
-	
+
 	// タイムスタンプとバージョンを設定
 	entry.Timestamp = time.Now()
 	entry.Version = ScoreVersion
-	
+
 	// スコアを追加
 	scoreFile.Entries = append(scoreFile.Entries, entry)
-	
+
 	// スコア順でソート（高い順）
 	sort.Slice(scoreFile.Entries, func(i, j int) bool {
 		return scoreFile.Entries[i].Score > scoreFile.Entries[j].Score
 	})
-	
+
 	// 最大エントリ数を超えた場合は削除
 	if len(scoreFile.Entries) > MaxScoreEntries {
 		scoreFile.Entries = scoreFile.Entries[:MaxScoreEntries]
 	}
-	
+
 	// ファイルの更新日時を設定
 	scoreFile.Updated = time.Now()
-	
+
 	// ファイルに保存
 	if err := sm.writeScoreFile(scoreFile); err != nil {
 		return fmt.Errorf("failed to write score file: %w", err)
 	}
-	
+
 	logger.Info("Score added successfully",
 		"player", entry.PlayerName,
 		"score", entry.Score,
 		"level", entry.Level,
 		"victory", entry.IsVictory,
 	)
-	
+
 	return nil
 }
 
@@ -149,11 +149,11 @@ func (sm *ScoreManager) GetHighScores(limit int) ([]ScoreEntry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read score file: %w", err)
 	}
-	
+
 	if limit <= 0 || limit > len(scoreFile.Entries) {
 		limit = len(scoreFile.Entries)
 	}
-	
+
 	return scoreFile.Entries[:limit], nil
 }
 
@@ -163,7 +163,7 @@ func (sm *ScoreManager) GetAllScores() ([]ScoreEntry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read score file: %w", err)
 	}
-	
+
 	return scoreFile.Entries, nil
 }
 
@@ -173,11 +173,11 @@ func (sm *ScoreManager) GetBestScore() (*ScoreEntry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read score file: %w", err)
 	}
-	
+
 	if len(scoreFile.Entries) == 0 {
 		return nil, nil
 	}
-	
+
 	return &scoreFile.Entries[0], nil
 }
 
@@ -187,14 +187,14 @@ func (sm *ScoreManager) GetVictoryScores() ([]ScoreEntry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read score file: %w", err)
 	}
-	
+
 	var victories []ScoreEntry
 	for _, entry := range scoreFile.Entries {
 		if entry.IsVictory {
 			victories = append(victories, entry)
 		}
 	}
-	
+
 	return victories, nil
 }
 
@@ -204,14 +204,14 @@ func (sm *ScoreManager) GetPlayerScores(playerName string) ([]ScoreEntry, error)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read score file: %w", err)
 	}
-	
+
 	var playerScores []ScoreEntry
 	for _, entry := range scoreFile.Entries {
 		if entry.PlayerName == playerName {
 			playerScores = append(playerScores, entry)
 		}
 	}
-	
+
 	return playerScores, nil
 }
 
@@ -220,7 +220,7 @@ func (sm *ScoreManager) ClearScores() error {
 	if err := sm.createEmptyScoreFile(); err != nil {
 		return fmt.Errorf("failed to clear scores: %w", err)
 	}
-	
+
 	logger.Info("All scores cleared")
 	return nil
 }
@@ -231,21 +231,21 @@ func (sm *ScoreManager) GetScoreStats() (*ScoreStats, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read score file: %w", err)
 	}
-	
+
 	stats := &ScoreStats{
-		TotalEntries: len(scoreFile.Entries),
-		VictoryCount: 0,
-		HighestScore: 0,
-		AverageScore: 0,
-		DeepestFloor: 0,
+		TotalEntries:  len(scoreFile.Entries),
+		VictoryCount:  0,
+		HighestScore:  0,
+		AverageScore:  0,
+		DeepestFloor:  0,
 		TotalPlayTime: 0,
-		LastUpdated: scoreFile.Updated,
+		LastUpdated:   scoreFile.Updated,
 	}
-	
+
 	if len(scoreFile.Entries) == 0 {
 		return stats, nil
 	}
-	
+
 	totalScore := 0
 	for _, entry := range scoreFile.Entries {
 		if entry.IsVictory {
@@ -260,9 +260,9 @@ func (sm *ScoreManager) GetScoreStats() (*ScoreStats, error) {
 		totalScore += entry.Score
 		stats.TotalPlayTime += entry.PlayTime
 	}
-	
+
 	stats.AverageScore = totalScore / len(scoreFile.Entries)
-	
+
 	return stats, nil
 }
 
@@ -283,12 +283,12 @@ func (sm *ScoreManager) IsHighScore(score int) (bool, int, error) {
 	if err != nil {
 		return false, 0, fmt.Errorf("failed to read score file: %w", err)
 	}
-	
+
 	// エントリが最大数未満の場合は常にハイスコア
 	if len(scoreFile.Entries) < MaxScoreEntries {
 		return true, len(scoreFile.Entries) + 1, nil
 	}
-	
+
 	// 最低スコアより高い場合はハイスコア
 	lowestScore := scoreFile.Entries[len(scoreFile.Entries)-1].Score
 	if score > lowestScore {
@@ -302,7 +302,7 @@ func (sm *ScoreManager) IsHighScore(score int) (bool, int, error) {
 		}
 		return true, rank, nil
 	}
-	
+
 	return false, 0, nil
 }
 
@@ -314,18 +314,18 @@ func (sm *ScoreManager) GetScoreFilePath() string {
 // BackupScores はスコアファイルをバックアップする
 func (sm *ScoreManager) BackupScores() error {
 	backupPath := sm.scoreFilePath + ".backup"
-	
+
 	// 元ファイルを読み込み
 	data, err := os.ReadFile(sm.scoreFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to read score file: %w", err)
 	}
-	
+
 	// バックアップファイルに書き込み
 	if err := os.WriteFile(backupPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write backup file: %w", err)
 	}
-	
+
 	logger.Info("Scores backed up successfully", "backup_path", backupPath)
 	return nil
 }
@@ -333,18 +333,18 @@ func (sm *ScoreManager) BackupScores() error {
 // RestoreScores はバックアップからスコアファイルを復元する
 func (sm *ScoreManager) RestoreScores() error {
 	backupPath := sm.scoreFilePath + ".backup"
-	
+
 	// バックアップファイルを読み込み
 	data, err := os.ReadFile(backupPath)
 	if err != nil {
 		return fmt.Errorf("failed to read backup file: %w", err)
 	}
-	
+
 	// 元ファイルに書き込み
 	if err := os.WriteFile(sm.scoreFilePath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write score file: %w", err)
 	}
-	
+
 	logger.Info("Scores restored successfully", "backup_path", backupPath)
 	return nil
 }
@@ -357,12 +357,12 @@ func (sm *ScoreManager) readScoreFile() (*ScoreFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var scoreFile ScoreFile
 	if err := json.Unmarshal(data, &scoreFile); err != nil {
 		return nil, err
 	}
-	
+
 	return &scoreFile, nil
 }
 
@@ -372,18 +372,18 @@ func (sm *ScoreManager) writeScoreFile(scoreFile *ScoreFile) error {
 	if err != nil {
 		return err
 	}
-	
+
 	// 一時ファイルに書き込み
 	tempFile := sm.scoreFilePath + ".tmp"
 	if err := os.WriteFile(tempFile, data, 0644); err != nil {
 		return err
 	}
-	
+
 	// アトミックに移動
 	if err := os.Rename(tempFile, sm.scoreFilePath); err != nil {
 		os.Remove(tempFile)
 		return err
 	}
-	
+
 	return nil
 }

@@ -2,6 +2,7 @@ package dungeon
 
 import (
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/yuru-sha/gorogue/internal/game/actor"
@@ -224,6 +225,9 @@ func TestVictoryCondition(t *testing.T) {
 		if !dm.PlayerHasAmulet() {
 			t.Error("Player should have amulet in inventory")
 		}
+		if !dm.CheckVictoryCondition() {
+			t.Error("Player should win from the surface exit with the amulet")
+		}
 	})
 }
 
@@ -295,6 +299,41 @@ func TestLevelGeneration(t *testing.T) {
 	}
 }
 
+func TestSeededLevelGenerationIsStable(t *testing.T) {
+	first := NewLevelWithSeed(80, 41, 5, 12345)
+	second := NewLevelWithSeed(80, 41, 5, 12345)
+
+	if len(first.Rooms) != len(second.Rooms) || len(first.Monsters) != len(second.Monsters) || len(first.Items) != len(second.Items) {
+		t.Fatalf("seeded levels have different sizes: rooms %d/%d, monsters %d/%d, items %d/%d", len(first.Rooms), len(second.Rooms), len(first.Monsters), len(second.Monsters), len(first.Items), len(second.Items))
+	}
+
+	for y := 0; y < first.Height; y++ {
+		for x := 0; x < first.Width; x++ {
+			if first.GetTile(x, y).Type != second.GetTile(x, y).Type {
+				t.Fatalf("seeded tile differs at (%d,%d)", x, y)
+			}
+		}
+	}
+	for i, room := range first.Rooms {
+		other := second.Rooms[i]
+		if *room != *other {
+			t.Fatalf("seeded room %d differs: %#v != %#v", i, room, other)
+		}
+	}
+	for i, monster := range first.Monsters {
+		other := second.Monsters[i]
+		if *monster.Position != *other.Position || monster.Type.Symbol != other.Type.Symbol || monster.HP != other.HP {
+			t.Fatalf("seeded monster %d differs", i)
+		}
+	}
+	for i, item := range first.Items {
+		other := second.Items[i]
+		if *item.Position != *other.Position || item.Type != other.Type || item.Name != other.Name || item.Value != other.Value {
+			t.Fatalf("seeded item %d differs", i)
+		}
+	}
+}
+
 func TestProgressInfo(t *testing.T) {
 	player := actor.NewPlayer(10, 10)
 	dm := NewDungeonManager(player)
@@ -315,7 +354,7 @@ func TestProgressInfo(t *testing.T) {
 			info := dm.GetProgressInfo()
 
 			if progress, ok := info["progress_percent"].(float64); ok {
-				if progress != tc.expectedPercent {
+				if math.Abs(progress-tc.expectedPercent) > 1e-12 {
 					t.Errorf("Floor %d: Expected progress %.2f%%, got %.2f%%",
 						tc.floor, tc.expectedPercent, progress)
 				}

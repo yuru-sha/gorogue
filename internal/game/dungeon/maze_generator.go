@@ -1,10 +1,6 @@
 package dungeon
 
-import (
-	"math/rand"
-
-	"github.com/yuru-sha/gorogue/internal/utils/logger"
-)
+import "github.com/yuru-sha/gorogue/internal/utils/logger"
 
 // MazeGenerator generates maze-type dungeons
 type MazeGenerator struct {
@@ -67,7 +63,7 @@ func (g *MazeGenerator) carveMaze(x, y int) {
 	}
 
 	// Shuffle directions for randomness
-	rand.Shuffle(len(directions), func(i, j int) {
+	g.level.random().Shuffle(len(directions), func(i, j int) {
 		directions[i], directions[j] = directions[j], directions[i]
 	})
 
@@ -117,8 +113,8 @@ func (g *MazeGenerator) addRandomConnections() {
 
 	for i := 0; i < connectionCount; i++ {
 		// Pick a random wall
-		x := 1 + rand.Intn(g.level.Width-2)
-		y := 1 + rand.Intn(g.level.Height-2)
+		x := 1 + g.level.random().Intn(g.level.Width-2)
+		y := 1 + g.level.random().Intn(g.level.Height-2)
 
 		// If it's a wall and connects two floor areas, make it a floor
 		if g.level.GetTile(x, y).Type == TileWall && g.connectsFloorAreas(x, y) {
