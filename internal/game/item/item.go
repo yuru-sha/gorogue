@@ -2,6 +2,7 @@ package item
 
 import (
 	"math/rand"
+	"time"
 
 	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/entity"
@@ -101,7 +102,7 @@ func NewItem(x, y int, itemType ItemType, name string, value int) *Item {
 	// Determine if item should start identified
 	isIdentified := true
 	switch itemType {
-	case ItemScroll, ItemPotion, ItemRing:
+	case ItemScroll, ItemPotion, ItemRing, ItemWand:
 		isIdentified = false // These need to be identified
 	}
 
@@ -120,11 +121,17 @@ func NewItem(x, y int, itemType ItemType, name string, value int) *Item {
 
 // NewGold creates a new gold pile with random amount
 func NewGold(x, y int, isSpecialRoom bool) *Item {
+	return NewGoldWithRand(x, y, isSpecialRoom, nil)
+}
+
+// NewGoldWithRand creates gold using the supplied random source.
+func NewGoldWithRand(x, y int, isSpecialRoom bool, rng *rand.Rand) *Item {
+	rng = ensureRand(rng)
 	var amount int
 	if isSpecialRoom {
-		amount = 100 + rand.Intn(151) // 100-250
+		amount = 100 + rng.Intn(151) // 100-250
 	} else {
-		amount = 1 + rand.Intn(250) // 1-250
+		amount = 1 + rng.Intn(250) // 1-250
 	}
 	return NewItem(x, y, ItemGold, "Gold", amount)
 }
@@ -136,6 +143,12 @@ func NewAmulet(x, y int) *Item {
 
 // NewRandomScroll creates a random scroll
 func NewRandomScroll(x, y int) *Item {
+	return NewRandomScrollWithRand(x, y, nil)
+}
+
+// NewRandomScrollWithRand creates a random scroll using the supplied random source.
+func NewRandomScrollWithRand(x, y int, rng *rand.Rand) *Item {
+	rng = ensureRand(rng)
 	scrollTypes := []string{
 		"identify", "teleportation", "sleep", "enchant armor", "enchant weapon",
 		"create monster", "remove curse", "aggravate monster", "magic mapping",
@@ -144,12 +157,18 @@ func NewRandomScroll(x, y int) *Item {
 		"magic detection", "monster detection", "trap detection",
 	}
 
-	scrollType := scrollTypes[rand.Intn(len(scrollTypes))]
-	return NewItem(x, y, ItemScroll, scrollType, 50+rand.Intn(100))
+	scrollType := scrollTypes[rng.Intn(len(scrollTypes))]
+	return NewItem(x, y, ItemScroll, scrollType, 50+rng.Intn(100))
 }
 
 // NewRandomPotion creates a random potion
 func NewRandomPotion(x, y int) *Item {
+	return NewRandomPotionWithRand(x, y, nil)
+}
+
+// NewRandomPotionWithRand creates a random potion using the supplied random source.
+func NewRandomPotionWithRand(x, y int, rng *rand.Rand) *Item {
+	rng = ensureRand(rng)
 	potionTypes := []string{
 		"healing", "extra healing", "haste self", "restore strength", "blindness",
 		"paralysis", "confusion", "hallucination", "poison", "gain strength",
@@ -158,12 +177,18 @@ func NewRandomPotion(x, y int) *Item {
 		"gain constitution", "gain intelligence", "levitation", "invisibility",
 	}
 
-	potionType := potionTypes[rand.Intn(len(potionTypes))]
-	return NewItem(x, y, ItemPotion, potionType, 25+rand.Intn(75))
+	potionType := potionTypes[rng.Intn(len(potionTypes))]
+	return NewItem(x, y, ItemPotion, potionType, 25+rng.Intn(75))
 }
 
 // NewRandomRing creates a random ring
 func NewRandomRing(x, y int) *Item {
+	return NewRandomRingWithRand(x, y, nil)
+}
+
+// NewRandomRingWithRand creates a random ring using the supplied random source.
+func NewRandomRingWithRand(x, y int, rng *rand.Rand) *Item {
+	rng = ensureRand(rng)
 	ringTypes := []string{
 		"protection", "add strength", "sustain strength", "searching", "see invisible",
 		"adornment", "teleportation", "stealth", "regeneration", "slow digestion",
@@ -171,15 +196,28 @@ func NewRandomRing(x, y int) *Item {
 		"aggravate monster", "maintain armor", "teleport control",
 	}
 
-	ringType := ringTypes[rand.Intn(len(ringTypes))]
-	return NewItem(x, y, ItemRing, ringType, 100+rand.Intn(200))
+	ringType := ringTypes[rng.Intn(len(ringTypes))]
+	return NewItem(x, y, ItemRing, ringType, 100+rng.Intn(200))
 }
 
 // NewFood creates food item
 func NewFood(x, y int) *Item {
+	return NewFoodWithRand(x, y, nil)
+}
+
+// NewFoodWithRand creates food using the supplied random source.
+func NewFoodWithRand(x, y int, rng *rand.Rand) *Item {
+	rng = ensureRand(rng)
 	foodTypes := []string{"food ration", "slime-mold", "fruit"}
-	foodType := foodTypes[rand.Intn(len(foodTypes))]
-	return NewItem(x, y, ItemFood, foodType, 10+rand.Intn(20))
+	foodType := foodTypes[rng.Intn(len(foodTypes))]
+	return NewItem(x, y, ItemFood, foodType, 10+rng.Intn(20))
+}
+
+func ensureRand(rng *rand.Rand) *rand.Rand {
+	if rng == nil {
+		rng = rand.New(rand.NewSource(time.Now().UnixNano()))
+	}
+	return rng
 }
 
 // WeaponDefinition represents a weapon type
@@ -253,6 +291,12 @@ var WandTypes = []WandDefinition{
 
 // NewRandomWeapon creates a random weapon appropriate for the floor
 func NewRandomWeapon(x, y, floor int) *Item {
+	return NewRandomWeaponWithRand(x, y, floor, nil)
+}
+
+// NewRandomWeaponWithRand creates a random weapon using the supplied random source.
+func NewRandomWeaponWithRand(x, y, floor int, rng *rand.Rand) *Item {
+	rng = ensureRand(rng)
 	var validWeapons []WeaponDefinition
 	for _, weapon := range WeaponTypes {
 		if floor >= weapon.MinFloor && floor <= weapon.MaxFloor {
@@ -264,16 +308,22 @@ func NewRandomWeapon(x, y, floor int) *Item {
 		validWeapons = WeaponTypes // Fallback
 	}
 
-	weapon := validWeapons[rand.Intn(len(validWeapons))]
+	weapon := validWeapons[rng.Intn(len(validWeapons))]
 	item := NewItem(x, y, ItemWeapon, weapon.Name, weapon.Value)
 	item.Damage = weapon.Damage
 	item.ItemID = weapon.ID
-	item.Enchantment = rand.Intn(3) - 1 // -1, 0, or +1
+	item.Enchantment = rng.Intn(3) - 1 // -1, 0, or +1
 	return item
 }
 
 // NewRandomArmor creates a random armor appropriate for the floor
 func NewRandomArmor(x, y, floor int) *Item {
+	return NewRandomArmorWithRand(x, y, floor, nil)
+}
+
+// NewRandomArmorWithRand creates random armor using the supplied random source.
+func NewRandomArmorWithRand(x, y, floor int, rng *rand.Rand) *Item {
+	rng = ensureRand(rng)
 	var validArmors []ArmorDefinition
 	for _, armor := range ArmorTypes {
 		if floor >= armor.MinFloor && floor <= armor.MaxFloor {
@@ -285,16 +335,22 @@ func NewRandomArmor(x, y, floor int) *Item {
 		validArmors = ArmorTypes // Fallback
 	}
 
-	armor := validArmors[rand.Intn(len(validArmors))]
+	armor := validArmors[rng.Intn(len(validArmors))]
 	item := NewItem(x, y, ItemArmor, armor.Name, armor.Value)
 	item.Defense = armor.Defense
 	item.ItemID = armor.ID
-	item.Enchantment = rand.Intn(3) - 1 // -1, 0, or +1
+	item.Enchantment = rng.Intn(3) - 1 // -1, 0, or +1
 	return item
 }
 
 // NewRandomWand creates a random wand appropriate for the floor
 func NewRandomWand(x, y, floor int) *Item {
+	return NewRandomWandWithRand(x, y, floor, nil)
+}
+
+// NewRandomWandWithRand creates a random wand using the supplied random source.
+func NewRandomWandWithRand(x, y, floor int, rng *rand.Rand) *Item {
+	rng = ensureRand(rng)
 	var validWands []WandDefinition
 	for _, wand := range WandTypes {
 		if floor >= wand.MinFloor && floor <= wand.MaxFloor {
@@ -306,9 +362,9 @@ func NewRandomWand(x, y, floor int) *Item {
 		validWands = WandTypes // Fallback
 	}
 
-	wand := validWands[rand.Intn(len(validWands))]
+	wand := validWands[rng.Intn(len(validWands))]
 	item := NewItem(x, y, ItemWand, wand.Name, wand.Value)
-	item.Charges = wand.MinCharges + rand.Intn(wand.MaxCharges-wand.MinCharges+1)
+	item.Charges = wand.MinCharges + rng.Intn(wand.MaxCharges-wand.MinCharges+1)
 	item.MaxCharges = item.Charges
 	item.ItemID = wand.ID
 	item.IsIdentified = false // 杖は要識別

@@ -415,7 +415,7 @@ func (sgi *SaveGameIntegration) CreateNewGame(charName string, seed int64) error
 	player := actor.NewPlayer(0, 0)
 
 	// Create new dungeon manager
-	dungeonManager := dungeon.NewDungeonManager(player)
+	dungeonManager := dungeon.NewDungeonManagerWithSeed(player, seed)
 
 	// Set initial position
 	level := dungeonManager.GetCurrentLevel()

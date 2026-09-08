@@ -3,6 +3,7 @@ package actor
 import (
 	"math"
 	"math/rand"
+	"sort"
 
 	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/entity"
@@ -130,17 +131,28 @@ func GetValidMonsterTypesForFloor(floor int) []rune {
 			validTypes = append(validTypes, symbol)
 		}
 	}
+	sort.Slice(validTypes, func(i, j int) bool {
+		return validTypes[i] < validTypes[j]
+	})
 	return validTypes
 }
 
 // GetRandomMonsterTypeForFloor returns a random monster type appropriate for the floor
 func GetRandomMonsterTypeForFloor(floor int) rune {
+	return GetRandomMonsterTypeForFloorWithRand(floor, nil)
+}
+
+// GetRandomMonsterTypeForFloorWithRand selects a type using the supplied source.
+func GetRandomMonsterTypeForFloorWithRand(floor int, rng *rand.Rand) rune {
 	validTypes := GetValidMonsterTypesForFloor(floor)
 	if len(validTypes) == 0 {
 		// Fallback to basic monsters
 		return 'B' // Bat
 	}
-	return validTypes[rand.Intn(len(validTypes))]
+	if rng == nil {
+		rng = newRandomSource()
+	}
+	return validTypes[rng.Intn(len(validTypes))]
 }
 
 // calculateViewRange calculates the view range for a monster type
@@ -250,7 +262,7 @@ func (m *Monster) AttackPlayer(player *Player) {
 	hitChance := m.calculateHitChance(player)
 
 	// Roll for hit
-	if rand.Float64() > hitChance {
+	if player.random().Float64() > hitChance {
 		logger.Info("Monster attack missed",
 			"monster", m.Type.Name,
 			"hit_chance", hitChance,
@@ -319,24 +331,24 @@ func (m *Monster) applyDamageModifiers(baseDamage int, player *Player) int {
 	// Apply monster-specific damage modifiers
 	switch m.Type.Symbol {
 	case 'D': // Dragons do extra fire damage
-		finalDamage += rand.Intn(5) + 1
+		finalDamage += player.random().Intn(5) + 1
 	case 'V': // Vampires do life drain
-		finalDamage += rand.Intn(3) + 1
+		finalDamage += player.random().Intn(3) + 1
 		if m.HP < m.MaxHP {
 			healAmount := finalDamage / 4
 			m.Heal(healAmount)
 		}
 	case 'T': // Trolls do crushing damage
-		finalDamage += rand.Intn(4) + 1
+		finalDamage += player.random().Intn(4) + 1
 	case 'P': // Phantoms do psychic damage
-		finalDamage += rand.Intn(3) + 1
+		finalDamage += player.random().Intn(3) + 1
 	case 'R': // Rattlesnakes do poison damage
-		finalDamage += rand.Intn(2) + 1
+		finalDamage += player.random().Intn(2) + 1
 	}
 
 	// Random damage variation (±25%)
 	variation := float64(finalDamage) * 0.25
-	modifier := (rand.Float64() - 0.5) * variation
+	modifier := (player.random().Float64() - 0.5) * variation
 	finalDamage += int(modifier)
 
 	// Minimum damage is 1
@@ -351,22 +363,22 @@ func (m *Monster) applyDamageModifiers(baseDamage int, player *Player) int {
 func (m *Monster) applySpecialEffects(player *Player) {
 	switch m.Type.Symbol {
 	case 'R': // Rattlesnake poison
-		if rand.Float64() < 0.2 { // 20% chance
+		if player.random().Float64() < 0.2 { // 20% chance
 			logger.Info("Player poisoned by rattlesnake",
 				"monster", m.Type.Name,
 			)
 			// TODO: Implement poison effect
 		}
 	case 'V': // Vampire level drain
-		if rand.Float64() < 0.1 { // 10% chance
+		if player.random().Float64() < 0.1 { // 10% chance
 			logger.Info("Player drained by vampire",
 				"monster", m.Type.Name,
 			)
 			// TODO: Implement level drain
 		}
 	case 'L': // Leprechaun steals gold
-		if rand.Float64() < 0.15 && player.Gold > 0 { // 15% chance
-			stolen := rand.Intn(player.Gold/4 + 1)
+		if player.random().Float64() < 0.15 && player.Gold > 0 { // 15% chance
+			stolen := player.random().Intn(player.Gold/4 + 1)
 			if stolen > 0 {
 				player.Gold -= stolen
 				logger.Info("Leprechaun stole gold",
@@ -376,7 +388,7 @@ func (m *Monster) applySpecialEffects(player *Player) {
 			}
 		}
 	case 'N': // Nymph steals items
-		if rand.Float64() < 0.1 { // 10% chance
+		if player.random().Float64() < 0.1 { // 10% chance
 			logger.Info("Nymph attempts to steal item",
 				"monster", m.Type.Name,
 			)
@@ -403,14 +415,14 @@ func (m *Monster) MoveTowardsPlayer(player *Player, level LevelCollisionChecker)
 	}
 
 	// Add random element (25% chance to move in different direction)
-	if rand.Float32() < 0.25 {
+	if player.random().Float32() < 0.25 {
 		directions := []struct{ dx, dy int }{
 			{-1, -1}, {-1, 0}, {-1, 1},
 			{0, -1}, {0, 1},
 			{1, -1}, {1, 0}, {1, 1},
 		}
 		if len(directions) > 0 {
-			dir := directions[rand.Intn(len(directions))]
+			dir := directions[player.random().Intn(len(directions))]
 			dx = dir.dx
 			dy = dir.dy
 		}
@@ -553,7 +565,7 @@ func (m *Monster) UpdateAIState(player *Player, level LevelCollisionChecker, can
 // behaviorIdle handles idle behavior
 func (m *Monster) behaviorIdle(player *Player, level LevelCollisionChecker) {
 	// 25% chance to move randomly
-	if rand.Float32() < 0.25 {
+	if player.random().Float32() < 0.25 {
 		m.moveRandomly(level)
 	}
 }

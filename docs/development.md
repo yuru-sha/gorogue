@@ -106,6 +106,16 @@ GOROGUE_PROFILE=false
 GOROGUE_SAVE_DIR=./saves
 ```
 
+### 再現可能なゲーム
+
+GUIは起動時にシードを自動生成します。CLIでは`-seed`を指定すると同じダンジョン生成を再現できます。
+
+```bash
+go run ./cmd/gorogue-cli -seed 12345
+```
+
+コードからは`core.NewEngineWithSeed`または`dungeon.NewDungeonManagerWithSeed`を使用します。
+
 ### 実装場所
 - `internal/config/` - 設定管理パッケージ
 - `internal/game/settings/` - ゲーム設定構造体

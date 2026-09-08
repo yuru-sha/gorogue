@@ -1,10 +1,6 @@
 package dungeon
 
-import (
-	"math/rand"
-
-	"github.com/yuru-sha/gorogue/internal/utils/logger"
-)
+import "github.com/yuru-sha/gorogue/internal/utils/logger"
 
 // GridCell represents a single cell in the 3x3 grid
 type GridCell struct {
@@ -89,9 +85,9 @@ func (g *GridGenerator) GenerateRooms() {
 func (g *GridGenerator) decideRoomPlacements() {
 	for i, cell := range g.grid {
 		// Original Rogue: 70-80% chance of having a room in each cell
-		if rand.Float64() < 0.75 {
+		if g.level.random().Float64() < 0.75 {
 			// 15% chance of being a "gone room" (corridor only)
-			if rand.Float64() < 0.15 {
+			if g.level.random().Float64() < 0.15 {
 				cell.IsGone = true
 				cell.HasRoom = false
 				logger.Debug("Marked cell as gone room",
@@ -159,14 +155,14 @@ func (g *GridGenerator) createRoomInCell(cell *GridCell) *Room {
 	}
 
 	// Generate room size (smaller than the cell)
-	width := MinRoomSize + rand.Intn(maxWidth-MinRoomSize+1)
-	height := MinRoomSize + rand.Intn(maxHeight-MinRoomSize+1)
+	width := MinRoomSize + g.level.random().Intn(maxWidth-MinRoomSize+1)
+	height := MinRoomSize + g.level.random().Intn(maxHeight-MinRoomSize+1)
 
 	// Position room within the cell (centered with some randomness)
 	maxX := cellEndX - width - margin
 	maxY := cellEndY - height - margin
-	x := cellStartX + margin + rand.Intn(maxX-cellStartX-margin+1)
-	y := cellStartY + margin + rand.Intn(maxY-cellStartY-margin+1)
+	x := cellStartX + margin + g.level.random().Intn(maxX-cellStartX-margin+1)
+	y := cellStartY + margin + g.level.random().Intn(maxY-cellStartY-margin+1)
 
 	// Create the room
 	room := &Room{
@@ -196,8 +192,8 @@ func (g *GridGenerator) createGoneRoomInCell(cell *GridCell) {
 	cellStartY := cell.Y * g.cellHeight
 
 	// Create a smaller corridor space in the center of the cell
-	corridorWidth := 3 + rand.Intn(4)  // 3-6 tiles wide
-	corridorHeight := 3 + rand.Intn(4) // 3-6 tiles high
+	corridorWidth := 3 + g.level.random().Intn(4)  // 3-6 tiles wide
+	corridorHeight := 3 + g.level.random().Intn(4) // 3-6 tiles high
 
 	startX := cellStartX + (g.cellWidth-corridorWidth)/2
 	startY := cellStartY + (g.cellHeight-corridorHeight)/2
@@ -261,7 +257,7 @@ func (g *GridGenerator) connectRooms() {
 	}
 
 	// Step 4: Add some extra connections for variety (0-2 additional connections)
-	extraConnections := rand.Intn(3)
+	extraConnections := g.level.random().Intn(3)
 	for i := 0; i < extraConnections; i++ {
 		g.addRandomConnection()
 	}
@@ -291,7 +287,7 @@ func (g *GridGenerator) chooseRandomActiveCell() int {
 	if len(activeCells) == 0 {
 		return -1
 	}
-	return activeCells[rand.Intn(len(activeCells))]
+	return activeCells[g.level.random().Intn(len(activeCells))]
 }
 
 // isActiveCell checks if a cell has a room or is a gone room
@@ -368,8 +364,8 @@ func (g *GridGenerator) addRandomConnection() {
 	}
 
 	// Pick two random connected cells
-	from := connectedIndices[rand.Intn(len(connectedIndices))]
-	to := connectedIndices[rand.Intn(len(connectedIndices))]
+	from := connectedIndices[g.level.random().Intn(len(connectedIndices))]
+	to := connectedIndices[g.level.random().Intn(len(connectedIndices))]
 
 	if from != to {
 		// Check if they're not already connected

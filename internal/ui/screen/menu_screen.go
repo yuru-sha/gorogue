@@ -29,7 +29,7 @@ var menuBox = []string{
 	"",
 }
 
-var version = "v0.1.0"
+var version = "v0.3.0"
 
 // Colors (SDL2対応の16進数カラー)
 var (
@@ -183,7 +183,7 @@ func (s *MenuScreen) Draw(grid *gruid.Grid) {
 	}
 
 	// バージョン情報の描画
-	versionText := "GoRogue " + version + " - PyRogue compatible"
+	versionText := "GoRogue " + version
 	versionX := 1
 	versionY := s.height - 1
 	s.drawText(grid, versionX, versionY, versionText, colorDarkGray)

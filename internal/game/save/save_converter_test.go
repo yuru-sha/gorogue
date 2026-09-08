@@ -91,6 +91,7 @@ func TestSaveConverter_ConvertItemTypeToString(t *testing.T) {
 		{item.ItemRing, "ring"},
 		{item.ItemScroll, "scroll"},
 		{item.ItemPotion, "potion"},
+		{item.ItemWand, "wand"},
 		{item.ItemFood, "food"},
 		{item.ItemGold, "gold"},
 		{item.ItemAmulet, "amulet"},
@@ -113,7 +114,11 @@ func TestSaveConverter_ConvertTileTypeToString(t *testing.T) {
 		{dungeon.TileWall, "wall"},
 		{dungeon.TileFloor, "floor"},
 		{dungeon.TileDoor, "door"},
+		{dungeon.TileDoorClosed, "door_closed"},
+		{dungeon.TileDoorOpen, "door_open"},
 		{dungeon.TileSecretDoor, "secret_door"},
+		{dungeon.TileWater, "water"},
+		{dungeon.TileLava, "lava"},
 		{dungeon.TileStairsUp, "stairs_up"},
 		{dungeon.TileStairsDown, "stairs_down"},
 	}
@@ -162,6 +167,7 @@ func TestSaveConverter_StringToItemType(t *testing.T) {
 		{"ring", item.ItemRing, false},
 		{"scroll", item.ItemScroll, false},
 		{"potion", item.ItemPotion, false},
+		{"wand", item.ItemWand, false},
 		{"food", item.ItemFood, false},
 		{"gold", item.ItemGold, false},
 		{"amulet", item.ItemAmulet, false},
@@ -198,7 +204,11 @@ func TestSaveConverter_StringToTileType(t *testing.T) {
 		{"wall", dungeon.TileWall, false},
 		{"floor", dungeon.TileFloor, false},
 		{"door", dungeon.TileDoor, false},
+		{"door_closed", dungeon.TileDoorClosed, false},
+		{"door_open", dungeon.TileDoorOpen, false},
 		{"secret_door", dungeon.TileSecretDoor, false},
+		{"water", dungeon.TileWater, false},
+		{"lava", dungeon.TileLava, false},
 		{"stairs_up", dungeon.TileStairsUp, false},
 		{"stairs_down", dungeon.TileStairsDown, false},
 		{"unknown", 0, true},
@@ -319,6 +329,9 @@ func TestSaveConverter_ConvertSaveItem(t *testing.T) {
 		IsIdentified: true,
 		IsCursed:     false,
 		IsBlessed:    true,
+		Damage:       12,
+		Enchantment:  2,
+		ItemID:       101,
 		Slot:         0,
 	}
 
@@ -355,6 +368,9 @@ func TestSaveConverter_ConvertSaveItem(t *testing.T) {
 
 	if !gameItem.IsBlessed {
 		t.Error("Item should be blessed")
+	}
+	if gameItem.Damage != 12 || gameItem.Enchantment != 2 || gameItem.ItemID != 101 {
+		t.Errorf("combat fields were not restored: damage=%d enchantment=%d item_id=%d", gameItem.Damage, gameItem.Enchantment, gameItem.ItemID)
 	}
 }
 

@@ -21,8 +21,12 @@ func TestMenuScreen_NewMenuScreen(t *testing.T) {
 	if screen.selected != 0 {
 		t.Errorf("Expected selected 0, got %d", screen.selected)
 	}
-	if len(screen.menuItems) != 5 {
-		t.Errorf("Expected 5 menu items, got %d", len(screen.menuItems))
+	expectedItems := 3
+	if screen.saveManager.FileExists() {
+		expectedItems++
+	}
+	if len(screen.menuItems) != expectedItems {
+		t.Errorf("Expected %d menu items, got %d", expectedItems, len(screen.menuItems))
 	}
 }
 
@@ -31,17 +35,17 @@ func TestMenuScreen_HandleInput(t *testing.T) {
 	screen := NewMenuScreen(80, 50)
 
 	// Test Up key
-	msg := gruid.MsgKeyDown{Key: "Up"}
+	msg := gruid.MsgKeyDown{Key: gruid.KeyArrowUp}
 	result := screen.HandleInput(msg)
 	if result != state.StateMenu {
 		t.Errorf("Expected StateMenu, got %v", result)
 	}
-	if screen.selected != 4 { // Should wrap around
-		t.Errorf("Expected selected 4, got %d", screen.selected)
+	if screen.selected != len(screen.menuItems)-1 { // Should wrap around
+		t.Errorf("Expected selected %d, got %d", len(screen.menuItems)-1, screen.selected)
 	}
 
 	// Test Down key
-	msg = gruid.MsgKeyDown{Key: "Down"}
+	msg = gruid.MsgKeyDown{Key: gruid.KeyArrowDown}
 	result = screen.HandleInput(msg)
 	if result != state.StateMenu {
 		t.Errorf("Expected StateMenu, got %v", result)
@@ -107,38 +111,17 @@ func TestMenuScreen_MenuSelection(t *testing.T) {
 	logger.Setup()
 	screen := NewMenuScreen(80, 50)
 
-	// Test New Game
-	screen.selected = 0
-	result := screen.handleMenuSelection()
-	if result != state.StateGame {
-		t.Errorf("Expected StateGame, got %v", result)
+	expectedStates := map[string]state.GameState{
+		"New Game":  state.StateGame,
+		"Load Game": state.StateSaveLoad,
+		"Help":      state.StateHelp,
+		"Quit":      state.StateGameOver,
 	}
-
-	// Test Load Game
-	screen.selected = 1
-	result = screen.handleMenuSelection()
-	if result != state.StateSaveLoad {
-		t.Errorf("Expected StateSaveLoad, got %v", result)
-	}
-
-	// Test Scores
-	screen.selected = 2
-	result = screen.handleMenuSelection()
-	if result != state.StateMenu { // TODO: Should be StateScores when implemented
-		t.Errorf("Expected StateMenu, got %v", result)
-	}
-
-	// Test Help
-	screen.selected = 3
-	result = screen.handleMenuSelection()
-	if result != state.StateHelp {
-		t.Errorf("Expected StateHelp, got %v", result)
-	}
-
-	// Test Quit
-	screen.selected = 4
-	result = screen.handleMenuSelection()
-	if result != state.StateGameOver {
-		t.Errorf("Expected StateGameOver, got %v", result)
+	for i, menuItem := range screen.menuItems {
+		screen.selected = i
+		result := screen.handleMenuSelection()
+		if result != expectedStates[menuItem] {
+			t.Errorf("%s: expected %v, got %v", menuItem, expectedStates[menuItem], result)
+		}
 	}
 }

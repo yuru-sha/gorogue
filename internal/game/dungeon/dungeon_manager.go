@@ -2,6 +2,7 @@ package dungeon
 
 import (
 	"math/rand"
+	"time"
 
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/item"
@@ -19,18 +20,31 @@ type DungeonManager struct {
 	levels       map[int]*Level
 	currentFloor int
 	player       *actor.Player
+	seed         int64
+	floorSeeds   map[int]int64
+	rng          *rand.Rand
 }
 
 // NewDungeonManager creates a new dungeon manager
 func NewDungeonManager(player *actor.Player) *DungeonManager {
+	return NewDungeonManagerWithSeed(player, time.Now().UnixNano())
+}
+
+// NewDungeonManagerWithSeed creates a dungeon manager with reproducible random state.
+func NewDungeonManagerWithSeed(player *actor.Player, seed int64) *DungeonManager {
 	dm := &DungeonManager{
 		levels:       make(map[int]*Level),
 		currentFloor: 1,
 		player:       player,
+		seed:         seed,
+		floorSeeds:   make(map[int]int64),
+		rng:          rand.New(rand.NewSource(seed)),
 	}
+	player.SetRandomSource(dm.rng)
 
 	// 最初のレベルを生成
 	dm.generateLevel(1)
+	dm.setPlayerPositionOnFloorChange(1)
 
 	logger.Info("Created dungeon manager",
 		"max_floors", MaxFloors,
@@ -60,14 +74,38 @@ func (dm *DungeonManager) SetLevel(floor int, level *Level) {
 	dm.levels[floor] = level
 }
 
+// Seed returns the seed used to create this game.
+func (dm *DungeonManager) Seed() int64 {
+	return dm.seed
+}
+
+// FloorSeeds returns the seeds used for generated floors.
+func (dm *DungeonManager) FloorSeeds() map[int]int64 {
+	seeds := make(map[int]int64, len(dm.floorSeeds))
+	for floor, seed := range dm.floorSeeds {
+		seeds[floor] = seed
+	}
+	return seeds
+}
+
+// SetFloorSeed records a seed restored from a save file.
+func (dm *DungeonManager) SetFloorSeed(floor int, seed int64) {
+	dm.floorSeeds[floor] = seed
+}
+
 // generateLevel generates a new level for the given floor
 func (dm *DungeonManager) generateLevel(floor int) *Level {
-	level := NewLevel(DungeonWidth, DungeonHeight, floor)
+	floorSeed, exists := dm.floorSeeds[floor]
+	if !exists {
+		floorSeed = dm.seed + int64(floor)*1000003
+		dm.floorSeeds[floor] = floorSeed
+	}
+	level := NewLevelWithSeed(DungeonWidth, DungeonHeight, floor, floorSeed)
 	dm.levels[floor] = level
 
 	// 最終階層の場合はAmulet of Yendorを配置
 	if floor == MaxFloors {
-		dm.PlaceAmuletOfYendor()
+		dm.placeAmuletOn(level)
 	}
 
 	logger.Info("Generated new level",
@@ -121,7 +159,7 @@ func (dm *DungeonManager) setPlayerPositionOnFloorChange(floor int) {
 	for y := 0; y < level.Height; y++ {
 		for x := 0; x < level.Width; x++ {
 			tile := level.GetTile(x, y)
-			if tile.Type == TileStairsUp || tile.Type == TileStairsDown {
+			if tile != nil && (tile.Type == TileStairsUp || tile.Type == TileStairsDown) {
 				stairPos = &Position{X: x, Y: y}
 				break
 			}
@@ -148,7 +186,7 @@ func (dm *DungeonManager) GoUpstairs() bool {
 		// 1階で魔除けを持っている場合、勝利条件をチェック
 		if dm.PlayerHasAmulet() {
 			logger.Info("Player attempting to escape with Amulet of Yendor")
-			return false // ゲームエンジンが勝利条件を処理
+			return true // ゲームエンジンが勝利条件を処理
 		}
 		logger.Debug("Already at top floor")
 		return false
@@ -171,14 +209,14 @@ func (dm *DungeonManager) GoDownstairs() bool {
 func (dm *DungeonManager) CanGoUpstairs() bool {
 	level := dm.GetCurrentLevel()
 	tile := level.GetTile(dm.player.Position.X, dm.player.Position.Y)
-	return tile.Type == TileStairsUp && dm.currentFloor > 1
+	return tile != nil && tile.Type == TileStairsUp && (dm.currentFloor > 1 || dm.PlayerHasAmulet())
 }
 
 // CanGoDownstairs checks if the player can go downstairs from current position
 func (dm *DungeonManager) CanGoDownstairs() bool {
 	level := dm.GetCurrentLevel()
 	tile := level.GetTile(dm.player.Position.X, dm.player.Position.Y)
-	return tile.Type == TileStairsDown && dm.currentFloor < MaxFloors
+	return tile != nil && tile.Type == TileStairsDown && dm.currentFloor < MaxFloors
 }
 
 // GetFloorDifficulty returns the difficulty scaling for the given floor
@@ -259,7 +297,10 @@ func (dm *DungeonManager) PlaceAmuletOfYendor() {
 		return
 	}
 
-	level := dm.GetCurrentLevel()
+	dm.placeAmuletOn(dm.GetCurrentLevel())
+}
+
+func (dm *DungeonManager) placeAmuletOn(level *Level) {
 	if len(level.Rooms) == 0 {
 		return
 	}
@@ -298,15 +339,15 @@ func (dm *DungeonManager) PlaceAmuletOfYendor() {
 			break
 		}
 		// 部屋内のランダムな位置を試す
-		x = largestRoom.X + rand.Intn(largestRoom.Width)
-		y = largestRoom.Y + rand.Intn(largestRoom.Height)
+		x = largestRoom.X + level.random().Intn(largestRoom.Width)
+		y = largestRoom.Y + level.random().Intn(largestRoom.Height)
 	}
 
 	amulet := item.NewAmulet(x, y)
 	level.Items = append(level.Items, amulet)
 
 	logger.Info("Placed Amulet of Yendor",
-		"floor", dm.currentFloor,
+		"floor", level.FloorNumber,
 		"x", x,
 		"y", y,
 		"room_size", largestRoom.Width*largestRoom.Height,
@@ -341,7 +382,7 @@ func (dm *DungeonManager) CheckVictoryCondition() bool {
 		// プレイヤーが上り階段にいる場合
 		level := dm.GetCurrentLevel()
 		tile := level.GetTile(dm.player.Position.X, dm.player.Position.Y)
-		if tile.Type == TileStairsUp {
+		if tile != nil && tile.Type == TileStairsUp {
 			logger.Info("Player has won the game!",
 				"floor", dm.currentFloor,
 				"has_amulet", dm.PlayerHasAmulet(),
@@ -378,7 +419,7 @@ func (dm *DungeonManager) GetFloorInfo() map[string]interface{} {
 
 // GetProgressInfo returns progress information for the 26-floor journey
 func (dm *DungeonManager) GetProgressInfo() map[string]interface{} {
-	progress := float64(dm.currentFloor) / float64(MaxFloors) * 100
+	progress := float64(dm.currentFloor*100) / float64(MaxFloors)
 
 	return map[string]interface{}{
 		"current_floor":    dm.currentFloor,

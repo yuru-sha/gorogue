@@ -194,6 +194,30 @@ func (s *GameScreen) showScrolls() {
 	s.AddMessage("Read which scroll? (a-z, ESC to cancel)")
 }
 
+// enterEatMode enters food selection mode.
+func (s *GameScreen) enterEatMode() {
+	for _, item := range s.player.Inventory.Items {
+		if item.Type == gameitem.ItemFood {
+			s.inputMode = ModeEat
+			s.showFood()
+			return
+		}
+	}
+	s.AddMessage("You have no food to eat.")
+}
+
+// showFood displays available food.
+func (s *GameScreen) showFood() {
+	s.AddMessage("Available food:")
+	for i, item := range s.player.Inventory.Items {
+		if item.Type == gameitem.ItemFood {
+			letter := rune('a' + i)
+			s.AddMessage(fmt.Sprintf("%c) %s", letter, s.player.IdentifyMgr.GetDisplayName(item)))
+		}
+	}
+	s.AddMessage("Eat which food? (a-z, ESC to cancel)")
+}
+
 // enterCLIMode enters CLI debug mode
 func (s *GameScreen) enterCLIMode() {
 	if s.cliMode == nil {

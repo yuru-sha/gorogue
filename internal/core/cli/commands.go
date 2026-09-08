@@ -22,6 +22,7 @@ type CLIMode struct {
 	IsActive bool
 	Level    *dungeon.Level
 	Player   *actor.Player
+	Dungeon  *dungeon.DungeonManager
 	Commands map[string]*Command
 }
 
@@ -35,10 +36,20 @@ type Command struct {
 
 // NewCLIMode creates a new CLI mode instance
 func NewCLIMode(level *dungeon.Level, player *actor.Player) *CLIMode {
+	return newCLIMode(level, player, nil)
+}
+
+// NewCLIModeWithDungeonManager creates a CLI bound to the shared dungeon state.
+func NewCLIModeWithDungeonManager(manager *dungeon.DungeonManager, player *actor.Player) *CLIMode {
+	return newCLIMode(manager.GetCurrentLevel(), player, manager)
+}
+
+func newCLIMode(level *dungeon.Level, player *actor.Player, manager *dungeon.DungeonManager) *CLIMode {
 	cli := &CLIMode{
 		IsActive: false,
 		Level:    level,
 		Player:   player,
+		Dungeon:  manager,
 		Commands: make(map[string]*Command),
 	}
 
@@ -398,8 +409,14 @@ func (c *CLIMode) levelCommand(args []string) string {
 		return "Invalid floor number"
 	}
 
-	// TODO: Implement level changing
-	return fmt.Sprintf("Level change to floor %d (TODO: implement)", floor)
+	if c.Dungeon == nil {
+		return "Dungeon navigation is unavailable"
+	}
+	if !c.Dungeon.MoveToFloor(floor) {
+		return fmt.Sprintf("Cannot move to floor %d", floor)
+	}
+	c.Level = c.Dungeon.GetCurrentLevel()
+	return fmt.Sprintf("Moved to floor %d", floor)
 }
 
 // identifyCommand identifies items
@@ -428,8 +445,14 @@ func (c *CLIMode) mapCommand(args []string) string {
 	}
 
 	if args[0] == "reveal" {
-		// TODO: Implement map revelation
-		return "Map revealed (TODO: implement)"
+		for y := 0; y < c.Level.Height; y++ {
+			for x := 0; x < c.Level.Width; x++ {
+				if tile := c.Level.GetTile(x, y); tile != nil {
+					tile.Visible = true
+				}
+			}
+		}
+		return "Map revealed"
 	}
 
 	return "Usage: map [info|reveal]"

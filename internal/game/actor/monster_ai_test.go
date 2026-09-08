@@ -2,10 +2,26 @@ package actor
 
 import (
 	"fmt"
+	"sort"
 	"testing"
 
 	"github.com/yuru-sha/gorogue/internal/core/entity"
 )
+
+func TestValidMonsterTypesAreStableAndFloorBound(t *testing.T) {
+	for floor := 1; floor <= 26; floor++ {
+		types := GetValidMonsterTypesForFloor(floor)
+		if !sort.SliceIsSorted(types, func(i, j int) bool { return types[i] < types[j] }) {
+			t.Fatalf("floor %d monster types are not sorted: %q", floor, string(types))
+		}
+		for _, symbol := range types {
+			monsterType := MonsterTypes[symbol]
+			if floor < monsterType.MinFloor || floor > monsterType.MaxFloor {
+				t.Errorf("floor %d contains invalid monster %c", floor, symbol)
+			}
+		}
+	}
+}
 
 // MockLevelCollisionChecker is a mock implementation for testing
 type MockLevelCollisionChecker struct {

@@ -1,10 +1,6 @@
 package dungeon
 
-import (
-	"math/rand"
-
-	"github.com/yuru-sha/gorogue/internal/utils/logger"
-)
+import "github.com/yuru-sha/gorogue/internal/utils/logger"
 
 // DoorPlacer handles door placement in the dungeon
 type DoorPlacer struct {
@@ -36,7 +32,7 @@ func (d *DoorPlacer) placeDoorForRoom(roomIndex int, room *Room) {
 
 	for _, pos := range doorPositions {
 		// 15%の確率で秘密のドアを作成
-		if rand.Float64() < 0.15 {
+		if d.level.random().Float64() < 0.15 {
 			d.level.SetTile(pos.X, pos.Y, TileSecretDoor)
 			logger.Debug("Placed secret door",
 				"room", roomIndex,
@@ -125,22 +121,22 @@ func (d *DoorPlacer) isInsideRoom(x, y int, room *Room) bool {
 // PlaceSecretDoor places a secret door for a special room
 func (d *DoorPlacer) PlaceSecretDoor(room *Room) {
 	// 部屋の4辺のいずれかにランダムに秘密のドアを配置
-	side := rand.Intn(4)
+	side := d.level.random().Intn(4)
 	var x, y int
 
 	switch side {
 	case 0: // 上辺
-		x = room.X + rand.Intn(room.Width)
+		x = room.X + d.level.random().Intn(room.Width)
 		y = room.Y - 1
 	case 1: // 右辺
 		x = room.X + room.Width
-		y = room.Y + rand.Intn(room.Height)
+		y = room.Y + d.level.random().Intn(room.Height)
 	case 2: // 下辺
-		x = room.X + rand.Intn(room.Width)
+		x = room.X + d.level.random().Intn(room.Width)
 		y = room.Y + room.Height
 	case 3: // 左辺
 		x = room.X - 1
-		y = room.Y + rand.Intn(room.Height)
+		y = room.Y + d.level.random().Intn(room.Height)
 	}
 
 	if d.level.IsInBounds(x, y) {

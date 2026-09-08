@@ -1,6 +1,8 @@
 package core
 
 import (
+	"time"
+
 	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/state"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
@@ -32,18 +34,23 @@ type Engine struct {
 
 // NewEngine creates and initializes a new game engine
 func NewEngine() *Engine {
+	return NewEngineWithSeed(time.Now().UnixNano())
+}
+
+// NewEngineWithSeed creates an engine with reproducible game randomness.
+func NewEngineWithSeed(seed int64) *Engine {
 	// グリッドの初期化
 	grid := gruid.NewGrid(screenWidth, screenHeight)
 
 	// プレイヤーの生成（仮位置、後でダンジョンマネージャーが適切な位置に配置）
-	player := actor.NewPlayer(0, 0)
+	player := actor.NewPlayerWithSeed(0, 0, seed)
 	logger.Debug("Created player",
 		"x", player.Position.X,
 		"y", player.Position.Y,
 	)
 
 	// ダンジョンマネージャーの生成
-	dungeonManager := dungeon.NewDungeonManager(player)
+	dungeonManager := dungeon.NewDungeonManagerWithSeed(player, seed)
 
 	// プレイヤーを最初の部屋の中央に配置
 	level := dungeonManager.GetCurrentLevel()

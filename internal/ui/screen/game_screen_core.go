@@ -23,21 +23,22 @@ const (
 	ModeDrop
 	ModeQuaff
 	ModeRead
+	ModeEat
 	ModeCLI
 	ModeDirection
 )
 
 // GameScreen handles the main game display
 type GameScreen struct {
-	width, height   int
-	player          *actor.Player
-	level           *dungeon.Level
-	dungeonManager  *dungeon.DungeonManager
-	messages        []string
-	lastStats       map[string]interface{} // 前回のステータス情報
-	grid            gruid.Grid             // 画面全体のグリッド
-	wizardMode      *wizard.WizardMode     // ウィザードモード
-	cliMode         *cli.CLIMode           // CLIデバッグモード
+	width, height     int
+	player            *actor.Player
+	level             *dungeon.Level
+	dungeonManager    *dungeon.DungeonManager
+	messages          []string
+	lastStats         map[string]interface{} // 前回のステータス情報
+	grid              gruid.Grid             // 画面全体のグリッド
+	wizardMode        *wizard.WizardMode     // ウィザードモード
+	cliMode           *cli.CLIMode           // CLIデバッグモード
 	inputMode         InputMode              // 現在の入力モード
 	equippableItems   []*gameitem.Item       // 装備可能アイテムリスト
 	cliBuffer         string                 // CLI入力バッファ
@@ -63,7 +64,7 @@ func NewGameScreen(width, height int, player *actor.Player) *GameScreen {
 	}
 
 	// PyRogue風の初期メッセージを追加
-	screen.AddMessage("Welcome to PyRogue!")
+	screen.AddMessage("Welcome to GoRogue!")
 	screen.AddMessage("Use vi keys (hjkl), arrow keys, or numpad (1-9) to move.")
 	screen.AddMessage("You are a skilled warrior.")
 	screen.AddMessage("You are equipped with a dagger and leather armor.")
@@ -82,7 +83,11 @@ func NewGameScreen(width, height int, player *actor.Player) *GameScreen {
 func (s *GameScreen) SetLevel(level *dungeon.Level) {
 	s.level = level
 	s.wizardMode = wizard.NewWizardMode(level, s.player)
-	s.cliMode = cli.NewCLIMode(level, s.player)
+	if s.dungeonManager != nil {
+		s.cliMode = cli.NewCLIModeWithDungeonManager(s.dungeonManager, s.player)
+	} else {
+		s.cliMode = cli.NewCLIMode(level, s.player)
+	}
 	logger.Debug("Set dungeon level for game screen",
 		"width", level.Width,
 		"height", level.Height,
@@ -92,6 +97,18 @@ func (s *GameScreen) SetLevel(level *dungeon.Level) {
 // SetDungeonManager sets the dungeon manager for the game screen
 func (s *GameScreen) SetDungeonManager(dm *dungeon.DungeonManager) {
 	s.dungeonManager = dm
+	if dm != nil {
+		s.level = dm.GetCurrentLevel()
+		if s.wizardMode != nil {
+			s.wizardMode.SetLevel(s.level)
+		}
+		if s.cliMode == nil {
+			s.cliMode = cli.NewCLIModeWithDungeonManager(dm, s.player)
+		} else {
+			s.cliMode.Dungeon = dm
+			s.cliMode.SetLevel(s.level)
+		}
+	}
 	logger.Debug("Set dungeon manager for game screen")
 }
 

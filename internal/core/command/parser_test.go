@@ -22,6 +22,7 @@ func TestParser_BasicMovement(t *testing.T) {
 
 		// Diagonal movement
 		{"y", CmdMoveNorthWest, Direction{X: -1, Y: -1}},
+		{"u", CmdMoveNorthEast, Direction{X: 1, Y: -1}},
 		{"b", CmdMoveSouthWest, Direction{X: -1, Y: 1}},
 		{"n", CmdMoveSouthEast, Direction{X: 1, Y: 1}},
 
@@ -52,18 +53,22 @@ func TestParser_ActionCommands(t *testing.T) {
 		key      gruid.Key
 		expected Type
 	}{
-		// Basic actions - PyRogue style
+		// Actions must not shadow movement keys.
 		{"i", CmdInventory},
 		{"g", CmdPickUp},
 		{",", CmdPickUp},
-		{"u", CmdUse},
-		{"e", CmdEquip},
-		{"r", CmdUnequip},
-		{"d", CmdDisarm},
+		{"d", CmdDrop},
+		{"a", CmdUse},
+		{"z", CmdUse},
+		{"q", CmdQuaff},
+		{"r", CmdRead},
+		{"w", CmdWield},
+		{"t", CmdTakeOff},
+		{"e", CmdEat},
 		{"o", CmdOpen},
 		{"c", CmdClose},
 		{"s", CmdSearch},
-		{"z", CmdUse},
+		{"D", CmdDisarm},
 		{"f", CmdFight},
 		{"x", CmdLook},
 		{gruid.KeyTab, CmdToggleFOV},
@@ -78,7 +83,6 @@ func TestParser_ActionCommands(t *testing.T) {
 
 		// System
 		{"Q", CmdQuit},
-		{"S", CmdQuit},
 		{"?", CmdHelp},
 		{gruid.KeyEscape, CmdEscape},
 	}
