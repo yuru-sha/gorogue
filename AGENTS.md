@@ -1,65 +1,65 @@
 # AGENTS.md
 
-GoRogueで作業するエージェント向けの運用規約。ゲーム要件は [SPEC.md](SPEC.md)、実装の詳細はコードと関連ドキュメントを参照する。
+Operational guidelines for agents working on GoRogue. Game requirements are defined in [SPEC.md](SPEC.md); refer to the code and related documentation for implementation details.
 
 ## Sources of truth
 
-作業開始時に、対象に応じて次を読む。
+At the start of a task, read the following as relevant:
 
-- 要件、範囲、除外、受け入れ条件: [SPEC.md](SPEC.md)
-- 現在のアーキテクチャ: [docs/architecture.md](docs/architecture.md)
-- 開発コマンド: [docs/development.md](docs/development.md)、[Makefile](Makefile)、[go.mod](go.mod)
-- 実際の挙動: `cmd/`、`internal/`、`*_test.go`
+- Requirements, scope, exclusions, and acceptance criteria: [SPEC.md](SPEC.md)
+- Current architecture: [docs/architecture.md](docs/architecture.md)
+- Development commands: [docs/development.md](docs/development.md), [Makefile](Makefile), and [go.mod](go.mod)
+- Actual behavior: `cmd/`, `internal/`, and `*_test.go`
 
-`SPEC.md`をゲーム要件の正とする。`docs/`の記述が実装やテストと異なる場合、現在の挙動はコードとテストを基準にする。要件を変える必要がある場合は、実装より先に`SPEC.md`と受け入れ条件を更新する。
+Treat `SPEC.md` as the source of truth for game requirements. If the documentation under `docs/` differs from the implementation or tests, use the code and tests as the authority for current behavior. If the requirements need to change, update `SPEC.md` and the acceptance criteria before changing the implementation.
 
 ## Workflow
 
-1. `rtk git status --short --branch`と差分を確認し、既存のユーザー変更を保持する。
-2. 関係する`SPEC.md`の節、呼び出し元、関連テストを読む。
-3. 既存の型・ヘルパー・依存関係を再利用し、仕様に必要な最小範囲だけ変更する。
-4. 変更後に対象テストと`rtk go test ./...`を実行する。開発ツールが揃っている場合は`rtk make ci-checks`も実行する。
-5. 最終差分、ワークツリー、検証結果、残るリスクを確認してから報告する。
+1. Check `rtk git status --short --branch` and the diff, preserving existing user changes.
+2. Read the relevant sections of `SPEC.md`, callers, and related tests.
+3. Reuse existing types, helpers, and dependencies; make only the smallest change required by the specification.
+4. After making changes, run the target tests and `rtk go test ./...`. If the development tools are available, also run `rtk make ci-checks`.
+5. Check the final diff, worktree, verification results, and remaining risks before reporting completion.
 
 ## Safety boundaries
 
-- 変更対象はこのリポジトリに限る。外部サービス、GitHub、認証情報、ブラウザ、実機は明示的に依頼された場合だけ操作する。
-- 明示的に依頼されるまで、コミット、プッシュ、ブランチ作成、PR、マージ、リリースを行わない。
-- `rm -rf`、強制プッシュ、履歴書き換え、データベースリセットなど、復旧しにくい操作は行わない。
-- 秘密情報、トークン、認証情報、個人情報を出力・コミット・送信しない。`.env`は値を表示せずに使用できる。
-- 生成物、バイナリ、カバレッジ、ロックファイル、未追跡ファイルを変更する前に、対象範囲を確認する。
-- シェルコマンドは`rtk`経由で実行し、ファイル編集は`apply_patch`を使う。
+- Keep changes within this repository. Operate external services, GitHub, credentials, browsers, or physical devices only when explicitly requested.
+- Do not create commits, push, create branches, open pull requests, merge, or release until explicitly requested.
+- Do not perform difficult-to-recover operations such as `rm -rf`, force-pushing, rewriting history, or resetting a database.
+- Do not print, commit, or transmit secrets, tokens, credentials, or personal information. `.env` may be used without displaying its values.
+- Confirm the intended scope before modifying generated files, binaries, coverage data, lockfiles, or untracked files.
+- Run shell commands through `rtk` and use `apply_patch` for file edits.
 
 ## Project constraints
 
-- `go.mod`のGoバージョンと既存のGo Modules依存関係を基準にする。新しい依存関係やフレームワークは、必要性と代替案を説明してから追加する。
-- `SPEC.md`のGoRogue要件と除外事項に従い、隣接する未依頼機能を追加しない。
-- ゲームルールは`internal/core/`と`internal/game/`に集約し、`cmd/`や`internal/ui/`にCLI・GUI固有の重複ルールを追加しない。コマンド処理は既存の`internal/core/command/`と共有経路を優先する。
-- ダンジョン生成、戦闘、配置の乱数はゲームが管理する乱数源を使い、同じシードと入力列の再現性を維持する。
-- セーブ形式を変更する場合は`internal/game/save/`の`SaveVersion`、互換性チェック、変換処理、テストを同時に更新する。
-- Goコードは`gofmt`の形式と既存パッケージ構成に従う。公開APIは必要な場合を除いて壊さない。
+- Follow the Go version and existing Go Modules dependencies specified by `go.mod`. Explain the need and alternatives before adding a new dependency or framework.
+- Follow the GoRogue requirements and exclusions in `SPEC.md`; do not add adjacent features that were not requested.
+- Keep game rules in `internal/core/` and `internal/game/`. Do not duplicate CLI- or GUI-specific rules in `cmd/` or `internal/ui/`; prefer the existing shared command path in `internal/core/command/`.
+- Use the game-managed random source for dungeon generation, combat, and placement, preserving reproducibility for the same seed and input sequence.
+- When changing the save format, update `SaveVersion`, compatibility checks, conversion logic, and tests in `internal/game/save/` together.
+- Follow `gofmt` and the existing Go package structure. Do not break public APIs unless necessary.
 
 ## Definition of done
 
-次を満たすまで完了と報告しない。
+Do not report completion until all of the following are satisfied:
 
-- 差分が`SPEC.md`の要件・除外事項を満たす。
-- 対象テストと可能なら`rtk go test ./...`、`rtk go vet ./...`、`rtk make ci-checks`が成功する。
-- 影響を受けるシード、セーブ/ロード、勝敗、CLI/GUI共有ルールの境界を確認する。
-- コード、コマンド、設定、公開APIを変えた場合は関連ドキュメントを更新する。
-- `rtk git diff --check`が成功し、秘密情報や意図しない変更・未追跡ファイルがない。
-- GUI、SDL2、OS差異、外部CIを検証していない場合は、その範囲を明記する。
+- The diff meets the requirements and exclusions in `SPEC.md`.
+- The target tests and, where possible, `rtk go test ./...`, `rtk go vet ./...`, and `rtk make ci-checks` pass.
+- The affected seed, save/load, win/loss, and shared CLI/GUI rule boundaries have been checked.
+- Related documentation is updated when code, commands, configuration, or public APIs change.
+- `rtk git diff --check` passes, with no secrets, unintended changes, or untracked files.
+- Any unverified GUI, SDL2, OS-specific, or external CI behavior is explicitly reported.
 
 ## Verification entry point
 
 ```bash
 rtk go test ./...
 rtk go vet ./...
-rtk make ci-checks  # 開発ツールとセットアップ済みの場合
+rtk make ci-checks  # when the development tools are installed
 ```
 
-`make ci-checks`は`make lint`と`make test`を実行する。`make setup`や`make setup-dev`は依存関係・開発ツール・SDL2環境を変更するため、必要な場合だけ実行する。
+`make ci-checks` runs `make lint` and `make test`. Run `make setup` or `make setup-dev` only when necessary, because they change dependencies, development tools, or the SDL2 environment.
 
 ## Git
 
-ステージ済み、未ステージ、未追跡のユーザー変更を整理・削除・stashしない。レビュー指摘や検証失敗への恒久対応は、テスト、検証コマンド、ドキュメントのうち最小の適切な場所に追加する。
+Do not reorganize, delete, or stash staged, unstaged, or untracked user changes. Add permanent fixes for review comments or verification failures to the smallest appropriate place among the tests, verification commands, and documentation.
