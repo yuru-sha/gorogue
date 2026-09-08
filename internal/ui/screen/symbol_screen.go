@@ -119,27 +119,7 @@ func (s *SymbolScreen) Draw(grid *gruid.Grid) {
 	y := startY
 	for i := 0; i < len(symbolExplanations)/2 && y < s.height-3; i++ {
 		sym := symbolExplanations[i]
-
-		// シンボル (色付き)
-		symbolStyle := gruid.Style{Fg: 0xFFFFFF}
-		switch sym.symbol[0] {
-		case '@':
-			symbolStyle.Fg = 0x00FF00 // プレイヤーは緑
-		case ')', ']', '!', '?', '/', '=', ',', ':', '*':
-			symbolStyle.Fg = 0xFFFF00 // アイテムは黄色
-		case 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-			'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z':
-			symbolStyle.Fg = 0xFF0000 // モンスターは赤
-		case '%':
-			symbolStyle.Fg = 0x00FFFF // 階段はシアン
-		case '^':
-			symbolStyle.Fg = 0xFF00FF // トラップはマゼンタ
-		}
-
-		// フォーマット: "A giant ant"
-		text := sym.symbol + " " + sym.name
-		s.drawText(grid, leftCol, y, text[:1], symbolStyle)
-		s.drawText(grid, leftCol+1, y, text[1:], gruid.Style{Fg: 0xCCCCCC})
+		s.drawSymbol(grid, leftCol, y, sym.symbol, sym.name)
 
 		y++
 	}
@@ -148,27 +128,7 @@ func (s *SymbolScreen) Draw(grid *gruid.Grid) {
 	y = startY
 	for i := len(symbolExplanations) / 2; i < len(symbolExplanations) && y < s.height-3; i++ {
 		sym := symbolExplanations[i]
-
-		// シンボル (色付き)
-		symbolStyle := gruid.Style{Fg: 0xFFFFFF}
-		switch sym.symbol[0] {
-		case '@':
-			symbolStyle.Fg = 0x00FF00
-		case ')', ']', '!', '?', '/', '=', ',', ':', '*':
-			symbolStyle.Fg = 0xFFFF00
-		case 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-			'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z':
-			symbolStyle.Fg = 0xFF0000
-		case '%':
-			symbolStyle.Fg = 0x00FFFF
-		case '^':
-			symbolStyle.Fg = 0xFF00FF
-		}
-
-		// フォーマット: "A giant ant"
-		text := sym.symbol + " " + sym.name
-		s.drawText(grid, rightCol, y, text[:1], symbolStyle)
-		s.drawText(grid, rightCol+1, y, text[1:], gruid.Style{Fg: 0xCCCCCC})
+		s.drawSymbol(grid, rightCol, y, sym.symbol, sym.name)
 
 		y++
 	}
@@ -179,6 +139,27 @@ func (s *SymbolScreen) Draw(grid *gruid.Grid) {
 	s.drawText(grid, helpX, s.height-2, helpText, gruid.Style{Fg: 0x808080})
 
 	logger.Trace("Symbol screen drawn")
+}
+
+func (s *SymbolScreen) drawSymbol(grid *gruid.Grid, x, y int, symbol, name string) {
+	symbolStyle := gruid.Style{Fg: 0xFFFFFF}
+	switch symbol[0] {
+	case '@':
+		symbolStyle.Fg = 0x00FF00 // プレイヤーは緑
+	case ')', ']', '!', '?', '/', '=', ',', ':', '*':
+		symbolStyle.Fg = 0xFFFF00 // アイテムは黄色
+	case 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+		'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z':
+		symbolStyle.Fg = 0xFF0000 // モンスターは赤
+	case '%':
+		symbolStyle.Fg = 0x00FFFF // 階段はシアン
+	case '^':
+		symbolStyle.Fg = 0xFF00FF // トラップはマゼンタ
+	}
+
+	text := symbol + " " + name
+	s.drawText(grid, x, y, text[:1], symbolStyle)
+	s.drawText(grid, x+1, y, text[1:], gruid.Style{Fg: 0xCCCCCC})
 }
 
 // drawText draws text at the specified position with the given style
