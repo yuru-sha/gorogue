@@ -344,6 +344,7 @@ func (sc *SaveConverter) convertSaveFloor(saveFloor Floor) (*dungeon.Level, erro
 					tileType = dungeon.TileWall // Default to wall
 				}
 				tile := dungeon.NewTile(tileType)
+				tile.Explored = saveTile.Explored
 				tile.Visible = saveTile.Visible
 				level.Tiles[y][x] = tile
 			} else {

@@ -7,6 +7,7 @@ import (
 	"github.com/yuru-sha/gorogue/internal/core/state"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
+	"github.com/yuru-sha/gorogue/internal/game/save"
 	"github.com/yuru-sha/gorogue/internal/game/score"
 	uiscreen "github.com/yuru-sha/gorogue/internal/ui/screen"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
@@ -51,6 +52,11 @@ func NewEngineWithSeed(seed int64) *Engine {
 
 	// ダンジョンマネージャーの生成
 	dungeonManager := dungeon.NewDungeonManagerWithSeed(player, seed)
+	saveIntegration := save.NewSaveGameIntegration()
+	if err := saveIntegration.Initialize(); err != nil {
+		logger.Warn("Failed to initialize save integration", "error", err)
+	}
+	saveIntegration.SetGameState(player, dungeonManager)
 
 	// プレイヤーを最初の部屋の中央に配置
 	level := dungeonManager.GetCurrentLevel()
@@ -73,6 +79,7 @@ func NewEngineWithSeed(seed int64) *Engine {
 	menuScreen := uiscreen.NewMenuScreen(screenWidth, screenHeight)
 	helpScreen := uiscreen.NewHelpScreen(screenWidth, screenHeight)
 	symbolScreen := uiscreen.NewSymbolScreen(screenWidth, screenHeight)
+	saveLoadScreen := uiscreen.NewSaveLoadScreenWithIntegration(screenWidth, screenHeight, saveIntegration)
 
 	// ゲームオーバー・勝利画面（初期は空のスコアエントリーで作成）
 	gameOverScreen := uiscreen.NewGameOverScreen(screenWidth, screenHeight, nil)
@@ -88,6 +95,7 @@ func NewEngineWithSeed(seed int64) *Engine {
 	stateManager.RegisterState(state.StateGameOver, gameOverScreen)
 	stateManager.RegisterState(state.StateVictory, victoryScreen)
 	stateManager.RegisterState(state.StateSymbol, symbolScreen)
+	stateManager.RegisterState(state.StateSaveLoad, saveLoadScreen)
 
 	// メニュー状態で開始
 	stateManager.SetState(state.StateMenu)
@@ -105,8 +113,18 @@ func NewEngineWithSeed(seed int64) *Engine {
 		symbolScreen:   symbolScreen,
 		msgs:           make([]gruid.Msg, 0),
 	}
+	saveLoadScreen.SetOnLoad(engine.restoreLoadedGame)
 
 	return engine
+}
+
+func (e *Engine) restoreLoadedGame(player *actor.Player, dungeonManager *dungeon.DungeonManager) {
+	e.player = player
+	e.dungeonManager = dungeonManager
+	e.gameScreen = uiscreen.NewGameScreen(screenWidth, screenHeight, player)
+	e.gameScreen.SetLevel(dungeonManager.GetCurrentLevel())
+	e.gameScreen.SetDungeonManager(dungeonManager)
+	e.stateManager.RegisterState(state.StateGame, e.gameScreen)
 }
 
 // Update implements gruid.Model.Update

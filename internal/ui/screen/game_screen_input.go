@@ -365,6 +365,7 @@ func (s *GameScreen) handleEatInput(key gruid.Key) state.GameState {
 					s.player.EatFood(item.Value)
 					s.player.Inventory.RemoveItem(index)
 					s.AddMessage(fmt.Sprintf("You ate %s.", s.player.IdentifyMgr.GetDisplayName(item)))
+					s.level.UpdateMonsters(s.player)
 				} else {
 					s.AddMessage("You can't eat that!")
 				}

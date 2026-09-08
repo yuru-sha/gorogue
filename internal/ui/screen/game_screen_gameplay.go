@@ -220,19 +220,16 @@ func (s *GameScreen) canGoDownstairs() bool {
 func (s *GameScreen) doOpenDoor(dx, dy int) {
 	targetX := s.player.Position.X + dx
 	targetY := s.player.Position.Y + dy
-	
-	// Check if the target is a closed door
+
+	// Generated doors use TileDoor; saved/legacy games may use TileDoorClosed.
 	tile := s.level.GetTile(targetX, targetY)
-	if tile != nil && tile.Type == dungeon.TileDoorClosed {
-		// Open the door
-		tile.Type = dungeon.TileDoorOpen
-		tile.Rune = '/'
-		tile.IsWalkable = true
+	if tile != nil && (tile.Type == dungeon.TileDoor || tile.Type == dungeon.TileDoorClosed) {
+		s.level.SetTile(targetX, targetY, dungeon.TileOpenDoor)
 		s.AddMessage("You open the door.")
-		
+
 		// Let monsters take their turn
 		s.level.UpdateMonsters(s.player)
-	} else if tile != nil && tile.Type == dungeon.TileDoorOpen {
+	} else if tile != nil && (tile.Type == dungeon.TileDoorOpen || tile.Type == dungeon.TileOpenDoor) {
 		s.AddMessage("The door is already open.")
 	} else {
 		s.AddMessage("There is no door there.")
@@ -243,10 +240,10 @@ func (s *GameScreen) doOpenDoor(dx, dy int) {
 func (s *GameScreen) doCloseDoor(dx, dy int) {
 	targetX := s.player.Position.X + dx
 	targetY := s.player.Position.Y + dy
-	
-	// Check if the target is an open door
+
+	// Accept both open-door representations from generated and saved levels.
 	tile := s.level.GetTile(targetX, targetY)
-	if tile != nil && tile.Type == dungeon.TileDoorOpen {
+	if tile != nil && (tile.Type == dungeon.TileDoorOpen || tile.Type == dungeon.TileOpenDoor) {
 		// Check if there's a monster or item in the doorway
 		if s.level.GetMonsterAt(targetX, targetY) != nil {
 			s.AddMessage("There's a monster in the doorway!")
@@ -264,16 +261,14 @@ func (s *GameScreen) doCloseDoor(dx, dy int) {
 			s.AddMessage("There's something in the doorway!")
 			return
 		}
-		
-		// Close the door
-		tile.Type = dungeon.TileDoorClosed
-		tile.Rune = '+'
-		tile.IsWalkable = false
+
+		// Close the door using the generator's representation.
+		s.level.SetTile(targetX, targetY, dungeon.TileDoor)
 		s.AddMessage("You close the door.")
-		
+
 		// Let monsters take their turn
 		s.level.UpdateMonsters(s.player)
-	} else if tile != nil && tile.Type == dungeon.TileDoorClosed {
+	} else if tile != nil && (tile.Type == dungeon.TileDoor || tile.Type == dungeon.TileDoorClosed) {
 		s.AddMessage("The door is already closed.")
 	} else {
 		s.AddMessage("There is no door there.")

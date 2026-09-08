@@ -7,6 +7,8 @@ import (
 
 	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/state"
+	"github.com/yuru-sha/gorogue/internal/game/actor"
+	"github.com/yuru-sha/gorogue/internal/game/dungeon"
 	"github.com/yuru-sha/gorogue/internal/game/save"
 )
 
@@ -26,7 +28,9 @@ type SaveLoadScreen struct {
 	selected int
 
 	// Save system integration
-	saveManager *save.SaveManager
+	saveManager     *save.SaveManager
+	saveIntegration *save.SaveGameIntegration
+	onLoad          func(*actor.Player, *dungeon.DungeonManager)
 
 	// UI state
 	message      string
@@ -64,6 +68,22 @@ func NewSaveLoadScreen(width, height int, saveManager *save.SaveManager) *SaveLo
 		colorSuccess:   gruid.Color(0x00FF00), // Green
 		colorEmpty:     gruid.Color(0x808080), // Gray
 	}
+}
+
+// NewSaveLoadScreenWithIntegration creates a save/load screen connected to a game state.
+func NewSaveLoadScreenWithIntegration(width, height int, integration *save.SaveGameIntegration) *SaveLoadScreen {
+	if integration == nil {
+		return NewSaveLoadScreen(width, height, save.NewSaveManager())
+	}
+
+	screen := NewSaveLoadScreen(width, height, integration.GetSaveManager())
+	screen.saveIntegration = integration
+	return screen
+}
+
+// SetOnLoad registers the callback used to apply loaded state to the engine.
+func (s *SaveLoadScreen) SetOnLoad(callback func(*actor.Player, *dungeon.DungeonManager)) {
+	s.onLoad = callback
 }
 
 // SetMode sets the screen mode
@@ -143,9 +163,15 @@ func (s *SaveLoadScreen) handleSelection() state.GameState {
 
 // performSave performs save operation
 func (s *SaveLoadScreen) performSave() state.GameState {
-	// TODO: Get save data from game context
-	// For now, just show a message
-	s.setMessage("Save functionality not yet implemented", s.colorError)
+	if s.saveIntegration == nil {
+		s.setMessage("Save integration is not configured", s.colorError)
+		return state.StateGame
+	}
+	if err := s.saveIntegration.SaveGame(); err != nil {
+		s.setMessage(fmt.Sprintf("Save failed: %v", err), s.colorError)
+		return state.StateGame
+	}
+	s.setMessage("Game saved", s.colorSuccess)
 	return state.StateGame
 }
 
@@ -156,9 +182,18 @@ func (s *SaveLoadScreen) performLoad() state.GameState {
 		return state.StateGame
 	}
 
-	// TODO: Load game data and restore game state
-	// For now, just show a message
-	s.setMessage("Load functionality not yet implemented", s.colorError)
+	if s.saveIntegration == nil || s.onLoad == nil {
+		s.setMessage("Load integration is not configured", s.colorError)
+		return state.StateGame
+	}
+	if err := s.saveIntegration.LoadGame(); err != nil {
+		s.setMessage(fmt.Sprintf("Load failed: %v", err), s.colorError)
+		return state.StateGame
+	}
+
+	player, dungeonManager := s.saveIntegration.GetGameState()
+	s.onLoad(player, dungeonManager)
+	s.setMessage("Game loaded", s.colorSuccess)
 	return state.StateGame
 }
 

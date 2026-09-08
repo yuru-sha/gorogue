@@ -421,7 +421,7 @@ func ConvertLevelToSave(level *dungeon.Level) *Floor {
 			if tile != nil {
 				saveFloor.Tiles[y][x] = Tile{
 					Type:     ConvertTileTypeToString(tile.Type),
-					Explored: true, // Placeholder - would need visibility system
+					Explored: tile.Explored,
 					Lit:      true, // Placeholder - would need lighting system
 					Visible:  tile.Visible,
 				}

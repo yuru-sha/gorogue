@@ -131,6 +131,29 @@ func TestSaveConverter_ConvertTileTypeToString(t *testing.T) {
 	}
 }
 
+func TestSaveConverterPreservesExploredState(t *testing.T) {
+	level := &dungeon.Level{
+		Width:       1,
+		Height:      1,
+		FloorNumber: 1,
+		Tiles:       [][]*dungeon.Tile{{dungeon.NewTile(dungeon.TileFloor)}},
+	}
+	level.Tiles[0][0].Explored = false
+
+	saved := ConvertLevelToSave(level)
+	if saved.Tiles[0][0].Explored {
+		t.Fatal("unexplored tile was saved as explored")
+	}
+
+	restored, err := NewSaveConverter().convertSaveFloor(*saved)
+	if err != nil {
+		t.Fatalf("convertSaveFloor() error = %v", err)
+	}
+	if restored.Tiles[0][0].Explored {
+		t.Fatal("unexplored tile was restored as explored")
+	}
+}
+
 // TestSaveConverter_ConvertAIStateToString tests AI state conversion
 func TestSaveConverter_ConvertAIStateToString(t *testing.T) {
 	testCases := []struct {
