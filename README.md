@@ -1,131 +1,111 @@
 # GoRogue
+
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/yuru-sha/gorogue)
 
-Go言語とGruidライブラリを使用して実装された本格的なローグライクゲームです。[PyRogue](https://github.com/yuru-sha/pyrogue)を参考にしたオリジナルのRogue実装です。
+[日本語版 README](README.ja.md)
 
-## 特徴
+GoRogue is a Go implementation of the classic Rogue-style dungeon crawler. It is inspired by [PyRogue](https://github.com/yuru-sha/pyrogue) and uses [gruid](https://github.com/anaseto/gruid) with SDL2 for the graphical frontend.
 
-- **本格的なローグライク**: 手続き生成ダンジョン、ターンベース戦闘、パーマデス
-- **SDL2グラフィックス**: 美しいタイル描画とカラー表示
-- **豊富なゲームプレイ**: 多様なモンスター、アイテム、戦闘システム
-- **ウィザードモード**: 開発・デバッグ用の特別機能
+## Current scope
 
-## 操作方法
+The product requirements and acceptance criteria are defined in [`SPEC.md`](SPEC.md). The current implementation includes:
 
-### 基本移動
-- **カーソルキー**: ↑↓←→
-- **viキー**: hjkl
-- **8方向移動**: yubn（斜め移動）
+- A 26-floor, procedurally generated dungeon with seeded generation.
+- Turn-based movement and combat with permadeath.
+- Weapons, armor, food, potions, scrolls, wands, rings, gold, and the Amulet of Yendor.
+- Item identification and equipment management.
+- Victory by returning the Amulet of Yendor to the surface.
+- JSON save/load with save format version `1.1.0`.
+- SDL2 GUI, CLI, and seed-aware game APIs.
 
-### その他の操作
-- **停止・休憩**: `.` または Space
-- **食べる**: `e`
-- **薬を飲む**: `q`
-- **巻物を読む**: `r`
-- **装備・解除**: `w` / `t`
-- **終了**: `Q` または Escape
-- **戦闘**: モンスターに移動で自動攻撃
-- **アイテム取得**: アイテムの上を通ると自動取得
+Some legacy design documents describe features that are not part of the current scope. See [`docs/architecture.md`](docs/architecture.md) and [`docs/development.md`](docs/development.md) for the current implementation boundaries.
 
-### ウィザードモード
-- **起動**: `W`キー（大文字）
-- **ヘルプ**: `h`
-- **ゴールド**: `g` - 1000ゴールド取得
-- **レベルアップ**: `l` - 即座にレベルアップ
-- **完全回復**: `r` - HPを最大まで回復
-- **満腹**: `f` - 空腹度を最大に
-- **全モンスター撃破**: `k` - レベル内の全モンスターを倒す
-- **ステータス表示**: `s` - 詳細なステータス情報
-- **アイテム作成**: `i` - プレイヤーの位置にアイテム作成
-- **テレポート**: `t` - 他の部屋にテレポート
-- **視界切替**: `v` - 全タイルの視界を切り替え
-- **終了**: `W`キー（再度押すとオフ）
+## Requirements
 
-## ビルドと実行
+- Go 1.24.5 or later
+- `make`
+- `pkg-config`
+- SDL2 development libraries
+
+On macOS with Homebrew:
 
 ```bash
-# 開発環境のセットアップ
+brew install pkg-config sdl2
+```
+
+## Build and run
+
+```bash
+# Set up Go tools and verify SDL2
 make setup-dev
 
-# ビルド
+# Build the SDL2 GUI
 make build
-
-# 実行
 make run
 
-# 固定シードでCLIを起動（同じ入力列を再現可能）
-go run ./cmd/gorogue-cli -seed 12345
-
-# クリーンアップ
-make clean
+# Run the CLI with a reproducible seed
+go run ./cmd/gorogue-cli --seed 12345
 ```
 
-## 必要な依存関係
+The GUI chooses a seed automatically. Passing the same seed and input sequence to the CLI or API reproduces the same generated game state where the current save/runtime boundaries permit.
 
-- Go 1.21以上
-- SDL2開発ライブラリ
-- Gruidライブラリ
+## Controls
 
-## ゲーム要素
+| Key | Action |
+| --- | --- |
+| `h`, `j`, `k`, `l` | Move west, south, north, east |
+| `y`, `u`, `b`, `n` | Move diagonally |
+| Arrow keys | Move in four directions |
+| `.` or Space | Wait/rest |
+| `i` | Open inventory |
+| `,` or `g` | Pick up an item |
+| `d` | Drop an item |
+| `a` or `z` | Use/apply an item |
+| `q` | Quaff a potion |
+| `r` | Read a scroll |
+| `w` / `t` | Wield/wear or take off an item |
+| `e` | Eat food |
+| `<` / `>` | Use stairs |
+| `x` | Look around |
+| `?` | Show help |
+| `Q` or Escape | Quit or cancel |
 
-### キャラクター表示
-- **プレイヤー** (@): 緑色
-- **モンスター** (各種): 赤色
-- **壁** (#): グレー
-- **床** (.): 白色
+Moving into an adjacent monster attacks it. The game also supports doors, searching, traps, wizard mode, and an in-game CLI debug mode.
 
-### アイテム表示
-- **武器** ()): 銀色
-- **防具** ([): 茶色
-- **指輪** (=): 金色
-- **巻物** (?): 薄黄色
-- **薬** (!): ピンク色
-- **食べ物** (%): オレンジ色
-- **ゴールド** ($): 金色
-- **魔除け** (&): 金色
+## CLI examples
 
-### モンスター
-- **B**: コウモリ
-- **D**: ドラゴン
-- **E**: 目玉
-- **F**: ファンガス
-- **G**: ゴブリン
-- **O**: オーク
-- **S**: スケルトン
-- **T**: トロル
+```bash
+# Interactive mode
+go run ./cmd/gorogue-cli --seed 12345
 
-## 開発者向け情報
+# Batch commands from stdin
+printf 'status\nquit\n' | go run ./cmd/gorogue-cli --seed 12345 --interactive=false
 
-### デバッグ
-- ログファイルは`logs/`ディレクトリに保存
-- ウィザードモードでゲームプレイのテストが可能
-- 詳細なログでゲーム状態を追跡
-
-### 構造
-```
-gorogue/
-├── cmd/gorogue/         # メインアプリケーション
-├── internal/
-│   ├── core/           # ゲームエンジン
-│   │   └── wizard/     # ウィザードモード
-│   ├── game/           # ゲーム要素
-│   │   ├── actor/      # プレイヤー・モンスター
-│   │   ├── dungeon/    # ダンジョン生成
-│   │   └── item/       # アイテムシステム
-│   ├── ui/             # ユーザーインターフェース
-│   └── utils/          # ユーティリティ
-├── docs/               # ドキュメント
-└── logs/               # ログファイル
+# Show CLI options
+go run ./cmd/gorogue-cli --help
 ```
 
-## ライセンス
+## Development
 
-MITライセンス
+```bash
+go test ./...
+go vet ./...
+git diff --check
+```
 
-## 貢献
+The repository-specific development commands and architecture notes are in [`docs/development.md`](docs/development.md). The full design source of truth is [`SPEC.md`](SPEC.md).
 
-バグ報告、機能要求、プルリクエストは歓迎します。
+## Project layout
 
----
+```text
+cmd/gorogue/          SDL2 GUI entry point
+cmd/gorogue-cli/      CLI entry point
+internal/core/        Engine, commands, and CLI integration
+internal/game/        Actors, dungeon, items, magic, and saves
+internal/ui/           Screens and rendering
+docs/                  Architecture and development notes
+```
 
-[PyRogue](https://github.com/yuru-sha/pyrogue)を参考にしたGo言語によるローグライクゲーム実装プロジェクトです。
+## License
+
+MIT
