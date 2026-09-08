@@ -40,3 +40,10 @@ saves/
 
 # Claude Code settings
 .claude/settings.local.json
+
+# Machine-local agent links; keep only project-owned skills versioned.
+.agents/agent-capabilities/
+.codex/agents/
+.agents/skills/*
+!.agents/skills/gorogue-verify/
+!.agents/skills/gorogue-verify/**
