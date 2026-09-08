@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/yuru-sha/gorogue/internal/game/actor"
+	"github.com/yuru-sha/gorogue/internal/game/dungeon"
 	gameitem "github.com/yuru-sha/gorogue/internal/game/item"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
@@ -174,14 +175,16 @@ func (s *GameScreen) handleSearch() {
 
 // handleOpenDoor handles opening doors
 func (s *GameScreen) handleOpenDoor() {
-	s.AddMessage("Which direction? (not implemented yet)")
-	// TODO: Implement door opening functionality
+	s.AddMessage("Which direction?")
+	s.inputMode = ModeDirection
+	s.directionCallback = s.doOpenDoor
 }
 
 // handleCloseDoor handles closing doors
 func (s *GameScreen) handleCloseDoor() {
-	s.AddMessage("Which direction? (not implemented yet)")
-	// TODO: Implement door closing functionality
+	s.AddMessage("Which direction?")
+	s.inputMode = ModeDirection
+	s.directionCallback = s.doCloseDoor
 }
 
 // handleFight handles the fight command - attack in a specific direction
@@ -211,4 +214,63 @@ func (s *GameScreen) canGoDownstairs() bool {
 		return false
 	}
 	return s.dungeonManager.CanGoDownstairs()
+}
+
+// doOpenDoor opens a door in the specified direction
+func (s *GameScreen) doOpenDoor(dx, dy int) {
+	targetX := s.player.Position.X + dx
+	targetY := s.player.Position.Y + dy
+
+	// Generated doors use TileDoor; saved/legacy games may use TileDoorClosed.
+	tile := s.level.GetTile(targetX, targetY)
+	if tile != nil && (tile.Type == dungeon.TileDoor || tile.Type == dungeon.TileDoorClosed) {
+		s.level.SetTile(targetX, targetY, dungeon.TileOpenDoor)
+		s.AddMessage("You open the door.")
+
+		// Let monsters take their turn
+		s.level.UpdateMonsters(s.player)
+	} else if tile != nil && (tile.Type == dungeon.TileDoorOpen || tile.Type == dungeon.TileOpenDoor) {
+		s.AddMessage("The door is already open.")
+	} else {
+		s.AddMessage("There is no door there.")
+	}
+}
+
+// doCloseDoor closes a door in the specified direction
+func (s *GameScreen) doCloseDoor(dx, dy int) {
+	targetX := s.player.Position.X + dx
+	targetY := s.player.Position.Y + dy
+
+	// Accept both open-door representations from generated and saved levels.
+	tile := s.level.GetTile(targetX, targetY)
+	if tile != nil && (tile.Type == dungeon.TileDoorOpen || tile.Type == dungeon.TileOpenDoor) {
+		// Check if there's a monster or item in the doorway
+		if s.level.GetMonsterAt(targetX, targetY) != nil {
+			s.AddMessage("There's a monster in the doorway!")
+			return
+		}
+		// Check if there are any items at this position
+		hasItems := false
+		for _, item := range s.level.Items {
+			if item.Position.X == targetX && item.Position.Y == targetY {
+				hasItems = true
+				break
+			}
+		}
+		if hasItems {
+			s.AddMessage("There's something in the doorway!")
+			return
+		}
+
+		// Close the door using the generator's representation.
+		s.level.SetTile(targetX, targetY, dungeon.TileDoor)
+		s.AddMessage("You close the door.")
+
+		// Let monsters take their turn
+		s.level.UpdateMonsters(s.player)
+	} else if tile != nil && (tile.Type == dungeon.TileDoor || tile.Type == dungeon.TileDoorClosed) {
+		s.AddMessage("The door is already closed.")
+	} else {
+		s.AddMessage("There is no door there.")
+	}
 }

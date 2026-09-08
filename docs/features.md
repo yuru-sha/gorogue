@@ -1,11 +1,22 @@
 ---
 cache_control: {"type": "ephemeral"}
 ---
-# PyRogue - 機能一覧
+# GoRogue - 機能一覧
 
 ## 概要
 
-PyRogueは、伝統的なローグライクゲームの要素を現代的な技術で実装した完全なゲームシステムです。以下では、実装されている機能を詳細に説明します。
+GoRogueは、伝統的なローグライクゲームの要素をGoで実装したゲームシステムです。以下では、実装されている機能を詳細に説明します。
+
+## v0.3.0 現行範囲
+
+現行仕様は `SPEC.md` を正とします。実装済みの主要な境界は次のとおりです。
+
+- 26階層のダンジョン、階段移動、アミュレット回収後の地上帰還による勝利、パーマデス。
+- 武器、防具、食料、薬、巻物、杖、指輪、ゴールド、アミュレットのアイテム分類と識別状態。
+- GUI/CLI/API のシード指定、決定的なダンジョン生成、JSON セーブ/ロード。
+- vi キーを含む基本移動と、アイテム操作・装備・食事・勝利判定。
+
+この下に残る旧仕様の説明（隠し扉、状態異常、MP/呪文など）は未実装または `SPEC.md` の対象外です。対応済み機能の一覧として参照しないでください。
 
 ## ゲームプレイ機能
 
@@ -31,28 +42,34 @@ PyRogueは、伝統的なローグライクゲームの要素を現代的な技�
 - **戦術的配置**: 回避困難で戦術的価値の高い位置にのみ配置
 
 #### 実装場所
-- `src/pyrogue/map/dungeon/section_based_builder.py` - BSPダンジョン生成
-- `src/pyrogue/map/dungeon/maze_builder.py` - 迷路生成専用ビルダー
-- `src/pyrogue/map/dungeon/director.py` - ダンジョン生成ディレクター
-- `src/pyrogue/map/dungeon_manager.py` - マルチフロア管理
+- `internal/game/dungeon/generator.go` - ダンジョン生成システム
+- `internal/game/dungeon/room.go` - 部屋・コリドー管理
+- `internal/game/dungeon/maze.go` - 迷路生成専用機能
+- `internal/game/dungeon/floor.go` - マルチフロア管理
 
 #### 詳細仕様
-```python
-# BSPダンジョン生成パラメータ
-DUNGEON_DEPTH = 26                    # 最大階層数
-MIN_SIZE = 5                          # BSPノード最小サイズ（RogueBasin準拠）
-ROOM_MIN_SIZE = 3                     # 最小部屋サイズ
-L_SHAPED_CORRIDORS = True             # L字型通路接続
+```go
+// BSPダンジョン生成パラメータ
+const (
+    DungeonDepth = 26                    // 最大階層数
+    MinSize = 5                          // BSPノード最小サイズ（RogueBasin準拠）
+    RoomMinSize = 3                      // 最小部屋サイズ
+    LShapedCorridors = true              // L字型通路接続
+)
 
-# ドア配置パラメータ
-DOOR_CLOSED_RATE = 0.6                # クローズドドア確率
-DOOR_OPEN_RATE = 0.3                  # オープンドア確率
-DOOR_SECRET_RATE = 0.1                # 隠し扉確率
-ADJACENT_DOOR_PREVENTION = True       # 連続ドア防止
+// ドア配置パラメータ
+const (
+    DoorClosedRate = 0.6                // クローズドドア確率
+    DoorOpenRate = 0.3                  // オープンドア確率
+    DoorSecretRate = 0.1                // 隠し扉確率
+    AdjacentDoorPrevention = true       // 連続ドア防止
+)
 
-# 迷路階層パラメータ
-MAZE_GUARANTEED_FLOORS = [7, 13, 19]  # 必ず迷路になる階層
-MAZE_COMPLEXITY = 0.75                # 迷路の複雑さ
+// 迷路階層パラメータ
+var (
+    MazeGuaranteedFloors = []int{7, 13, 19}  // 必ず迷路になる階層
+    MazeComplexity = 0.75                    // 迷路の複雑さ
+)
 ```
 
 ### 2. 移動・操作システム
@@ -73,9 +90,9 @@ MAZE_COMPLEXITY = 0.75                # 迷路の複雑さ
 - **z**: 魔法書（spellbook）
 
 #### 実装場所
-- `src/pyrogue/core/input_handlers.py` - 入力処理
-- `src/pyrogue/ui/components/input_handler.py` - UI入力処理
-- `src/pyrogue/core/command_handler.py` - 統一コマンド処理
+- `internal/game/input/handler.go` - 入力処理
+- `internal/ui/input_handler.go` - UI入力処理
+- `internal/game/command/handler.go` - 統一コマンド処理
 
 #### コマンド統一化システム
 - **共通コマンドハンドラー**: GUIとCLIで統一されたコマンド処理
@@ -96,17 +113,19 @@ MAZE_COMPLEXITY = 0.75                # 迷路の複雑さ
 - **テレポートトラップ**: ランダムテレポート（マゼンタの`T`で表示）
 
 #### 実装場所
-- `src/pyrogue/entities/traps/trap.py` - トラップ基底クラス・各種トラップ
-- `src/pyrogue/core/game_logic.py` - 探索・解除ロジック（`search_trap`, `disarm_trap`）
+- `internal/game/trap/trap.go` - トラップ基底構造体・各種トラップ
+- `internal/game/logic/game_logic.go` - 探索・解除ロジック（`SearchTrap`, `DisarmTrap`）
 
 #### 詳細仕様
-```python
-# トラップ探索・解除パラメータ
-TRAP_SEARCH_BASE_RATE = 40            # 基本発見成功率（%）
-TRAP_SEARCH_LEVEL_BONUS = 5           # レベルボーナス（%/level）
-TRAP_SEARCH_MAX_RATE = 90             # 最大発見成功率（%）
-TRAP_DISARM_BASE_RATE = 70            # 基本解除成功率（%）
-TRAP_DISARM_FAILURE_TRIGGER = 30      # 解除失敗時の発動確率（%）
+```go
+// トラップ探索・解除パラメータ
+const (
+    TrapSearchBaseRate = 40            // 基本発見成功率（%）
+    TrapSearchLevelBonus = 5           // レベルボーナス（%/level）
+    TrapSearchMaxRate = 90             // 最大発見成功率（%）
+    TrapDisarmBaseRate = 70            // 基本解除成功率（%）
+    TrapDisarmFailureTrigger = 30      // 解除失敗時の発動確率（%）
+)
 ```
 
 ### 4. ウィザードモード（デバッグシステム）
@@ -134,9 +153,9 @@ TRAP_DISARM_FAILURE_TRIGGER = 30      # 解除失敗時の発動確率（%）
 - **Ctrl+R**: 全マップ探索（全隠し要素発見）
 
 #### 実装場所
-- `src/pyrogue/core/game_logic.py` - ウィザードモード管理
-- `src/pyrogue/ui/components/game_renderer.py` - 可視化機能
-- `src/pyrogue/ui/components/input_handler.py` - ウィザードコマンド
+- `internal/game/logic/wizard_mode.go` - ウィザードモード管理
+- `internal/ui/renderer/game_renderer.go` - 可視化機能
+- `internal/ui/input_handler.go` - ウィザードコマンド
 
 ### 5. 戦闘システム
 
@@ -147,16 +166,18 @@ TRAP_DISARM_FAILURE_TRIGGER = 30      # 解除失敗時の発動確率（%）
 - **クリティカルヒット**: 5%確率で2倍ダメージ
 
 #### 実装場所
-- `src/pyrogue/core/managers/combat_manager.py` - 戦闘管理
-- `src/pyrogue/core/managers/turn_manager.py` - ターン管理
+- `internal/game/combat/manager.go` - 戦闘管理
+- `internal/game/turn/manager.go` - ターン管理
 
 #### 詳細仕様
-```python
-# 戦闘パラメータ
-CRITICAL_HIT_CHANCE = 0.05            # クリティカルヒット確率
-CRITICAL_HIT_MULTIPLIER = 2.0         # クリティカルヒット倍率
-MIN_DAMAGE = 1                        # 最低ダメージ
-BASE_ATTACK_BONUS = 1                 # 基本攻撃ボーナス
+```go
+// 戦闘パラメータ
+const (
+    CriticalHitChance = 0.05            // クリティカルヒット確率
+    CriticalHitMultiplier = 2.0         // クリティカルヒット倍率
+    MinDamage = 1                       // 最低ダメージ
+    BaseAttackBonus = 1                 // 基本攻撃ボーナス
+)
 ```
 
 ### 4. 経験値・レベルシステム
@@ -167,15 +188,17 @@ BASE_ATTACK_BONUS = 1                 # 基本攻撃ボーナス
 - **能力値成長**: レベルアップ時のHP/MP増加
 
 #### 実装場所
-- `src/pyrogue/entities/actors/player.py` - プレイヤー成長
-- `src/pyrogue/core/managers/combat_manager.py` - 経験値計算
+- `internal/game/actor/player.go` - プレイヤー成長
+- `internal/game/combat/manager.go` - 経験値計算
 
 #### 詳細仕様
-```python
-# 経験値システム
-XP_PER_LEVEL = 100                    # レベルアップ必要経験値
-HP_PER_LEVEL = 10                     # レベルアップ時HP増加
-MP_PER_LEVEL = 5                      # レベルアップ時MP増加
+```go
+// 経験値システム
+const (
+    XPPerLevel = 100                    // レベルアップ必要経験値
+    HPPerLevel = 10                     // レベルアップ時HP増加
+    MPPerLevel = 5                      // レベルアップ時MP増加
+)
 ```
 
 ## 新機能システム
@@ -241,13 +264,15 @@ TRADE_DISCOUNT = 0.7                  # 買取価格割引率
 - `src/pyrogue/entities/actors/monster.py` - モンスター基底クラス
 
 #### 詳細仕様
-```python
-# モンスターAIパラメータ
-ITEM_STEAL_CHANCE = 0.2               # アイテム盗取確率
-GOLD_STEAL_RATE = 0.1                 # ゴールド盗取率
-LEVEL_DRAIN_CHANCE = 0.15             # レベル下げ確率
-SPLIT_HP_THRESHOLD = 0.3              # 分裂発動HP閾値
-HALLUCINATION_CHANCE = 0.3            # 幻覚発症確率
+```go
+// モンスターAIパラメータ
+const (
+    ItemStealChance = 0.2               // アイテム盗取確率
+    GoldStealRate = 0.1                 // ゴールド盗取率
+    LevelDrainChance = 0.15             // レベル下げ確率
+    SplitHPThreshold = 0.3              // 分裂発動HP閾値
+    HallucinationChance = 0.3           // 幻覚発症確率
+)
 ```
 
 ### 3. 幻覚システム
@@ -326,17 +351,19 @@ FULL_RECOVERY_RATE = 0.1              # 満腹時回復率
 - `src/pyrogue/entities/actors/player.py` - プレイヤー識別記録
 
 #### 詳細仕様
-```python
-# 識別システムパラメータ
-POTION_COLORS = [                     # ポーション色リスト
-    "red", "blue", "green", "yellow", "purple", "orange"
-]
-SCROLL_LABELS = [                     # 巻物呪文リスト
-    "ZELGO MER", "JUYED AWK", "NR 9", "XIXAXA XOXAXA"
-]
-RING_MATERIALS = [                    # 指輪材質リスト
-    "wooden", "silver", "gold", "platinum", "copper"
-]
+```go
+// 識別システムパラメータ
+var (
+    PotionColors = []string{                     // ポーション色リスト
+        "red", "blue", "green", "yellow", "purple", "orange",
+    }
+    ScrollLabels = []string{                     // 巻物呪文リスト
+        "ZELGO MER", "JUYED AWK", "NR 9", "XIXAXA XOXAXA",
+    }
+    RingMaterials = []string{                    // 指輪材質リスト
+        "wooden", "silver", "gold", "platinum", "copper",
+    }
+)
 ```
 
 ### 6. スコアランキングシステム
@@ -360,17 +387,19 @@ RING_MATERIALS = [                    # 指輪材質リスト
 - **日時**: 記録日時
 
 #### 実装場所
-- `src/pyrogue/core/score_manager.py` - スコア管理システム
-- `src/pyrogue/ui/screens/score_screen.py` - スコア表示UI
+- `internal/game/score/manager.go` - スコア管理システム
+- `internal/ui/screen/score_screen.go` - スコア表示UI
 
 #### 詳細仕様
-```python
-# スコア計算パラメータ
-SCORE_GOLD_MULTIPLIER = 10            # 金貨スコア倍率
-SCORE_XP_MULTIPLIER = 5               # 経験値スコア倍率
-SCORE_LEVEL_MULTIPLIER = 100          # レベルスコア倍率
-SCORE_KILLS_MULTIPLIER = 50           # 撃破スコア倍率
-SCORE_FLOOR_MULTIPLIER = 200          # 階層スコア倍率
+```go
+// スコア計算パラメータ
+const (
+    ScoreGoldMultiplier = 10            // 金貨スコア倍率
+    ScoreXPMultiplier = 5               // 経験値スコア倍率
+    ScoreLevelMultiplier = 100          // レベルスコア倍率
+    ScoreKillsMultiplier = 50           // 撃破スコア倍率
+    ScoreFloorMultiplier = 200          // 階層スコア倍率
+)
 ```
 
 ### 7. 完全なPermadeathシステム
@@ -388,16 +417,18 @@ SCORE_FLOOR_MULTIPLIER = 200          # 階層スコア倍率
 - **バックアップ管理**: 自動バックアップ・復旧
 
 #### 実装場所
-- `src/pyrogue/core/save_manager.py` - セーブ管理・Permadeath処理
-- `src/pyrogue/core/engine.py` - エンジン制御
+- `internal/game/save/manager.go` - セーブ管理・Permadeath処理
+- `internal/game/engine.go` - エンジン制御
 
 #### 詳細仕様
-```python
-# Permadeathシステムパラメータ
-SAVE_FILE_PATH = "saves/pyrogue_save.json"
-BACKUP_FILE_PATH = "saves/pyrogue_save_backup.json"
-CHECKSUM_VERIFICATION = True          # チェックサム検証の有効化
-AUTO_BACKUP_INTERVAL = 10             # 自動バックアップ間隔（ターン）
+```go
+// Permadeathシステムパラメータ
+const (
+    SaveFilePath = "saves/gorogue_save.json"
+    BackupFilePath = "saves/gorogue_save_backup.json"
+    ChecksumVerification = true          // チェックサム検証の有効化
+    AutoBackupInterval = 10              // 自動バックアップ間隔（ターン）
+)
 ```
 
 ## アイテムシステム
@@ -425,9 +456,9 @@ AUTO_BACKUP_INTERVAL = 10             # 自動バックアップ間隔（ター�
 - **食料**: 満腹度回復、栄養補給
 
 #### 実装場所
-- `src/pyrogue/entities/items/item.py` - アイテム基底クラス
-- `src/pyrogue/entities/items/item_types.py` - アイテム種別定義
-- `src/pyrogue/entities/items/effects.py` - アイテム効果
+- `internal/game/item/item.go` - アイテム基底構造体
+- `internal/game/item/item_types.go` - アイテム種別定義
+- `internal/game/item/effects.go` - アイテム効果
 
 ### 2. インベントリシステム
 
@@ -459,8 +490,8 @@ AUTO_BACKUP_INTERVAL = 10             # 自動バックアップ間隔（ター�
 - **?**: インベントリ画面内でヘルプ表示切り替え（JIS配列対応）
 
 #### 実装場所
-- `src/pyrogue/entities/actors/inventory.py` - インベントリ管理
-- `src/pyrogue/ui/screens/inventory_screen.py` - インベントリUI
+- `internal/game/inventory/manager.go` - インベントリ管理
+- `internal/ui/screen/inventory_screen.go` - インベントリUI
 
 ## 魔法システム
 
@@ -475,8 +506,8 @@ AUTO_BACKUP_INTERVAL = 10             # 自動バックアップ間隔（ター�
 - **Cure Poison**: 毒状態の回復
 
 #### 実装場所
-- `src/pyrogue/entities/magic/spells.py` - 魔法システム
-- `src/pyrogue/ui/screens/magic_screen.py` - 魔法UI
+- `internal/game/magic/spells.go` - 魔法システム
+- `internal/ui/screen/magic_screen.go` - 魔法UI
 
 ### 2. 魔法書（Spellbook）システム
 
@@ -492,13 +523,15 @@ AUTO_BACKUP_INTERVAL = 10             # 自動バックアップ間隔（ター�
 - **a-z**: 魔法の直接選択
 
 #### 詳細仕様
-```python
-# 魔法システム
-MP_RECOVERY_RATE = 0.1                # MP自然回復率
-MAGIC_MISSILE_COST = 3                # Magic Missile消費MP
-HEAL_COST = 5                         # Heal消費MP
-CURE_POISON_COST = 4                  # Cure Poison消費MP
-POISON_BOLT_COST = 4                  # Poison Bolt消費MP
+```go
+// 魔法システム
+const (
+    MPRecoveryRate = 0.1                // MP自然回復率
+    MagicMissileCost = 3                // Magic Missile消費MP
+    HealCost = 5                        // Heal消費MP
+    CurePoisonCost = 4                  // Cure Poison消費MP
+    PoisonBoltCost = 4                  // Poison Bolt消費MP
+)
 ```
 
 ### 4. ゴールドオートピックアップシステム
@@ -515,22 +548,20 @@ POISON_BOLT_COST = 4                  # Poison Bolt消費MP
 - **処理順序**: 移動 → ゴールド回収 → 他アイテム通知 → トラップチェック
 
 #### 実装場所
-- `src/pyrogue/core/managers/movement_manager.py` - 移動時の自動回収処理
-- `src/pyrogue/entities/items/item.py` - ゴールドアイテム定義
+- `internal/game/movement/manager.go` - 移動時の自動回収処理
+- `internal/game/item/item.go` - ゴールドアイテム定義
 
 #### 詳細仕様
-```python
-# ゴールドオートピックアップ処理（MovementManager._check_item_pickup）
-gold_items = [
-    item
-    for item in items_at_position
-    if hasattr(item, "item_type") and item.item_type == "GOLD"
-]
-for gold_item in gold_items:
-    amount = getattr(gold_item, "amount", 1)
-    player.gold += amount
-    floor_data.items.remove(gold_item)
-    self.context.add_message(f"You picked up {amount} gold.")
+```go
+// ゴールドオートピックアップ処理（MovementManager.CheckItemPickup）
+for _, item := range itemsAtPosition {
+    if goldItem, ok := item.(*GoldItem); ok {
+        amount := goldItem.Amount
+        player.Gold += amount
+        floorData.RemoveItem(goldItem)
+        m.Context.AddMessage(fmt.Sprintf("You picked up %d gold.", amount))
+    }
+}
 ```
 
 #### メッセージ例
@@ -569,12 +600,14 @@ You picked up 25 gold.
 - **効果の累積**: 同じ状態異常の重複処理
 
 #### 詳細仕様
-```python
-# 状態異常パラメータ
-POISON_DAMAGE = 2                     # 毒ダメージ量
-POISON_DURATION = 10                  # 毒持続時間
-PARALYSIS_DURATION = 3                # 麻痺持続時間
-CONFUSION_DURATION = 5                # 混乱持続時間
+```go
+// 状態異常パラメータ
+const (
+    PoisonDamage = 2                     // 毒ダメージ量
+    PoisonDuration = 10                  // 毒持続時間
+    ParalysisDuration = 3                // 麻痺持続時間
+    ConfusionDuration = 5                // 混乱持続時間
+)
 ```
 
 ## トラップシステム
@@ -597,7 +630,7 @@ CONFUSION_DURATION = 5                # 混乱持続時間
 - **回避**: 発見後は回避可能
 
 #### 実装場所
-- `src/pyrogue/entities/traps/trap.py` - トラップシステム
+- `internal/game/trap/trap.go` - トラップシステム
 
 ### 2. トラップ管理
 
@@ -607,12 +640,14 @@ CONFUSION_DURATION = 5                # 混乱持続時間
 - **発見システム**: 探索コマンドによる発見
 
 #### 詳細仕様
-```python
-# トラップパラメータ
-TRAP_SPAWN_CHANCE = 0.05              # トラップ出現確率
-PIT_TRAP_DAMAGE = 10                  # 落とし穴ダメージ
-DISARM_SUCCESS_RATE = 0.7             # 解除成功率
-SEARCH_SUCCESS_RATE = 0.6             # 探索成功率
+```go
+// トラップパラメータ
+const (
+    TrapSpawnChance = 0.05              // トラップ出現確率
+    PitTrapDamage = 10                  // 落とし穴ダメージ
+    DisarmSuccessRate = 0.7             // 解除成功率
+    SearchSuccessRate = 0.6             // 探索成功率
+)
 ```
 
 ## UIシステム
@@ -630,8 +665,8 @@ SEARCH_SUCCESS_RATE = 0.6             # 探索成功率
 - **Exit**: ゲーム終了
 
 #### 実装場所
-- `src/pyrogue/ui/screens/` - 各種画面システム
-- `src/pyrogue/ui/components/` - UI コンポーネント
+- `internal/ui/screen/` - 各種画面システム
+- `internal/ui/component/` - UI コンポーネント
 
 ### 2. 視界システム (FOV)
 
@@ -641,7 +676,7 @@ SEARCH_SUCCESS_RATE = 0.6             # 探索成功率
 - **霧システム**: 未探索・既探索領域の区別
 
 #### 実装場所
-- `src/pyrogue/ui/components/fov_manager.py` - 視界管理
+- `internal/ui/fov/manager.go` - 視界管理
 
 ## セーブ・ロードシステム
 
@@ -657,8 +692,8 @@ SEARCH_SUCCESS_RATE = 0.6             # 探索成功率
 - **自動セーブ**: 重要なイベント時の自動保存
 
 #### 実装場所
-- `src/pyrogue/core/save_manager.py` - セーブ・ロード管理
-- `src/pyrogue/ui/components/save_load_manager.py` - UI連携
+- `internal/game/save/manager.go` - セーブ・ロード管理
+- `internal/ui/save_load/manager.go` - UI連携
 
 ### 2. ロード機能
 
@@ -681,8 +716,8 @@ SEARCH_SUCCESS_RATE = 0.6             # 探索成功率
 - **待機**: 発見前の待機状態
 
 #### 実装場所
-- `src/pyrogue/core/managers/monster_ai_manager.py` - モンスターAI管理
-- `src/pyrogue/entities/actors/monster.py` - モンスター基底クラス
+- `internal/game/ai/monster_ai.go` - モンスターAI管理
+- `internal/game/actor/monster.go` - モンスター基底構造体
 
 ### 2. モンスター種別
 
@@ -692,8 +727,8 @@ SEARCH_SUCCESS_RATE = 0.6             # 探索成功率
 - **特殊能力**: 一部モンスターの特殊攻撃
 
 #### 実装場所
-- `src/pyrogue/entities/actors/monster_types.py` - モンスター定義
-- `src/pyrogue/entities/actors/monster_spawner.py` - モンスター生成
+- `internal/game/actor/monster_types.go` - モンスター定義
+- `internal/game/actor/monster_spawner.go` - モンスター生成
 
 ## 設定・カスタマイズ
 
@@ -705,8 +740,8 @@ SEARCH_SUCCESS_RATE = 0.6             # 探索成功率
 - **操作設定**: キーバインドのカスタマイズ
 
 #### 実装場所
-- `src/pyrogue/config.py` - 設定管理（非推奨）
-- `src/pyrogue/constants.py` - 定数管理（推奨）
+- `internal/config/config.go` - 設定管理
+- `internal/game/constants.go` - 定数管理
 
 ### 2. デバッグ機能
 
@@ -716,13 +751,13 @@ SEARCH_SUCCESS_RATE = 0.6             # 探索成功率
 - **ログ出力**: 詳細なゲーム状態ログ
 
 #### 実装場所
-- `src/pyrogue/utils/logger.py` - ログシステム
-- `src/pyrogue/core/cli_engine.py` - CLI開発モード
+- `internal/utils/logger.go` - ログシステム
+- `internal/game/cli_engine.go` - CLI開発モード
 
 #### CLIモード詳細
 ```bash
 # CLIモードでの起動
-python -m pyrogue.main --cli
+go run ./cmd/gorogue --cli
 
 # 利用可能なコマンド例
 > move north    # 北へ移動
@@ -779,7 +814,7 @@ python -m pyrogue.main --cli
 
 ## まとめ
 
-PyRogueは、**オリジナルRogue（1980年代）の忠実な再現**と**現代的な拡張機能**を融合した、完全に機能する本格的なローグライクゲームです。
+GoRogueは、**オリジナルRogue（1980年代）の忠実な再現**と**現代的な拡張機能**を融合した、Goで実装された本格的なローグライクゲームです。
 
 ### 🎯 **完成度の高い機能群**
 - **オリジナルRogue準拠**: 26階層、手続き生成、パーマデス、識別システム
@@ -803,4 +838,4 @@ PyRogueは、**オリジナルRogue（1980年代）の忠実な再現**と**現�
 - **包括的ドキュメント**: 開発ガイド、アーキテクチャ文書
 - **一貫したコーディング規約**: 日本語コメント、PEP 8準拠
 
-PyRogueは、単なるゲームではなく、**高品質なソフトウェア開発のベストプラクティス**を実践した、教育的価値の高いプロジェクトでもあります。各機能は独立性を保ちながら有機的に連携し、一貫性のあるゲーム体験を実現しています。
+GoRogueは、単なるゲームではなく、**Goでの高品質なソフトウェア開発のベストプラクティス**を実践した、教育的価値の高いプロジェクトでもあります。各機能は独立性を保ちながら有機的に連携し、一貫性のあるゲーム体験を実現しています。

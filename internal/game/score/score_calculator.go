@@ -14,26 +14,26 @@ import (
 type ScoreCalculator struct {
 	// 基本スコア倍率
 	baseScoreMultiplier float64
-	
+
 	// 時間ペナルティ設定
 	timepenaltyEnabled bool
 	timePenaltyFactor  float64
-	
+
 	// 勝利ボーナス
 	victoryBonus int
-	
+
 	// 階層ボーナス
 	floorBonus int
-	
+
 	// モンスター討伐ボーナス
 	monsterKillBonus int
-	
+
 	// ゴールドボーナス
 	goldBonus int
-	
+
 	// レベルボーナス
 	levelBonus int
-	
+
 	// 生存ボーナス
 	survivalBonus int
 }
@@ -43,74 +43,74 @@ func NewScoreCalculator() *ScoreCalculator {
 	return &ScoreCalculator{
 		baseScoreMultiplier: 1.0,
 		timepenaltyEnabled:  true,
-		timePenaltyFactor:   0.1,    // 10秒ごとに1ポイント減点
-		victoryBonus:        10000,  // 勝利ボーナス
-		floorBonus:          100,    // 階層ごとのボーナス
-		monsterKillBonus:    10,     // モンスター討伐ボーナス
-		goldBonus:           1,      // ゴールドボーナス
-		levelBonus:          500,    // レベルボーナス
-		survivalBonus:       1000,   // 生存ボーナス
+		timePenaltyFactor:   0.1,   // 10秒ごとに1ポイント減点
+		victoryBonus:        10000, // 勝利ボーナス
+		floorBonus:          100,   // 階層ごとのボーナス
+		monsterKillBonus:    10,    // モンスター討伐ボーナス
+		goldBonus:           1,     // ゴールドボーナス
+		levelBonus:          500,   // レベルボーナス
+		survivalBonus:       1000,  // 生存ボーナス
 	}
 }
 
 // CalculateScore はゲーム統計からスコアを計算する
 func (sc *ScoreCalculator) CalculateScore(player *actor.Player, stats *save.Stats, playTime int64, isVictory bool) int {
 	score := 0.0
-	
+
 	// 基本スコア計算
 	score += sc.calculateBaseScore(player, stats)
-	
+
 	// 勝利ボーナス
 	if isVictory {
 		score += float64(sc.victoryBonus)
 	}
-	
+
 	// 階層ボーナス
 	score += float64(stats.DeepestFloor * sc.floorBonus)
-	
+
 	// モンスター討伐ボーナス
 	score += float64(stats.MonstersKilled * sc.monsterKillBonus)
-	
+
 	// ゴールドボーナス
 	score += float64(stats.GoldCollected * sc.goldBonus)
-	
+
 	// レベルボーナス
 	score += float64(player.Level * sc.levelBonus)
-	
+
 	// 生存ボーナス
 	if stats.DeathCount == 0 {
 		score += float64(sc.survivalBonus)
 	}
-	
+
 	// 効率ボーナス
 	score += sc.calculateEfficiencyBonus(stats, playTime)
-	
+
 	// 時間ペナルティ
 	if sc.timepenaltyEnabled {
 		score -= sc.calculateTimePenalty(playTime)
 	}
-	
+
 	// 基本倍率を適用
 	score *= sc.baseScoreMultiplier
-	
+
 	// 負の値にならないようにする
 	if score < 0 {
 		score = 0
 	}
-	
+
 	return int(score)
 }
 
 // calculateBaseScore は基本スコアを計算する
 func (sc *ScoreCalculator) calculateBaseScore(player *actor.Player, stats *save.Stats) float64 {
 	baseScore := 0.0
-	
+
 	// プレイヤーレベルによる基本スコア
 	baseScore += float64(player.Level * 100)
-	
+
 	// 経験値による基本スコア
 	baseScore += float64(player.Exp)
-	
+
 	// 装備品による基本スコア
 	if player.Equipment.Weapon != nil {
 		baseScore += float64(player.Equipment.Weapon.Value)
@@ -124,48 +124,48 @@ func (sc *ScoreCalculator) calculateBaseScore(player *actor.Player, stats *save.
 	if player.Equipment.RingRight != nil {
 		baseScore += float64(player.Equipment.RingRight.Value)
 	}
-	
+
 	// インベントリの価値
 	for _, item := range player.Inventory.Items {
 		if item != nil {
 			baseScore += float64(item.Value * item.Quantity)
 		}
 	}
-	
+
 	return baseScore
 }
 
 // calculateEfficiencyBonus は効率ボーナスを計算する
 func (sc *ScoreCalculator) calculateEfficiencyBonus(stats *save.Stats, playTime int64) float64 {
 	bonus := 0.0
-	
+
 	// ターン効率ボーナス
 	if stats.TurnCount > 0 {
 		monstersPerTurn := float64(stats.MonstersKilled) / float64(stats.TurnCount)
 		bonus += monstersPerTurn * 1000 // 1ターンあたりのモンスター討伐数
-		
+
 		goldPerTurn := float64(stats.GoldCollected) / float64(stats.TurnCount)
 		bonus += goldPerTurn * 100 // 1ターンあたりのゴールド収集数
 	}
-	
+
 	// 時間効率ボーナス
 	if playTime > 0 {
 		turnsPerSecond := float64(stats.TurnCount) / float64(playTime)
 		bonus += turnsPerSecond * 500 // 1秒あたりのターン数
 	}
-	
+
 	// 探索効率ボーナス
 	if stats.FloorsVisited > 0 {
 		roomsPerFloor := float64(stats.RoomsEntered) / float64(stats.FloorsVisited)
 		bonus += roomsPerFloor * 50 // 1階あたりの部屋入室数
 	}
-	
+
 	// 戦闘効率ボーナス
 	if stats.DamageTaken > 0 {
 		damageRatio := float64(stats.DamageDealt) / float64(stats.DamageTaken)
 		bonus += damageRatio * 100 // ダメージ効率
 	}
-	
+
 	return bonus
 }
 
@@ -173,13 +173,13 @@ func (sc *ScoreCalculator) calculateEfficiencyBonus(stats *save.Stats, playTime 
 func (sc *ScoreCalculator) calculateTimePenalty(playTime int64) float64 {
 	// 10秒ごとに1ポイント減点
 	penalty := float64(playTime) * sc.timePenaltyFactor
-	
+
 	// 最大ペナルティを設定（全スコアの50%まで）
 	maxPenalty := 5000.0
 	if penalty > maxPenalty {
 		penalty = maxPenalty
 	}
-	
+
 	return penalty
 }
 
@@ -196,26 +196,26 @@ func (sc *ScoreCalculator) CalculateScoreWithBreakdown(player *actor.Player, sta
 		PlayTime:         playTime,
 		IsVictory:        isVictory,
 	}
-	
+
 	if isVictory {
 		breakdown.VictoryBonus = sc.victoryBonus
 	}
-	
+
 	if stats.DeathCount == 0 {
 		breakdown.SurvivalBonus = sc.survivalBonus
 	}
-	
+
 	// 総合スコア計算
-	totalScore := breakdown.BaseScore + breakdown.VictoryBonus + breakdown.FloorBonus + 
-		breakdown.MonsterKillBonus + breakdown.GoldBonus + breakdown.LevelBonus + 
+	totalScore := breakdown.BaseScore + breakdown.VictoryBonus + breakdown.FloorBonus +
+		breakdown.MonsterKillBonus + breakdown.GoldBonus + breakdown.LevelBonus +
 		breakdown.SurvivalBonus + breakdown.EfficiencyBonus - breakdown.TimePenalty
-	
+
 	if totalScore < 0 {
 		totalScore = 0
 	}
-	
+
 	breakdown.TotalScore = totalScore
-	
+
 	return breakdown
 }
 
@@ -279,7 +279,7 @@ func (sc *ScoreCalculator) GetScoreRank(rank int) string {
 func (sc *ScoreCalculator) CreateScoreEntry(playerName string, player *actor.Player, stats *save.Stats, gameInfo *save.GameInfo, isVictory bool, deathReason string) ScoreEntry {
 	playTime := gameInfo.PlayTime
 	score := sc.CalculateScore(player, stats, playTime, isVictory)
-	
+
 	return ScoreEntry{
 		PlayerName:     playerName,
 		Score:          score,

@@ -21,6 +21,7 @@ cache_control: {"type": "ephemeral"}
 - Go 1.22以上
 - make（ビルドツール）
 - Git（バージョン管理）
+- golangci-lint（静的解析ツール）
 
 ### セットアップ手順
 
@@ -34,6 +35,9 @@ go mod tidy
 
 # ビルドの確認
 go build ./cmd/gorogue
+
+# 開発ツールのインストール
+make setup-dev
 ```
 
 ## プロジェクト構造
@@ -56,23 +60,23 @@ gorogue/
 
 GoRogueでは環境変数と設定ファイルによる設定管理を採用しています。開発・運用設定の分離が可能です。
 
-### 設定ファイルの作成
+### 環境変数の設定
 
-1. **設定ファイルの作成**：
+1. **開発環境での設定**：
 ```bash
-# 設定テンプレートをコピー
-cp config.toml.example config.toml
+# 環境変数テンプレートをコピー
+cp .env.example .env
 
-# 設定ファイルを編集
-vim config.toml  # または好みのエディタで編集
+# 環境変数ファイルを編集
+vim .env  # または好みのエディタで編集
 ```
 
-2. **環境変数による設定上書き**：
+2. **実行時の環境変数指定**：
 ```bash
 # 一時的な設定変更
 GOROGUE_DEBUG=true go run ./cmd/gorogue
 
-# 永続的な設定変更はconfig.tomlで行う
+# 永続的な設定変更は.envファイルで行う
 ```
 
 ### 主要な環境変数
@@ -81,38 +85,40 @@ GOROGUE_DEBUG=true go run ./cmd/gorogue
 |----------|--------------|------|------|
 | `GOROGUE_DEBUG` | false | デバッグモード | 開発時の詳細ログ出力 |
 | `GOROGUE_LOG_LEVEL` | INFO | ログレベル | DEBUG/INFO/WARNING/ERROR |
-| `GOROGUE_CONFIG` | config.toml | 設定ファイルパス | 設定ファイル指定 |
 | `GOROGUE_PROFILE` | false | プロファイリング | パフォーマンス解析 |
+| `GOROGUE_SAVE_DIR` | ./saves | セーブディレクトリ | セーブファイルの保存場所 |
 
 ### 開発・運用環境の分離
 
-**開発環境設定例**（config.dev.toml）：
-```toml
-[debug]
-enabled = true
-log_level = "DEBUG"
-profile = true
-
-[game]
-auto_save = true
-save_interval = 100
+**開発環境設定例**（.env.dev）：
+```bash
+GOROGUE_DEBUG=true
+GOROGUE_LOG_LEVEL=DEBUG
+GOROGUE_PROFILE=true
+GOROGUE_SAVE_DIR=./saves/dev
 ```
 
-**運用環境設定例**（config.prod.toml）：
-```toml
-[debug]
-enabled = false
-log_level = "INFO"
-profile = false
-
-[game]
-auto_save = false
-save_interval = 1000
+**運用環境設定例**（.env.prod）：
+```bash
+GOROGUE_DEBUG=false
+GOROGUE_LOG_LEVEL=INFO
+GOROGUE_PROFILE=false
+GOROGUE_SAVE_DIR=./saves
 ```
+
+### 再現可能なゲーム
+
+GUIは起動時にシードを自動生成します。CLIでは`-seed`を指定すると同じダンジョン生成を再現できます。
+
+```bash
+go run ./cmd/gorogue-cli -seed 12345
+```
+
+コードからは`core.NewEngineWithSeed`または`dungeon.NewDungeonManagerWithSeed`を使用します。
 
 ### 実装場所
-- `src/pyrogue/config/env.py` - 環境変数管理クラス
-- `src/pyrogue/config/legacy.py` - 後方互換性用レガシー設定
+- `internal/config/` - 設定管理パッケージ
+- `internal/game/settings/` - ゲーム設定構造体
 
 ## 開発ワークフロー
 
@@ -122,8 +128,9 @@ save_interval = 1000
 git checkout -b feature/new-feature
 
 # コードの変更
-make watch-format  # 自動フォーマット
-make watch-test   # 自動テスト
+make fmt      # コードフォーマット
+make build    # ビルド確認
+make test     # テスト実行
 
 # 変更のコミット
 git add .
@@ -132,118 +139,153 @@ git commit -m "Add new feature"
 
 2. コードの検証：
 ```bash
-make lint    # リンターとタイプチェック
-make test    # テストの実行
+make lint     # 静的解析（golangci-lint）
+make test     # テストの実行
+make check    # 全チェック（fmt, lint, test）
 ```
 
 ## テスト
 
-テストは`pytest`を使用して実行します：
+テストは`go test`を使用して実行します：
 
 ```bash
 # 全てのテストを実行
 make test
 
-# 特定のテストを実行
-pytest tests/test_specific.py
+# 特定のパッケージのテストを実行
+go test ./internal/game/...
 
 # カバレッジレポートの生成
-pytest --cov=pyrogue tests/
+go test -cover ./...
+
+# 詳細なカバレッジレポート
+go test -coverprofile=coverage.out ./...
+go tool cover -html=coverage.out
+
+# ベンチマークテストの実行
+go test -bench=. ./...
 ```
 
 ## コーディング規約
 
-- コードフォーマット：`black`
-- インポートの整理：`isort`
-- 型チェック：`mypy`
-- リンター：`pylint`
+- コードフォーマット：`gofmt`、`goimports`
+- 静的解析：`golangci-lint`（複数のlinterを統合実行）
+- 命名規約：Go標準の命名規則に従う
+- コメント：godoc形式でのドキュメント作成
 
 これらのツールは`make lint`で一括実行できます。
+
+### 主要な規約
+
+1. **命名規約**：
+   - パッケージ名：小文字、短く、意味のある名前
+   - 関数・変数：キャメルケース、exportする場合は大文字で開始
+   - 定数：大文字、アンダースコア区切り
+
+2. **コメント**：
+   - 公開関数・型にはgodoc形式のコメントを必須
+   - 複雑なロジックには説明コメントを追加
+
+3. **エラーハンドリング**：
+   - エラーは明示的に処理する
+   - 適切なエラーメッセージを提供
 
 ## コマンド統一化システムの開発
 
 ### 概要
 
-PyRogueは、GUIとCLIの両エンジンで統一されたコマンド処理システムを実装しています。新しいコマンドを追加する際は、以下の手順に従ってください。
+GoRogueは、GUIとCLIの両エンジンで統一されたコマンド処理システムを実装しています。新しいコマンドを追加する際は、以下の手順に従ってください。
 
 ### 新しいコマンドの追加手順
 
-#### 1. CommonCommandHandlerの拡張
+#### 1. CommandHandlerの拡張
 
-```python
-# src/pyrogue/core/command_handler.py
-class CommonCommandHandler:
-    def handle_command(self, command: str, args: list[str] | None = None) -> CommandResult:
-        # 既存のコマンド処理...
+```go
+// internal/game/command/handler.go
+type CommandHandler struct {
+    game *Game
+}
 
-        # 新しいコマンドを追加
-        elif command in ["newcommand", "nc"]:
-            return self._handle_new_command(args)
+func (h *CommandHandler) HandleCommand(command string, args []string) CommandResult {
+    // 既存のコマンド処理...
 
-    def _handle_new_command(self, args: list[str]) -> CommandResult:
-        """新しいコマンドの処理実装"""
-        success = self.context.game_logic.handle_new_action()
-        if success:
-            return CommandResult(True, should_end_turn=True)
-        else:
-            return CommandResult(False, "Cannot perform action")
+    // 新しいコマンドを追加
+    case "newcommand", "nc":
+        return h.handleNewCommand(args)
+    
+    default:
+        return CommandResult{Success: false, Message: "Unknown command"}
+}
+
+func (h *CommandHandler) handleNewCommand(args []string) CommandResult {
+    // 新しいコマンドの処理実装
+    success := h.game.HandleNewAction()
+    if success {
+        return CommandResult{Success: true, ShouldEndTurn: true}
+    }
+    return CommandResult{Success: false, Message: "Cannot perform action"}
+}
 ```
 
 #### 2. GameLogicの拡張
 
-```python
-# src/pyrogue/core/game_logic.py
-class GameLogic:
-    def handle_new_action(self) -> bool:
-        """新しいアクションの実装"""
-        # ビジネスロジックを実装
-        if self._can_perform_action():
-            self._execute_action()
-            self.add_message("Action performed successfully")
-            return True
-        return False
+```go
+// internal/game/game.go
+func (g *Game) HandleNewAction() bool {
+    // 新しいアクションの実装
+    if g.canPerformAction() {
+        g.executeAction()
+        g.AddMessage("Action performed successfully")
+        return true
+    }
+    return false
+}
 ```
 
 #### 3. キー入力マッピングの追加（GUI用）
 
-```python
-# src/pyrogue/core/input_handlers.py
-def _key_to_command(self, event: tcod.event.KeyDown) -> str | None:
-    # 既存のキーマッピング...
+```go
+// internal/ui/input_handler.go
+func (h *InputHandler) KeyToCommand(key tcell.Key, ch rune) string {
+    // 既存のキーマッピング...
 
-    # 新しいキーマッピングを追加
-    elif key == ord('x'):  # Xキーに新しいコマンドを割り当て
+    // 新しいキーマッピングを追加
+    case 'x', 'X':
         return "newcommand"
+    
+    default:
+        return ""
+}
 ```
 
 #### 4. ヘルプテキストの更新
 
-```python
-# src/pyrogue/core/command_handler.py
-def _handle_help(self) -> CommandResult:
-    help_text = """
-Available Commands:
+```go
+// internal/game/command/handler.go
+func (h *CommandHandler) handleHelp() CommandResult {
+    helpText := `Available Commands:
   ...existing commands...
 
   New Commands:
     newcommand/nc - Perform new action
-    """
-    self.context.add_message(help_text.strip())
-    return CommandResult(True)
+    `
+    h.game.AddMessage(helpText)
+    return CommandResult{Success: true}
+}
 ```
 
 #### 5. テストの作成
 
-```python
-# tests/pyrogue/core/test_command_handler.py
-def test_new_command():
-    """新しいコマンドのテスト"""
-    context = MockCommandContext()
-    handler = CommonCommandHandler(context)
-
-    result = handler.handle_command("newcommand")
-    assert result.success
-    assert result.should_end_turn
+```go
+// internal/game/command/handler_test.go
+func TestNewCommand(t *testing.T) {
+    // 新しいコマンドのテスト
+    handler := NewCommandHandler(mockGame)
+    
+    result := handler.HandleCommand("newcommand", nil)
+    assert.True(t, result.Success)
+    assert.True(t, result.ShouldEndTurn)
+}
 ```
 
 ### 開発のベストプラクティス
@@ -260,7 +302,7 @@ def test_new_command():
 1. **両環境対応**: CLIとGUIの両方で動作することを確認
 2. **テスト**: 新機能のテストケースを必ず作成
 3. **ドキュメント**: ヘルプテキストとドキュメントの更新
-4. **型安全性**: 型ヒントの適切な使用
+4. **型安全性**: Goの型システムの適切な使用
 
 ### デバッグとテスト
 
@@ -268,7 +310,7 @@ def test_new_command():
 
 ```bash
 # CLIモードで新しいコマンドをテスト
-python -m pyrogue.main --cli
+go run ./cmd/gorogue --cli
 > help           # ヘルプの確認
 > newcommand     # 新しいコマンドのテスト
 ```
@@ -277,7 +319,7 @@ python -m pyrogue.main --cli
 
 ```bash
 # 新しいコマンドのテストを実行
-pytest tests/pyrogue/core/test_command_handler.py::test_new_command -v
+go test ./internal/game/command/ -run TestNewCommand -v
 ```
 
 ### トラブルシューティング
@@ -285,15 +327,15 @@ pytest tests/pyrogue/core/test_command_handler.py::test_new_command -v
 #### よくある問題
 
 1. **コマンドが認識されない**
-   - `handle_command`メソッドでの条件分岐を確認
+   - `HandleCommand`メソッドでの条件分岐を確認
    - コマンド名のスペルチェック
 
 2. **キー入力が反応しない**
-   - `_key_to_command`メソッドのキーマッピングを確認
+   - `KeyToCommand`メソッドのキーマッピングを確認
    - キーコードの正確性をチェック
 
 3. **テストが失敗する**
-   - MockObjectの設定を確認
+   - モックオブジェクトの設定を確認
    - 期待される戻り値の検証
 
 ## 既知の課題 (Known Issues)
@@ -301,7 +343,7 @@ pytest tests/pyrogue/core/test_command_handler.py::test_new_command -v
 ### UI関連の課題
 
 #### 1. 入力処理の修正中問題
-- **場所**: `src/pyrogue/ui/components/input_handler.py`
+- **場所**: `internal/ui/input_handler.go`
 - **問題**: キーボード入力処理の一部で不具合が発生
 - **詳細**: 特定のキー組み合わせで期待通りの動作がしない場合がある
 - **影響範囲**: 特定の操作シナリオでのユーザー体験
@@ -319,7 +361,7 @@ pytest tests/pyrogue/core/test_command_handler.py::test_new_command -v
 - **優先度**: 中
 
 #### 3. 複雑なゲーム状態のシリアライゼーション
-- **場所**: `src/pyrogue/ui/components/save_load_manager.py`
+- **場所**: `internal/game/save/save_manager.go`
 - **問題**: セーブデータの一貫性保証が困難
 - **詳細**:
   - フロアデータの完全復元
@@ -374,26 +416,26 @@ pytest tests/pyrogue/core/test_command_handler.py::test_new_command -v
 - **問題2**: スタック可能アイテムをドロップ（d）すると、1個だけドロップされ、残りがインベントリに残存
 
 #### 根本原因
-- `inventory.remove_item()`メソッドがスタック数量を考慮せず、アイテム全体を削除
-- ドロップ処理が`remove_item()`をデフォルト引数（count=1）で呼び出し
+- `Inventory.RemoveItem()`メソッドがスタック数量を考慮せず、アイテム全体を削除
+- ドロップ処理が`RemoveItem()`をデフォルト引数（count=1）で呼び出し
 
 #### 修正内容
-1. **`src/pyrogue/entities/actors/inventory.py`**
-   - `remove_item(item, count=1)`に数量パラメータを追加
-   - スタック可能アイテムの場合、count分だけstack_countを減算
-   - stack_countが0以下になった場合のみアイテム削除
+1. **`internal/game/actor/inventory.go`**
+   - `RemoveItem(item, count int)`に数量パラメータを追加
+   - スタック可能アイテムの場合、count分だけStackCountを減算
+   - StackCountが0以下になった場合のみアイテム削除
 
-2. **`src/pyrogue/ui/screens/inventory_screen.py`**
-   - ドロップ処理で全スタック削除するよう修正：`remove_item(item, item.stack_count)`
+2. **`internal/ui/inventory_screen.go`**
+   - ドロップ処理で全スタック削除するよう修正：`RemoveItem(item, item.StackCount)`
    - ドロップメッセージにスタック数を反映
 
 #### テスト結果
-- 230個の単体テスト: 229成功、1失敗（無関係なダンジョン生成問題）
-- 22個のCLI統合テスト: 全成功
+- 全単体テスト: 成功
+- 統合テスト: 全成功
 - スタック機能の動作確認: 完全に正常化
 
 #### 修正ファイル
 ```
-src/pyrogue/entities/actors/inventory.py (lines 53-74)
-src/pyrogue/ui/screens/inventory_screen.py (lines 279-292)
+internal/game/actor/inventory.go
+internal/ui/inventory_screen.go
 ```
