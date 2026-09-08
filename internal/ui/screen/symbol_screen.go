@@ -26,10 +26,10 @@ var symbolExplanations = []struct {
 	{"|", "vertical open door"},
 	{"^", "trap"},
 	{"%", "stairs"},
-	
+
 	// プレイヤー
 	{"@", "you"},
-	
+
 	// モンスター（PyRogue準拠）
 	{"A", "giant ant"},
 	{"B", "bat"},
@@ -57,12 +57,12 @@ var symbolExplanations = []struct {
 	{"X", "xorn"},
 	{"Y", "yeti"},
 	{"Z", "zombie"},
-	
+
 	// アイテム（PyRogue準拠）
 	{")", "weapon"},
 	{"]", "armor"},
 	{"!", "potion"},
-	{"?", "scroll"}, 
+	{"?", "scroll"},
 	{"/", "wand or staff"},
 	{"=", "ring"},
 	{",", "amulet"},
@@ -96,7 +96,7 @@ func (s *SymbolScreen) HandleInput(msg gruid.Msg) state.GameState {
 			}
 		}
 	}
-	
+
 	return state.StateSymbol
 }
 
@@ -104,22 +104,22 @@ func (s *SymbolScreen) HandleInput(msg gruid.Msg) state.GameState {
 func (s *SymbolScreen) Draw(grid *gruid.Grid) {
 	// グリッドをクリア
 	grid.Fill(gruid.Cell{Rune: ' ', Style: gruid.Style{Bg: 0x000000, Fg: 0xFFFFFF}})
-	
+
 	// PyRogue風のタイトル
 	title := "Character Descriptions"
 	titleX := (s.width - len(title)) / 2
 	s.drawText(grid, titleX, 2, title, gruid.Style{Fg: 0xFFFF00})
-	
+
 	// 2カラムレイアウト（PyRogue準拠）
 	leftCol := 10
 	rightCol := 45
 	startY := 5
-	
+
 	// 左カラム
 	y := startY
 	for i := 0; i < len(symbolExplanations)/2 && y < s.height-3; i++ {
 		sym := symbolExplanations[i]
-		
+
 		// シンボル (色付き)
 		symbolStyle := gruid.Style{Fg: 0xFFFFFF}
 		switch sym.symbol[0] {
@@ -128,27 +128,27 @@ func (s *SymbolScreen) Draw(grid *gruid.Grid) {
 		case ')', ']', '!', '?', '/', '=', ',', ':', '*':
 			symbolStyle.Fg = 0xFFFF00 // アイテムは黄色
 		case 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-		     'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z':
+			'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z':
 			symbolStyle.Fg = 0xFF0000 // モンスターは赤
 		case '%':
 			symbolStyle.Fg = 0x00FFFF // 階段はシアン
 		case '^':
 			symbolStyle.Fg = 0xFF00FF // トラップはマゼンタ
 		}
-		
+
 		// フォーマット: "A giant ant"
 		text := sym.symbol + " " + sym.name
 		s.drawText(grid, leftCol, y, text[:1], symbolStyle)
 		s.drawText(grid, leftCol+1, y, text[1:], gruid.Style{Fg: 0xCCCCCC})
-		
+
 		y++
 	}
-	
+
 	// 右カラム
 	y = startY
-	for i := len(symbolExplanations)/2; i < len(symbolExplanations) && y < s.height-3; i++ {
+	for i := len(symbolExplanations) / 2; i < len(symbolExplanations) && y < s.height-3; i++ {
 		sym := symbolExplanations[i]
-		
+
 		// シンボル (色付き)
 		symbolStyle := gruid.Style{Fg: 0xFFFFFF}
 		switch sym.symbol[0] {
@@ -157,27 +157,27 @@ func (s *SymbolScreen) Draw(grid *gruid.Grid) {
 		case ')', ']', '!', '?', '/', '=', ',', ':', '*':
 			symbolStyle.Fg = 0xFFFF00
 		case 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-		     'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z':
+			'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z':
 			symbolStyle.Fg = 0xFF0000
 		case '%':
 			symbolStyle.Fg = 0x00FFFF
 		case '^':
 			symbolStyle.Fg = 0xFF00FF
 		}
-		
+
 		// フォーマット: "A giant ant"
 		text := sym.symbol + " " + sym.name
 		s.drawText(grid, rightCol, y, text[:1], symbolStyle)
 		s.drawText(grid, rightCol+1, y, text[1:], gruid.Style{Fg: 0xCCCCCC})
-		
+
 		y++
 	}
-	
+
 	// 下部の説明（PyRogue準拠）
 	helpText := "--Press any key to continue--"
 	helpX := (s.width - len(helpText)) / 2
 	s.drawText(grid, helpX, s.height-2, helpText, gruid.Style{Fg: 0x808080})
-	
+
 	logger.Trace("Symbol screen drawn")
 }
 
