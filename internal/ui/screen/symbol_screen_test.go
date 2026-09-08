@@ -8,7 +8,9 @@ import (
 )
 
 func TestSymbolScreenDrawKeepsColumnsAndSymbolColors(t *testing.T) {
-	logger.Setup()
+	if err := logger.Setup(); err != nil {
+		t.Fatal(err)
+	}
 	screen := NewSymbolScreen(80, 50)
 	grid := gruid.NewGrid(80, 50)
 	screen.Draw(&grid)
