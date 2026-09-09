@@ -63,3 +63,17 @@ rtk make ci-checks  # when the development tools are installed
 ## Git
 
 Do not reorganize, delete, or stash staged, unstaged, or untracked user changes. Add permanent fixes for review comments or verification failures to the smallest appropriate place among the tests, verification commands, and documentation.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues; use the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the default five canonical triage labels. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This is a single-context repository. See `docs/agents/domain.md`.
