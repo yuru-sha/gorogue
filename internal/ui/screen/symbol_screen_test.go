@@ -67,6 +67,13 @@ func TestSymbolScreenDrawRendersEveryLegendEntry(t *testing.T) {
 	if len(tests) != 43 {
 		t.Fatalf("legend test cases = %d, want 43", len(tests))
 	}
+	seenSymbols := make(map[string]struct{}, len(tests))
+	for _, tt := range tests {
+		if _, exists := seenSymbols[tt.symbol]; exists {
+			t.Fatalf("duplicate legend symbol %q", tt.symbol)
+		}
+		seenSymbols[tt.symbol] = struct{}{}
+	}
 
 	for _, tt := range tests {
 		t.Run(tt.symbol+" "+tt.name, func(t *testing.T) {
