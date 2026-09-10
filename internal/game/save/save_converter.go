@@ -97,7 +97,8 @@ func (sc *SaveConverter) convertSavePlayer(savePlayer Player, seed int64) (*acto
 		return nil, fmt.Errorf("failed to convert equipment: %w", err)
 	}
 
-	// Convert identified items
+	// Convert identification state
+	player.IdentifyMgr.LoadAppearanceState(savePlayer.IdentificationAppearances)
 	if err := sc.convertIdentifiedItems(savePlayer.IdentifiedItems, player.IdentifyMgr); err != nil {
 		return nil, fmt.Errorf("failed to convert identified items: %w", err)
 	}
@@ -299,7 +300,7 @@ func (sc *SaveConverter) convertSaveDungeon(saveDungeon Dungeon, player *actor.P
 				"floor", floorNum,
 				"error", err,
 			)
-			continue
+			return nil, fmt.Errorf("failed to convert floor %d: %w", floorNum, err)
 		}
 
 		// Set the level in the dungeon manager
@@ -309,6 +310,9 @@ func (sc *SaveConverter) convertSaveDungeon(saveDungeon Dungeon, player *actor.P
 		}
 	}
 
+	if err := dungeonManager.SetRandomDraws(saveDungeon.RandomState.Draws); err != nil {
+		return nil, fmt.Errorf("failed to restore dungeon random state: %w", err)
+	}
 	return dungeonManager, nil
 }
 
@@ -324,6 +328,9 @@ func (sc *SaveConverter) convertSaveFloor(saveFloor Floor) (*dungeon.Level, erro
 		Rooms:       make([]*dungeon.Room, 0),
 		Monsters:    make([]*actor.Monster, 0),
 		Items:       make([]*item.Item, 0),
+	}
+	if err := level.SetRandomDraws(saveFloor.RandomState.Draws); err != nil {
+		return nil, fmt.Errorf("failed to restore floor random state: %w", err)
 	}
 
 	// Convert tiles

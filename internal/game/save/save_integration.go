@@ -412,7 +412,7 @@ func (sgi *SaveGameIntegration) RepairSave() error {
 // CreateNewGame creates a new game with the specified parameters
 func (sgi *SaveGameIntegration) CreateNewGame(charName string, seed int64) error {
 	// Create new player
-	player := actor.NewPlayer(0, 0)
+	player := actor.NewPlayerWithSeed(0, 0, seed)
 
 	// Create new dungeon manager
 	dungeonManager := dungeon.NewDungeonManagerWithSeed(player, seed)
