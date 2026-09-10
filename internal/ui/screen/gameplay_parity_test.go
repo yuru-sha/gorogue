@@ -97,6 +97,52 @@ func TestGameplayCommandsHaveGUICLIParity(t *testing.T) {
 	}
 }
 
+func TestPickupParityTracksTurnOnlyOnSuccess(t *testing.T) {
+	if err := logger.Setup(); err != nil {
+		t.Fatal(err)
+	}
+
+	run := func(capacity int) (int, int, int, int) {
+		newLevel := func(player *actor.Player) *dungeon.Level {
+			level := newTestFloor(5, 5)
+			level.Items = []*item.Item{item.NewItem(1, 1, item.ItemFood, "parity food", 1)}
+			monster := actor.NewMonster(3, 1, 'B')
+			monster.Type.Speed = 100
+			level.Monsters = []*actor.Monster{monster}
+			return level
+		}
+
+		guiPlayer := actor.NewPlayerWithSeed(1, 1, 42)
+		guiPlayer.Inventory.Capacity = capacity
+		guiLevel := newLevel(guiPlayer)
+		gui := NewGameScreen(80, 50, guiPlayer)
+		gui.SetLevel(guiLevel)
+		gui.HandleInput(gruid.MsgKeyDown{Key: ","})
+
+		cliPlayer := actor.NewPlayerWithSeed(1, 1, 42)
+		cliPlayer.Inventory.Capacity = capacity
+		cliLevel := newLevel(cliPlayer)
+		cliMode := cli.NewCLIMode(cliLevel, cliPlayer)
+		cliMode.IsActive = true
+		cliMode.ExecuteCommand("pickup")
+
+		return guiLevel.Monsters[0].TurnCount, cliLevel.Monsters[0].TurnCount,
+			len(guiPlayer.Inventory.Items), len(cliPlayer.Inventory.Items)
+	}
+
+	guiTurn, cliTurn, guiItems, cliItems := run(1)
+	if guiTurn != 1 || cliTurn != 1 || guiItems != 1 || cliItems != 1 {
+		t.Fatalf("successful pickup mismatch: GUI=(turns=%d items=%d) CLI=(turns=%d items=%d)",
+			guiTurn, guiItems, cliTurn, cliItems)
+	}
+
+	guiTurn, cliTurn, guiItems, cliItems = run(0)
+	if guiTurn != 0 || cliTurn != 0 || guiItems != 0 || cliItems != 0 {
+		t.Fatalf("failed pickup consumed a turn or changed inventory: GUI=(turns=%d items=%d) CLI=(turns=%d items=%d)",
+			guiTurn, guiItems, cliTurn, cliItems)
+	}
+}
+
 func TestGameplayCombatAdvancesMonstersAfterKill(t *testing.T) {
 	if err := logger.Setup(); err != nil {
 		t.Fatal(err)
@@ -246,6 +292,20 @@ func TestAttackRejectsDistantMonster(t *testing.T) {
 
 	if got := cliMode.ExecuteCommand("attack 3 1"); got != "You can only attack an adjacent monster." {
 		t.Fatalf("distant attack result = %q", got)
+	}
+}
+
+func TestGameScreenSplitsMultilineMessages(t *testing.T) {
+	if err := logger.Setup(); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := NewGameScreen(80, 50, actor.NewPlayerWithSeed(1, 1, 42))
+	screen.messages = nil
+	screen.AddMessage("first line\nsecond line")
+
+	if got := strings.Join(screen.messages, "|"); got != "first line|second line" {
+		t.Fatalf("message log = %q", got)
 	}
 }
 

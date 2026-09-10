@@ -3,6 +3,8 @@
 package screen
 
 import (
+	"strings"
+
 	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/cli"
 	"github.com/yuru-sha/gorogue/internal/core/command"
@@ -165,9 +167,11 @@ func (s *GameScreen) addCommandResult(result command.Result) {
 
 // AddMessage adds a message to the message log
 func (s *GameScreen) AddMessage(msg string) {
-	s.messages = append(s.messages, msg)
-	if len(s.messages) > 7 {
-		s.messages = s.messages[len(s.messages)-7:]
+	for _, line := range strings.Split(msg, "\n") {
+		s.messages = append(s.messages, line)
+		if len(s.messages) > 7 {
+			s.messages = s.messages[len(s.messages)-7:]
+		}
 	}
 	logger.Debug("Added message to log",
 		"message", msg,

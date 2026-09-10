@@ -101,7 +101,7 @@ func executeMove(ctx *Context, direction Direction) Result {
 	ctx.Player.Position.X = newX
 	ctx.Player.Position.Y = newY
 	message := fmt.Sprintf("Moved %s to (%d, %d).", directionName(direction), newX, newY)
-	if pickupMessage := pickUpAt(ctx, newX, newY); pickupMessage != "" {
+	if pickupMessage, _ := pickUpAt(ctx, newX, newY); pickupMessage != "" {
 		message += "\n" + pickupMessage
 	}
 	advanceMonsters(ctx)
@@ -182,33 +182,38 @@ func executePickUp(ctx *Context, args []string) Result {
 			}
 		}
 		if pickedUp > 0 {
+			advanceMonsters(ctx)
 			return turnResult(ctx, fmt.Sprintf("Picked up %d items.", pickedUp))
 		}
 		return result(ctx, "Picked up 0 items.")
 	}
 
-	message := pickUpAt(ctx, ctx.Player.Position.X, ctx.Player.Position.Y)
+	message, pickedUp := pickUpAt(ctx, ctx.Player.Position.X, ctx.Player.Position.Y)
+	if !pickedUp {
+		return result(ctx, message)
+	}
+	advanceMonsters(ctx)
 	return turnResult(ctx, message)
 }
 
-func pickUpAt(ctx *Context, x, y int) string {
+func pickUpAt(ctx *Context, x, y int) (string, bool) {
 	item := ctx.Level.GetItemAt(x, y)
 	if item == nil {
-		return ""
+		return "", false
 	}
 	if !ctx.Player.Inventory.AddItem(item) {
-		return "Your pack is full!"
+		return "Your pack is full!", false
 	}
 
 	ctx.Level.RemoveItem(item)
 	displayName := ctx.Player.IdentifyMgr.GetDisplayName(item)
 	switch item.Type {
 	case gameitem.ItemGold:
-		return fmt.Sprintf("You found %d gold pieces.", item.Value)
+		return fmt.Sprintf("You found %d gold pieces.", item.Value), true
 	case gameitem.ItemAmulet:
-		return fmt.Sprintf("You picked up the %s!", displayName)
+		return fmt.Sprintf("You picked up the %s!", displayName), true
 	default:
-		return fmt.Sprintf("You picked up %s.", displayName)
+		return fmt.Sprintf("You picked up %s.", displayName), true
 	}
 }
 
