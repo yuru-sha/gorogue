@@ -79,6 +79,17 @@ func TestGameplayCommandsHaveGUICLIParity(t *testing.T) {
 			if len(guiPlayer.Inventory.Items) != len(cliPlayer.Inventory.Items) {
 				t.Fatalf("inventory size mismatch: GUI=%d CLI=%d", len(guiPlayer.Inventory.Items), len(cliPlayer.Inventory.Items))
 			}
+			if len(guiLevel.Items) != len(cliLevel.Items) || len(guiLevel.Monsters) != len(cliLevel.Monsters) {
+				t.Fatalf("level entity count mismatch: GUI=(items=%d monsters=%d) CLI=(items=%d monsters=%d)",
+					len(guiLevel.Items), len(guiLevel.Monsters), len(cliLevel.Items), len(cliLevel.Monsters))
+			}
+			for i := range guiLevel.Monsters {
+				guiMonster, cliMonster := guiLevel.Monsters[i], cliLevel.Monsters[i]
+				if guiMonster.HP != cliMonster.HP || guiMonster.TurnCount != cliMonster.TurnCount {
+					t.Fatalf("monster state mismatch: GUI=(hp=%d turns=%d) CLI=(hp=%d turns=%d)",
+						guiMonster.HP, guiMonster.TurnCount, cliMonster.HP, cliMonster.TurnCount)
+				}
+			}
 			if got := gui.messages[len(gui.messages)-1]; got != cliResult {
 				t.Fatalf("message mismatch: GUI=%q CLI=%q\nall GUI messages: %s", got, cliResult, strings.Join(gui.messages, " | "))
 			}
@@ -111,6 +122,37 @@ func TestGameplayStairsHaveGUICLIParity(t *testing.T) {
 	}
 	if guiPlayer.Position.X != cliPlayer.Position.X || guiPlayer.Position.Y != cliPlayer.Position.Y {
 		t.Fatalf("position mismatch: GUI=%v CLI=%v", guiPlayer.Position, cliPlayer.Position)
+	}
+	if got := gui.messages[len(gui.messages)-1]; got != cliResult {
+		t.Fatalf("message mismatch: GUI=%q CLI=%q", got, cliResult)
+	}
+}
+
+func TestGameplayItemUseHasGUICLIParity(t *testing.T) {
+	if err := logger.Setup(); err != nil {
+		t.Fatal(err)
+	}
+
+	guiPlayer := actor.NewPlayerWithSeed(1, 1, 42)
+	guiPlayer.Hunger = 40
+	guiLevel := newTestFloor(5, 5)
+	guiPlayer.Inventory.AddItem(item.NewItem(1, 1, item.ItemFood, "parity food", 12))
+	gui := NewGameScreen(80, 50, guiPlayer)
+	gui.SetLevel(guiLevel)
+	gui.HandleInput(gruid.MsgKeyDown{Key: "e"})
+	gui.HandleInput(gruid.MsgKeyDown{Key: "a"})
+
+	cliPlayer := actor.NewPlayerWithSeed(1, 1, 42)
+	cliPlayer.Hunger = 40
+	cliLevel := newTestFloor(5, 5)
+	cliPlayer.Inventory.AddItem(item.NewItem(1, 1, item.ItemFood, "parity food", 12))
+	cliMode := cli.NewCLIMode(cliLevel, cliPlayer)
+	cliMode.IsActive = true
+	cliResult := cliMode.ExecuteCommand("use a")
+
+	if guiPlayer.Hunger != cliPlayer.Hunger || len(guiPlayer.Inventory.Items) != len(cliPlayer.Inventory.Items) {
+		t.Fatalf("item state mismatch: GUI=(hunger=%d inventory=%d) CLI=(hunger=%d inventory=%d)",
+			guiPlayer.Hunger, len(guiPlayer.Inventory.Items), cliPlayer.Hunger, len(cliPlayer.Inventory.Items))
 	}
 	if got := gui.messages[len(gui.messages)-1]; got != cliResult {
 		t.Fatalf("message mismatch: GUI=%q CLI=%q", got, cliResult)
