@@ -122,7 +122,7 @@ game/
 
 #### 3. Map (マップ)
 **役割**: ダンジョン生成、タイル定義、階層管理
-**場所**: `internal/dungeon/`
+**場所**: `internal/game/dungeon/`
 
 ```
 dungeon/
@@ -132,7 +132,7 @@ dungeon/
 ├── tile.go              # タイル定義
 ├── room.go              # 部屋定義
 ├── corridor.go          # 通路生成
-├── fov.go               # 視界計算
+├── visibility.go        # Level.UpdateVisibilityによる視界計算
 └── builders/            # 各種ビルダー
     ├── bsp.go           # BSPダンジョン生成
     ├── maze.go          # 迷路生成
@@ -1338,7 +1338,7 @@ func (r *GameRenderer) Render(screen *ebiten.Image) {
 
 **主要機能**:
 - **レイヤー化描画**: マップ→ステータス→メッセージの順序描画
-- **FOV統合**: 可視/探索済み状態による動的描画制御
+- **可視性統合**: `Visible`/`Explored` 状態による動的描画制御
 - **マップオフセット**: ステータス行を考慮した座標調整
 - **エンティティ描画**: アイテム、モンスター、NPCの統合描画
 
@@ -1416,100 +1416,12 @@ func NewInputMapper() *InputMapper {
 - **修飾キー対応**: Ctrl+S/L（セーブ・ロード）、Shift+./,（階段）
 - **周囲検索**: ドア開閉、隠し扉探索、トラップ解除の8方向検索
 
-#### 3. FOVシステム（視界計算）
+#### 3. 視界と探索済み状態
 
-```go
-type FOVSystem struct {
-    visible     [][]bool
-    explored    [][]bool
-    lightRadius int
-}
+`Level.UpdateVisibility`（`internal/game/dungeon/visibility.go`）が、プレイヤー位置から壁で遮られる現在の視界を計算します。更新時には全タイルの `Visible` をいったん解除し、視界内のタイルだけを `Visible` にして `Explored` を記録します。視界外になったタイルの `Explored` は保持されます。
 
-func (fov *FOVSystem) Calculate(world *World, x, y int) {
-    // すべてのタイルを非表示に
-    fov.clearVisible()
-    
-    // Shadowcasting アルゴリズム
-    for octant := 0; octant < 8; octant++ {
-        fov.castLight(world, x, y, 1, 1.0, 0.0, octant)
-    }
-    
-    // プレイヤー位置は常に可視
-    fov.visible[y][x] = true
-    fov.explored[y][x] = true
-}
+描画では、未探索の地形を表示せず、探索済みだが現在の視界外にある地形だけを記憶情報として表示します。アイテムとモンスターは現在 `Visible` なタイルにいる場合だけ表示します。視界範囲は地形の遮蔽で決まります。
 
-func (fov *FOVSystem) castLight(world *World, cx, cy, row int, 
-                                start, end float64, octant int) {
-    if start < end {
-        return
-    }
-    
-    for j := row; j <= fov.lightRadius; j++ {
-        dx := -j - 1
-        dy := -j
-        blocked := false
-        newStart := 0.0
-        
-        for dx <= 0 {
-            dx++
-            // 座標変換（octantに応じて）
-            x, y := fov.transformOctant(cx, cy, dx, dy, octant)
-            
-            if !world.InBounds(x, y) {
-                continue
-            }
-            
-            // 視線の角度を計算
-            leftSlope := (float64(dx) - 0.5) / (float64(dy) + 0.5)
-            rightSlope := (float64(dx) + 0.5) / (float64(dy) - 0.5)
-            
-            if start < rightSlope {
-                continue
-            } else if end > leftSlope {
-                break
-            }
-            
-            // タイルを可視に設定
-            fov.visible[y][x] = true
-            fov.explored[y][x] = true
-            
-            if blocked {
-                if world.BlocksSight(x, y) {
-                    newStart = rightSlope
-                    continue
-                } else {
-                    blocked = false
-                    start = newStart
-                }
-            } else {
-                if world.BlocksSight(x, y) && j < fov.lightRadius {
-                    blocked = true
-                    fov.castLight(world, cx, cy, j+1, start, leftSlope, octant)
-                    newStart = rightSlope
-                }
-            }
-        }
-        
-        if blocked {
-            break
-        }
-    }
-}
-```
-
-**効果的FOV半径計算**:
-```go
-func (fov *FOVSystem) calculateEffectiveFOVRadius(x, y int) int {
-    // 基本半径: 8
-    // 暗い部屋での制限: 2-3  
-    // 光源アイテム使用時: 基本半径復帰
-    if fov.isDarkRoom(x, y) && !fov.hasLight {
-        return 3
-    }
-    return fov.baseRadius
-}
-```
 
 #### 4. SaveLoadManager（状態永続化システム）
 
@@ -1616,7 +1528,7 @@ func max(a, b int) int {
 #### 1. 描画最適化
 
 - **差分描画**: 変更されたタイルのみ更新
-- **FOVベース描画**: 視界外のエンティティ描画を省略
+- **可視性ベース描画**: 視界外のエンティティ描画を省略
 - **レイヤー分離**: マップ、エンティティ、UIの独立レンダリング
 
 #### 2. メモリ効率
@@ -1654,7 +1566,7 @@ func max(a, b int) int {
 
 #### 2. 大規模マップでのレンダリングパフォーマンス
 - **問題**: マップサイズ拡大時の描画処理負荷
-- **対策候補**: 視界ベースのカリング、タイル描画最適化
+- **対策候補**: タイル描画最適化、差分描画
 
 #### 3. 複雑なゲーム状態のシリアライゼーション
 - **問題**: セーブデータの一貫性保証
