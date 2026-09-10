@@ -124,14 +124,8 @@ func (sm *SaveManager) LoadGame() (*SaveData, error) {
 		return nil, fmt.Errorf("failed to read save data: %w", err)
 	}
 
-	// Verify save data integrity
-	if err := sm.verifySaveData(saveData); err != nil {
-		return nil, fmt.Errorf("save data integrity check failed: %w", err)
-	}
-
-	// Check version compatibility
-	if err := sm.checkVersionCompatibility(saveData); err != nil {
-		return nil, fmt.Errorf("version compatibility check failed: %w", err)
+	if err := sm.validateSaveData(saveData); err != nil {
+		return nil, err
 	}
 
 	logger.Info("Game loaded successfully",
@@ -279,8 +273,8 @@ func (sm *SaveManager) ImportSave(importPath string) error {
 		return fmt.Errorf("failed to read import file: %w", err)
 	}
 
-	if err := sm.verifySaveData(saveData); err != nil {
-		return fmt.Errorf("import file integrity check failed: %w", err)
+	if err := sm.validateSaveData(saveData); err != nil {
+		return fmt.Errorf("import file validation failed: %w", err)
 	}
 
 	// Save to main save file
@@ -418,6 +412,16 @@ func (sm *SaveManager) verifySaveData(saveData *SaveData) error {
 		usedSlots[item.Slot] = true
 	}
 
+	return nil
+}
+
+func (sm *SaveManager) validateSaveData(saveData *SaveData) error {
+	if err := sm.verifySaveData(saveData); err != nil {
+		return fmt.Errorf("save data integrity check failed: %w", err)
+	}
+	if err := sm.checkVersionCompatibility(saveData); err != nil {
+		return fmt.Errorf("version compatibility check failed: %w", err)
+	}
 	return nil
 }
 
@@ -586,22 +590,19 @@ func (sm *SaveManager) RepairSave() error {
 		return info1.ModTime().After(info2.ModTime())
 	})
 
-	// Try to restore from the most recent backup
+	// Validate the backup before replacing the current save.
 	mostRecentBackup := matches[0]
 	saveFile := sm.getSaveFilePath()
+	saveData, err := sm.readSaveData(mostRecentBackup)
+	if err != nil {
+		return fmt.Errorf("backup save file is corrupted: %w", err)
+	}
+	if err := sm.validateSaveData(saveData); err != nil {
+		return fmt.Errorf("backup save file is invalid: %w", err)
+	}
 
 	if err := sm.copyFile(mostRecentBackup, saveFile); err != nil {
 		return fmt.Errorf("failed to restore from backup: %w", err)
-	}
-
-	// Verify the restored file
-	saveData, err := sm.readSaveData(saveFile)
-	if err != nil {
-		return fmt.Errorf("restored save file is still corrupted: %w", err)
-	}
-
-	if err := sm.verifySaveData(saveData); err != nil {
-		return fmt.Errorf("restored save file failed integrity check: %w", err)
 	}
 
 	logger.Info("Save file repaired successfully",
