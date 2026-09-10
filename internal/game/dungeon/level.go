@@ -304,7 +304,12 @@ func (l *Level) IsWalkable(x, y int) bool {
 // SetTile sets the tile at the given coordinates
 func (l *Level) SetTile(x, y int, tileType TileType) {
 	if l.IsInBounds(x, y) {
-		l.Tiles[y][x] = NewTile(tileType)
+		tile := NewTile(tileType)
+		if previous := l.Tiles[y][x]; previous != nil {
+			tile.Visible = previous.Visible
+			tile.Explored = previous.Explored
+		}
+		l.Tiles[y][x] = tile
 		logger.Debug("Set tile",
 			"x", x,
 			"y", y,

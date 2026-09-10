@@ -132,26 +132,99 @@ func TestSaveConverter_ConvertTileTypeToString(t *testing.T) {
 	}
 }
 
-func TestSaveConverterPreservesExploredState(t *testing.T) {
+func TestSaveConverterPreservesTileVisibilityState(t *testing.T) {
 	level := &dungeon.Level{
 		Width:       1,
 		Height:      1,
 		FloorNumber: 1,
 		Tiles:       [][]*dungeon.Tile{{dungeon.NewTile(dungeon.TileFloor)}},
 	}
-	level.Tiles[0][0].Explored = false
+	level.Tiles[0][0].Explored = true
+	level.Tiles[0][0].Visible = false
 
 	saved := ConvertLevelToSave(level)
-	if saved.Tiles[0][0].Explored {
-		t.Fatal("unexplored tile was saved as explored")
+	if !saved.Tiles[0][0].Explored || saved.Tiles[0][0].Visible {
+		t.Fatal("tile visibility state was not saved")
 	}
 
 	restored, err := NewSaveConverter().convertSaveFloor(*saved)
 	if err != nil {
 		t.Fatalf("convertSaveFloor() error = %v", err)
 	}
-	if restored.Tiles[0][0].Explored {
-		t.Fatal("unexplored tile was restored as explored")
+	if !restored.Tiles[0][0].Explored || restored.Tiles[0][0].Visible {
+		t.Fatal("tile visibility state was not restored")
+	}
+}
+
+func TestSaveConverterDoesNotExploreCurrentFloorBeforeRestoringPlayer(t *testing.T) {
+	player := actor.NewPlayer(0, 0)
+	saveDungeon := Dungeon{
+		Seed:         12345,
+		CurrentFloor: 1,
+		Floors: map[int]*Floor{
+			1: {
+				FloorNumber: 1,
+				Width:       1,
+				Height:      1,
+				Tiles:       [][]Tile{{{Type: "floor"}}},
+			},
+		},
+	}
+
+	manager, err := NewSaveConverter().convertSaveDungeon(saveDungeon, player)
+	if err != nil {
+		t.Fatalf("convertSaveDungeon() error = %v", err)
+	}
+	if manager.GetCurrentLevel().GetTile(0, 0).Explored {
+		t.Fatal("loading a floor explored its tile before the saved player position was restored")
+	}
+}
+
+func saveVisibilityTestLevel() *dungeon.Level {
+	level := &dungeon.Level{
+		Width:  7,
+		Height: 5,
+		Tiles:  make([][]*dungeon.Tile, 5),
+	}
+	for y := range level.Tiles {
+		level.Tiles[y] = make([]*dungeon.Tile, level.Width)
+		for x := range level.Tiles[y] {
+			level.Tiles[y][x] = dungeon.NewTile(dungeon.TileWall)
+		}
+	}
+	for _, position := range [][2]int{{1, 2}, {2, 2}, {4, 2}} {
+		level.SetTile(position[0], position[1], dungeon.TileFloor)
+	}
+	return level
+}
+
+func TestSaveGameIntegrationPreservesExploredState(t *testing.T) {
+	integration := NewSaveGameIntegration()
+	integration.saveManager.saveDir = t.TempDir()
+	if err := integration.Initialize(); err != nil {
+		t.Fatalf("Initialize() error = %v", err)
+	}
+
+	player := actor.NewPlayer(1, 2)
+	manager := dungeon.NewDungeonManagerWithSeed(player, 12345)
+	level := saveVisibilityTestLevel()
+	manager.SetLevel(1, level)
+	farTile := level.GetTile(4, 2)
+	farTile.Explored = true
+	farTile.Visible = false
+	integration.SetGameState(player, manager)
+
+	if err := integration.SaveGame(); err != nil {
+		t.Fatalf("SaveGame() error = %v", err)
+	}
+	if err := integration.LoadGame(); err != nil {
+		t.Fatalf("LoadGame() error = %v", err)
+	}
+
+	_, loadedManager := integration.GetGameState()
+	loadedTile := loadedManager.GetCurrentLevel().GetTile(4, 2)
+	if loadedTile.Visible || !loadedTile.Explored {
+		t.Fatalf("loaded tile state = visible:%t explored:%t", loadedTile.Visible, loadedTile.Explored)
 	}
 }
 

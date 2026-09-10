@@ -48,6 +48,7 @@ func NewDungeonManagerWithSeed(player *actor.Player, seed int64) *DungeonManager
 	// 最初のレベルを生成
 	dm.generateLevel(1)
 	dm.setPlayerPositionOnFloorChange(1)
+	dm.GetCurrentLevel().UpdateVisibility(player.Position.X, player.Position.Y)
 
 	logger.Info("Created dungeon manager",
 		"max_floors", MaxFloors,
@@ -162,6 +163,7 @@ func (dm *DungeonManager) MoveToFloor(targetFloor int) bool {
 
 	// プレイヤーの位置を適切な階段に設定
 	dm.setPlayerPositionOnFloorChange(targetFloor)
+	dm.GetCurrentLevel().UpdateVisibility(dm.player.Position.X, dm.player.Position.Y)
 
 	logger.Info("Moved to floor",
 		"floor", targetFloor,

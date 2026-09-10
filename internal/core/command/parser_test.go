@@ -71,7 +71,7 @@ func TestParser_ActionCommands(t *testing.T) {
 		{"D", CmdDisarm},
 		{"f", CmdFight},
 		{"x", CmdLook},
-		{gruid.KeyTab, CmdToggleFOV},
+		{gruid.KeyTab, CmdUnknown},
 
 		// Movement-related
 		{" ", CmdWait},

@@ -60,6 +60,7 @@ func (sc *SaveConverter) FromSaveData(saveData *SaveData) (*actor.Player, *dunge
 			)
 			sc.resetPlayerToSafePosition(player, currentLevel)
 		}
+		currentLevel.UpdateVisibility(player.Position.X, player.Position.Y)
 	}
 
 	logger.Info("Successfully converted save data to game objects",
@@ -283,6 +284,9 @@ func (sc *SaveConverter) convertIdentifiedItems(identifiedItems map[string]bool,
 func (sc *SaveConverter) convertSaveDungeon(saveDungeon Dungeon, player *actor.Player) (*dungeon.DungeonManager, error) {
 	// Create dungeon manager
 	dungeonManager := dungeon.NewDungeonManagerWithSeed(player, saveDungeon.Seed)
+	if !dungeonManager.MoveToFloor(saveDungeon.CurrentFloor) {
+		return nil, fmt.Errorf("failed to set current floor: %d", saveDungeon.CurrentFloor)
+	}
 
 	// Convert each floor
 	for floorNum, saveFloor := range saveDungeon.Floors {
@@ -306,14 +310,9 @@ func (sc *SaveConverter) convertSaveDungeon(saveDungeon Dungeon, player *actor.P
 		}
 	}
 
-	// Set current floor
-	if !dungeonManager.MoveToFloor(saveDungeon.CurrentFloor) {
-		return nil, fmt.Errorf("failed to set current floor: %d", saveDungeon.CurrentFloor)
-	}
 	if err := dungeonManager.SetRandomDraws(saveDungeon.RandomState.Draws); err != nil {
 		return nil, fmt.Errorf("failed to restore dungeon random state: %w", err)
 	}
-
 	return dungeonManager, nil
 }
 
