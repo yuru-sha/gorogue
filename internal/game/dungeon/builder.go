@@ -8,7 +8,7 @@ import (
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
-const dungeonTypeMaze = "maze"
+const DUNGEON_TYPE_MAZE = "maze"
 
 // DungeonBuilder is responsible for building dungeon levels
 type DungeonBuilder struct {
@@ -57,7 +57,7 @@ func (b *DungeonBuilder) Build() *Level {
 	dungeonType := b.determineDungeonType()
 
 	switch dungeonType {
-	case dungeonTypeMaze:
+	case DUNGEON_TYPE_MAZE:
 		b.generateMaze()
 		logger.Info("Built maze dungeon", "floor", b.level.FloorNumber)
 	case "bsp":
@@ -69,7 +69,7 @@ func (b *DungeonBuilder) Build() *Level {
 	}
 
 	// 特別な部屋の生成（迷路以外）
-	if dungeonType != dungeonTypeMaze && b.shouldGenerateSpecialRoom() {
+	if dungeonType != DUNGEON_TYPE_MAZE && b.shouldGenerateSpecialRoom() {
 		b.generateSpecialRoom()
 	}
 
@@ -110,7 +110,7 @@ func (b *DungeonBuilder) determineDungeonType() string {
 	// PyRogue風の階層別ダンジョンタイプ
 	switch {
 	case floor == 7 || floor == 13 || floor == 19:
-		return dungeonTypeMaze
+		return DUNGEON_TYPE_MAZE
 	default:
 		return "bsp"
 	}

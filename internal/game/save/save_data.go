@@ -13,8 +13,8 @@ import (
 
 const (
 	// SaveVersion represents the save file format version
-	SaveVersion  = "1.3.0"
-	unknownValue = "unknown"
+	SaveVersion   = "1.3.0"
+	UNKNOWN_VALUE = "unknown"
 )
 
 // SaveData represents the complete game state
@@ -543,7 +543,7 @@ func ConvertItemTypeToString(itemType item.ItemType) string {
 	case item.ItemAmulet:
 		return "amulet"
 	default:
-		return unknownValue
+		return UNKNOWN_VALUE
 	}
 }
 
@@ -571,7 +571,7 @@ func ConvertTileTypeToString(tileType dungeon.TileType) string {
 	case dungeon.TileLava:
 		return "lava"
 	default:
-		return unknownValue
+		return UNKNOWN_VALUE
 	}
 }
 
@@ -591,7 +591,7 @@ func ConvertAIStateToString(aiState actor.AIState) string {
 	case actor.StateFlee:
 		return "flee"
 	default:
-		return unknownValue
+		return UNKNOWN_VALUE
 	}
 }
 

@@ -21,9 +21,9 @@ type GameOverScreen struct {
 }
 
 const (
-	gameOverKeyDown  = "Down"
-	gameOverKeyEnter = "Enter"
-	gameOverKeySpace = "Space"
+	KEY_DOWN  = "Down"
+	KEY_ENTER = "Enter"
+	KEY_SPACE = "Space"
 )
 
 // NewGameOverScreen creates a new game over screen
@@ -48,11 +48,11 @@ func (s *GameOverScreen) HandleInput(msg gruid.Msg) state.GameState {
 	switch keyMsg.Key {
 	case "Up":
 		s.selected = (s.selected - 1 + len(s.menuItems)) % len(s.menuItems)
-	case gameOverKeyDown:
+	case KEY_DOWN:
 		s.selected = (s.selected + 1) % len(s.menuItems)
-	case gameOverKeyEnter:
+	case KEY_ENTER:
 		return s.handleMenuSelection()
-	case gameOverKeySpace:
+	case KEY_SPACE:
 		s.showStats = !s.showStats
 	default:
 		// キーによる直接選択
