@@ -176,6 +176,7 @@ func (c *CLIMode) moveCommand(args []string) string {
 	// Move player
 	c.Player.Position.X = newX
 	c.Player.Position.Y = newY
+	c.Level.UpdateVisibility(newX, newY)
 
 	logger.Debug("Player moved via CLI", "from", fmt.Sprintf("(%d,%d)", oldX, oldY),
 		"to", fmt.Sprintf("(%d,%d)", newX, newY))

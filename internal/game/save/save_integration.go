@@ -423,6 +423,7 @@ func (sgi *SaveGameIntegration) CreateNewGame(charName string, seed int64) error
 		firstRoom := level.Rooms[0]
 		player.Position.X = firstRoom.X + firstRoom.Width/2
 		player.Position.Y = firstRoom.Y + firstRoom.Height/2
+		level.UpdateVisibility(player.Position.X, player.Position.Y)
 	}
 
 	// Set game state

@@ -72,7 +72,6 @@ func (p *Parser) initializeKeyMap() {
 	p.keyMap["x"] = Command{Type: CmdLook}
 	p.keyMap[" "] = Command{Type: CmdWait}
 	p.keyMap["."] = Command{Type: CmdWait}
-	p.keyMap[gruid.KeyTab] = Command{Type: CmdToggleFOV}
 	p.keyMap["^L"] = Command{Type: CmdLook}
 	p.keyMap["^R"] = Command{Type: CmdLook}
 
@@ -130,7 +129,6 @@ func (p *Parser) GetKeyBindings() map[string]string {
 	bindings["x"] = "Look/examine surroundings"
 	bindings["."] = "Rest for a turn"
 	bindings["Space"] = "Rest for a turn"
-	bindings["Tab"] = "Toggle field of view display"
 	bindings["Ctrl+L"] = "Redraw the screen"
 	bindings["Ctrl+R"] = "Repeat last message"
 
