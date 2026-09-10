@@ -9,6 +9,8 @@ BINARY_NAME := gorogue
 BUILD_DIR := bin
 LOG_DIR := logs
 GOLANGCI_LINT_VERSION := v1.64.8
+GO_BIN_DIR := $(shell go env GOPATH)/bin
+export PATH := $(GO_BIN_DIR):$(PATH)
 
 # SDL2専用設定
 RENDER_MODE := sdl2
@@ -42,7 +44,7 @@ $(SETUP_DEV_MARKER):
 	@echo "Installing development tools..."
 	@if ! command -v golangci-lint >/dev/null 2>&1; then \
 		echo "Installing golangci-lint..."; \
-		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin $(GOLANGCI_LINT_VERSION); \
+		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(GO_BIN_DIR)" $(GOLANGCI_LINT_VERSION); \
 	fi
 	@$(MAKE) check-golangci-lint-version
 	@command -v staticcheck >/dev/null 2>&1 || { \

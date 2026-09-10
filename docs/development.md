@@ -40,13 +40,19 @@ go build ./cmd/gorogue
 make setup-dev
 ```
 
-`make setup-dev`および`make ci-checks`は、golangci-lint v1.64.8をサポートします。別のバージョンがPATH上にある場合、セットアップはエラーで停止します。
+`make setup-dev`および`make ci-checks`は、golangci-lint v1.64.8を使用します。GoのbinディレクトリがPATHに含まれていない場合も、セットアップはインストール先をPATHに追加して実行します。別のバージョンがPATH上にある場合、セットアップはエラーで停止します。
 
-クリーンセットアップから検証する場合は、セットアップマーカーを削除してから次を実行します。
+クリーンセットアップからツールの導入とバージョン検査を検証する場合は、セットアップマーカーを削除してから次を実行します。
 
 ```bash
 rm -f .setup-check .setup-dev-check
 make setup-dev
+make check-setup-dev
+```
+
+`make ci-checks`は全体の品質ゲートです。現行コードに既存する83件のlint指摘は[#26](https://github.com/yuru-sha/gorogue/issues/26)で追跡しており、解消されるまではこのコマンドが失敗します。
+
+```bash
 make ci-checks
 ```
 
