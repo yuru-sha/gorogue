@@ -145,7 +145,7 @@ func TestDrawShowsExploredTerrainWithoutOutOfFOVEntities(t *testing.T) {
 	}
 }
 
-func TestTabDoesNotClaimToToggleUnimplementedFOV(t *testing.T) {
+func TestTabIsNotBoundToFOVToggle(t *testing.T) {
 	player := actor.NewPlayer(1, 2)
 	screen := NewGameScreen(80, 50, player)
 	screen.SetLevel(occludedTestFloor())
@@ -154,5 +154,30 @@ func TestTabDoesNotClaimToToggleUnimplementedFOV(t *testing.T) {
 
 	if strings.Contains(strings.Join(screen.messages, "\n"), "FOV display toggled") {
 		t.Fatal("Tab advertised an unimplemented FOV toggle")
+	}
+}
+
+func TestClosingDoorHidesEntitiesBehindIt(t *testing.T) {
+	player := actor.NewPlayer(1, 2)
+	level := occludedTestFloor()
+	level.SetTile(2, 2, dungeon.TileOpenDoor)
+	level.SetTile(3, 2, dungeon.TileFloor)
+	monster := actor.NewMonster(3, 2, 'B')
+	level.Monsters = []*actor.Monster{monster}
+	screen := NewGameScreen(80, 50, player)
+	screen.SetLevel(level)
+	if !level.GetTile(3, 2).Visible {
+		t.Fatal("test setup did not put the monster in view")
+	}
+
+	screen.doCloseDoor(1, 0)
+
+	if level.GetTile(3, 2).Visible {
+		t.Fatal("closing a door left the tile behind it visible")
+	}
+	grid := gruid.NewGrid(80, 50)
+	screen.Draw(&grid)
+	if got := grid.At(gruid.Point{X: 3, Y: 4}).Rune; got == monster.Type.Symbol {
+		t.Fatal("monster behind a closed door was drawn")
 	}
 }

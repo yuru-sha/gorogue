@@ -219,6 +219,7 @@ func (s *GameScreen) doOpenDoor(dx, dy int) {
 	tile := s.level.GetTile(targetX, targetY)
 	if tile != nil && (tile.Type == dungeon.TileDoor || tile.Type == dungeon.TileDoorClosed) {
 		s.level.SetTile(targetX, targetY, dungeon.TileOpenDoor)
+		s.level.UpdateVisibility(s.player.Position.X, s.player.Position.Y)
 		s.AddMessage("You open the door.")
 
 		// Let monsters take their turn
@@ -258,6 +259,7 @@ func (s *GameScreen) doCloseDoor(dx, dy int) {
 
 		// Close the door using the generator's representation.
 		s.level.SetTile(targetX, targetY, dungeon.TileDoor)
+		s.level.UpdateVisibility(s.player.Position.X, s.player.Position.Y)
 		s.AddMessage("You close the door.")
 
 		// Let monsters take their turn
