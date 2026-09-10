@@ -21,7 +21,7 @@ cache_control: {"type": "ephemeral"}
 - Go 1.22以上
 - make（ビルドツール）
 - Git（バージョン管理）
-- golangci-lint（静的解析ツール）
+- golangci-lint v1.64.8（静的解析ツール。`make setup-dev`でバージョンを検査）
 
 ### セットアップ手順
 
@@ -38,6 +38,22 @@ go build ./cmd/gorogue
 
 # 開発ツールのインストール
 make setup-dev
+```
+
+`make setup-dev`および`make ci-checks`は、golangci-lint v1.64.8を使用します。GoのbinディレクトリがPATHに含まれていない場合も、セットアップとlintはインストール先の実行ファイルを直接使用します。PATH上に別のバージョンがある場合は、そのバージョンを検査してエラーで停止します。
+
+クリーンセットアップからツールの導入とバージョン検査を検証する場合は、セットアップマーカーを削除してから次を実行します。
+
+```bash
+rm -f .setup-check .setup-dev-check
+make setup-dev
+make check-setup-dev
+```
+
+`make ci-checks`は全体の品質ゲートです。現行コードに既存する83件のlint指摘は[#26](https://github.com/yuru-sha/gorogue/issues/26)で追跡しており、解消されるまではこのコマンドが失敗します。
+
+```bash
+make ci-checks
 ```
 
 ## プロジェクト構造
