@@ -16,11 +16,11 @@ write_version() {
 }
 
 write_version 1.64.8
-output=$(GOLANGCI_LINT="$fake_lint" SETUP_MARKER="$setup_marker" SETUP_DEV_MARKER="$setup_dev_marker" make -C "$repo_dir" -s setup-dev 2>&1)
+output=$(GOLANGCI_LINT="$fake_lint" make -C "$repo_dir" -s SETUP_MARKER="$setup_marker" SETUP_DEV_MARKER="$setup_dev_marker" setup-dev 2>&1)
 test -z "$output"
 
 write_version 2.13.2
-if output=$(GOLANGCI_LINT="$fake_lint" SETUP_MARKER="$setup_marker" SETUP_DEV_MARKER="$setup_dev_marker" make -C "$repo_dir" -s setup-dev 2>&1); then
+if output=$(GOLANGCI_LINT="$fake_lint" make -C "$repo_dir" -s SETUP_MARKER="$setup_marker" SETUP_DEV_MARKER="$setup_dev_marker" setup-dev 2>&1); then
 	echo "incompatible golangci-lint version was accepted" >&2
 	exit 1
 fi
