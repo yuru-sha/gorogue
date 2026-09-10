@@ -87,6 +87,7 @@ func NewGameScreen(width, height int, player *actor.Player) *GameScreen {
 // SetLevel sets the dungeon level for the game screen
 func (s *GameScreen) SetLevel(level *dungeon.Level) {
 	s.level = level
+	level.UpdateVisibility(s.player.Position.X, s.player.Position.Y)
 	s.wizardMode = wizard.NewWizardMode(level, s.player)
 	if s.dungeonManager != nil {
 		s.cliMode = cli.NewCLIModeWithDungeonManager(s.dungeonManager, s.player)
@@ -105,6 +106,7 @@ func (s *GameScreen) SetDungeonManager(dm *dungeon.DungeonManager) {
 	s.dungeonManager = dm
 	if dm != nil {
 		s.level = dm.GetCurrentLevel()
+		s.level.UpdateVisibility(s.player.Position.X, s.player.Position.Y)
 		if s.wizardMode != nil {
 			s.wizardMode.SetLevel(s.level)
 		}

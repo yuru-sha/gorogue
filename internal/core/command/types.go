@@ -34,7 +34,6 @@ const (
 	CmdDisarm    // Disarm trap (d)
 	CmdEquip     // Equip item (e)
 	CmdUnequip   // Unequip item (r)
-	CmdToggleFOV // Toggle field of view (Tab)
 
 	// Stair commands
 	CmdGoUpstairs   // Go up stairs (<)
@@ -119,8 +118,6 @@ func (t Type) String() string {
 		return "Equip"
 	case CmdUnequip:
 		return "Unequip"
-	case CmdToggleFOV:
-		return "Toggle FOV"
 	case CmdGoUpstairs:
 		return "Go Upstairs"
 	case CmdGoDownstairs:

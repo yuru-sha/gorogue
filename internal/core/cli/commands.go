@@ -345,6 +345,7 @@ func (c *CLIMode) teleportCommand(args []string) string {
 	oldX, oldY := c.Player.Position.X, c.Player.Position.Y
 	c.Player.Position.X = x
 	c.Player.Position.Y = y
+	c.Level.UpdateVisibility(x, y)
 
 	return fmt.Sprintf("Teleported from (%d, %d) to (%d, %d)", oldX, oldY, x, y)
 }

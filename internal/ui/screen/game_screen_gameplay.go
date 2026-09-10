@@ -59,10 +59,6 @@ func (s *GameScreen) handleDisarm() {
 	s.AddMessage("Disarm trap which direction? (hjklybnu)")
 }
 
-func (s *GameScreen) handleToggleFOV() {
-	s.AddMessage("FOV display toggled")
-}
-
 func (s *GameScreen) canGoDownstairs() bool {
 	return s.dungeonManager != nil && s.dungeonManager.CanGoDownstairs()
 }

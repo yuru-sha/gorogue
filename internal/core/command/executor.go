@@ -100,6 +100,7 @@ func executeMove(ctx *Context, direction Direction) Result {
 
 	ctx.Player.Position.X = newX
 	ctx.Player.Position.Y = newY
+	ctx.Level.UpdateVisibility(newX, newY)
 	message := fmt.Sprintf("Moved %s to (%d, %d).", directionName(direction), newX, newY)
 	if pickupMessage, _ := pickUpAt(ctx, newX, newY); pickupMessage != "" {
 		message += "\n" + pickupMessage
@@ -453,6 +454,7 @@ func executeDoor(ctx *Context, cmd Command, args []string) Result {
 		switch tile.Type {
 		case dungeon.TileDoor, dungeon.TileDoorClosed:
 			ctx.Level.SetTile(targetX, targetY, dungeon.TileOpenDoor)
+			ctx.Level.UpdateVisibility(ctx.Player.Position.X, ctx.Player.Position.Y)
 			advanceMonsters(ctx)
 			return turnResult(ctx, "You open the door.")
 		case dungeon.TileDoorOpen, dungeon.TileOpenDoor:
@@ -473,6 +475,7 @@ func executeDoor(ctx *Context, cmd Command, args []string) Result {
 			}
 		}
 		ctx.Level.SetTile(targetX, targetY, dungeon.TileDoor)
+		ctx.Level.UpdateVisibility(ctx.Player.Position.X, ctx.Player.Position.Y)
 		advanceMonsters(ctx)
 		return turnResult(ctx, "You close the door.")
 	case dungeon.TileDoor, dungeon.TileDoorClosed:

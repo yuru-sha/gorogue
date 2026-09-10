@@ -14,7 +14,7 @@ GoRogueは、Go言語のシンプルさと並行処理の強みを活かした�
 - ゲーム状態とルールは `internal/core` と `internal/game` に置き、GUI/CLI は入力変換と表示を担当します。
 - `DungeonManager` がシード、階層、プレイヤー位置、階段移動を管理し、Engine/CLI/API から固定シードを渡せます。
 - JSON セーブは `SaveVersion 1.1.0` として、ダンジョン、階層、アイテム、識別状態を保存します。
-- 乱数状態の完全な復元、FOV/探索済み状態と表示セルの分離は未完了です。ゲームプレイの移動、アイテム、戦闘、階段、セーブ/ロードは `internal/core/command/executor.go` をGUI/CLIの共通実行経路として利用します。
+- 乱数状態の完全な復元は未完了です。ゲームプレイの移動、アイテム、戦闘、階段、セーブ/ロードは `internal/core/command/executor.go` をGUI/CLIの共通実行経路として利用し、FOV・探索済み状態は `Level.UpdateVisibility` で管理します。
 
 ## アーキテクチャの基本原則
 
