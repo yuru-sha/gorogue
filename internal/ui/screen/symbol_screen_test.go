@@ -97,7 +97,7 @@ func TestSymbolScreenDrawRendersEveryLegendEntry(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.symbol+" "+tt.name, func(t *testing.T) {
-			for i, wantRune := range tt.symbol + " " + tt.name {
+			for i, wantRune := range []rune(tt.symbol + " " + tt.name) {
 				wantStyle := gruid.Style{Fg: 0xCCCCCC}
 				if i == 0 {
 					wantStyle.Fg = tt.symbolFg

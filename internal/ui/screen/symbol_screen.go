@@ -165,7 +165,7 @@ func (s *SymbolScreen) drawSymbol(grid *gruid.Grid, x, y int, symbol, name strin
 
 // drawText draws text at the specified position with the given style
 func (s *SymbolScreen) drawText(grid *gruid.Grid, x, y int, text string, style gruid.Style) {
-	for i, r := range text {
+	for i, r := range []rune(text) {
 		pos := gruid.Point{X: x + i, Y: y}
 		if pos.X >= 0 && pos.X < grid.Size().X && pos.Y >= 0 && pos.Y < grid.Size().Y {
 			grid.Set(pos, gruid.Cell{Rune: r, Style: style})
