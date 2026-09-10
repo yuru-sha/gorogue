@@ -30,7 +30,7 @@ Core Dependencies:
   
 
 Development Dependencies:
-  golangci-lint: ">=1.55.0"
+  golangci-lint: "v1.64.8"
   go test: "標準ライブラリ"
   go vet: "標準ライブラリ"
   gofmt: "標準ライブラリ"

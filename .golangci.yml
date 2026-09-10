@@ -104,7 +104,6 @@ linters-settings:
       - sloppyReassign    # 再代入（ゲームロジックで必要）
   
   nolintlint:
-    allow-leading-space: true    # コメント前のスペースを許可
     allow-unused: false          # 未使用のnolintを禁止
     require-explanation: true    # nolintの理由説明を必須
     require-specific: true       # 具体的なリンター名を必須
