@@ -314,6 +314,24 @@ func (im *IdentificationManager) SaveState() map[string]bool {
 	return state
 }
 
+// SaveAppearanceState returns unidentified item appearances in a stable, category-qualified form.
+func (im *IdentificationManager) SaveAppearanceState() map[string]string {
+	state := make(map[string]string)
+	for name, appearance := range im.scrollTitles {
+		state["scroll:"+name] = appearance
+	}
+	for name, appearance := range im.potionColors {
+		state["potion:"+name] = appearance
+	}
+	for name, appearance := range im.ringMaterials {
+		state["ring:"+name] = appearance
+	}
+	for name, appearance := range im.wandMaterials {
+		state["wand:"+name] = appearance
+	}
+	return state
+}
+
 // LoadState restores identified item types saved by SaveState.
 func (im *IdentificationManager) LoadState(state map[string]bool) {
 	for key, identified := range state {
@@ -333,6 +351,26 @@ func (im *IdentificationManager) LoadState(state map[string]bool) {
 			im.identifiedRings[name] = true
 		case "wand":
 			im.identifiedWands[name] = true
+		}
+	}
+}
+
+// LoadAppearanceState restores unidentified item appearances saved by SaveAppearanceState.
+func (im *IdentificationManager) LoadAppearanceState(state map[string]string) {
+	for key, appearance := range state {
+		category, name, ok := strings.Cut(key, ":")
+		if !ok || name == "" || appearance == "" {
+			continue
+		}
+		switch category {
+		case "scroll":
+			im.scrollTitles[name] = appearance
+		case "potion":
+			im.potionColors[name] = appearance
+		case "ring":
+			im.ringMaterials[name] = appearance
+		case "wand":
+			im.wandMaterials[name] = appearance
 		}
 	}
 }

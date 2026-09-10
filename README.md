@@ -15,7 +15,7 @@ The product requirements and acceptance criteria are defined in [`SPEC.md`](SPEC
 - Weapons, armor, food, potions, scrolls, wands, rings, gold, and the Amulet of Yendor.
 - Item identification and equipment management.
 - Victory by returning the Amulet of Yendor to the surface.
-- JSON save/load with save format version `1.2.0`, including runtime RNG state.
+- JSON save/load with save format version `1.3.0`, including runtime RNG state and identification appearances.
 - SDL2 GUI, CLI, and seed-aware game APIs.
 
 Some legacy design documents describe features that are not part of the current scope. See [`docs/architecture.md`](docs/architecture.md) and [`docs/development.md`](docs/development.md) for the current implementation boundaries.

@@ -12,7 +12,7 @@ import (
 )
 
 // SaveVersion represents the save file format version
-const SaveVersion = "1.2.0"
+const SaveVersion = "1.3.0"
 
 // SaveData represents the complete game state
 type SaveData struct {
@@ -60,7 +60,8 @@ type Player struct {
 	Equipment Equipment       `json:"equipment"`
 
 	// Identification system
-	IdentifiedItems map[string]bool `json:"identified_items"`
+	IdentifiedItems           map[string]bool   `json:"identified_items"`
+	IdentificationAppearances map[string]string `json:"identification_appearances"`
 
 	// Status effects (for future expansion)
 	StatusEffects []StatusEffect `json:"status_effects"`
@@ -311,20 +312,21 @@ func ToSaveData(
 // ConvertPlayerToSave converts player object to save format
 func ConvertPlayerToSave(player *actor.Player) Player {
 	savePlayer := Player{
-		X:               player.Position.X,
-		Y:               player.Position.Y,
-		Level:           player.Level,
-		HP:              player.HP,
-		MaxHP:           player.MaxHP,
-		Attack:          player.Attack,
-		Defense:         player.Defense,
-		Hunger:          player.Hunger,
-		Exp:             player.Exp,
-		Gold:            player.Gold,
-		Inventory:       make([]InventoryItem, 0),
-		Equipment:       Equipment{},
-		IdentifiedItems: make(map[string]bool),
-		StatusEffects:   make([]StatusEffect, 0),
+		X:                         player.Position.X,
+		Y:                         player.Position.Y,
+		Level:                     player.Level,
+		HP:                        player.HP,
+		MaxHP:                     player.MaxHP,
+		Attack:                    player.Attack,
+		Defense:                   player.Defense,
+		Hunger:                    player.Hunger,
+		Exp:                       player.Exp,
+		Gold:                      player.Gold,
+		Inventory:                 make([]InventoryItem, 0),
+		Equipment:                 Equipment{},
+		IdentifiedItems:           make(map[string]bool),
+		IdentificationAppearances: make(map[string]string),
+		StatusEffects:             make([]StatusEffect, 0),
 	}
 
 	// Convert inventory
@@ -356,6 +358,7 @@ func ConvertPlayerToSave(player *actor.Player) Player {
 	}
 
 	savePlayer.IdentifiedItems = player.IdentifyMgr.SaveState()
+	savePlayer.IdentificationAppearances = player.IdentifyMgr.SaveAppearanceState()
 
 	return savePlayer
 }

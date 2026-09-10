@@ -105,12 +105,17 @@ func (dm *DungeonManager) RandomDraws() uint64 {
 }
 
 // SetRandomDraws restores the gameplay random source by replaying its seed cursor.
-func (dm *DungeonManager) SetRandomDraws(draws uint64) {
-	dm.rngSource = newTrackedRandomSourceAt(dm.seed, draws)
+func (dm *DungeonManager) SetRandomDraws(draws uint64) error {
+	rngSource, err := newTrackedRandomSourceAt(dm.seed, draws)
+	if err != nil {
+		return err
+	}
+	dm.rngSource = rngSource
 	dm.rng = dm.rngSource.rand()
 	if dm.player != nil {
 		dm.player.SetRandomSource(dm.rng)
 	}
+	return nil
 }
 
 // generateLevel generates a new level for the given floor

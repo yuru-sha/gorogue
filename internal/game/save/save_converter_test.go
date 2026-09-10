@@ -207,6 +207,39 @@ func TestSaveConverterPreservesRuntimeRandomState(t *testing.T) {
 	}
 }
 
+func TestSaveConverterPreservesIdentificationAppearances(t *testing.T) {
+	logger.Setup()
+	player := actor.NewPlayerWithSeed(0, 0, 7)
+	dungeonManager := dungeon.NewDungeonManagerWithSeed(player, 42)
+	saveData := ToSaveData(player, dungeonManager, GameInfo{}, Stats{}, Settings{})
+	encoded, err := json.Marshal(saveData)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	var persisted SaveData
+	if err := json.Unmarshal(encoded, &persisted); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v", err)
+	}
+
+	restoredPlayer, _, err := NewSaveConverter().FromSaveData(&persisted)
+	if err != nil {
+		t.Fatalf("FromSaveData() error = %v", err)
+	}
+
+	testItems := []*item.Item{
+		item.NewItem(0, 0, item.ItemScroll, "teleportation", 100),
+		item.NewItem(0, 0, item.ItemPotion, "healing", 25),
+		item.NewItem(0, 0, item.ItemRing, "protection", 200),
+		item.NewItem(0, 0, item.ItemWand, "wand of light", 120),
+	}
+	for _, testItem := range testItems {
+		want := player.IdentifyMgr.GetDisplayName(testItem)
+		if got := restoredPlayer.IdentifyMgr.GetDisplayName(testItem); got != want {
+			t.Errorf("display name for %q = %q, want %q", testItem.Name, got, want)
+		}
+	}
+}
+
 // TestSaveConverter_ConvertAIStateToString tests AI state conversion
 func TestSaveConverter_ConvertAIStateToString(t *testing.T) {
 	testCases := []struct {

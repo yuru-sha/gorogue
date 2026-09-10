@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/yuru-sha/gorogue/internal/game/dungeon"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
@@ -410,6 +411,15 @@ func (sm *SaveManager) verifySaveData(saveData *SaveData) error {
 			return fmt.Errorf("duplicate inventory slot: %d", item.Slot)
 		}
 		usedSlots[item.Slot] = true
+	}
+
+	if saveData.DungeonData.RandomState.Draws > dungeon.MaxRandomDraws {
+		return fmt.Errorf("dungeon random draw cursor exceeds maximum: %d", saveData.DungeonData.RandomState.Draws)
+	}
+	for floor, saveFloor := range saveData.DungeonData.Floors {
+		if saveFloor != nil && saveFloor.RandomState.Draws > dungeon.MaxRandomDraws {
+			return fmt.Errorf("floor %d random draw cursor exceeds maximum: %d", floor, saveFloor.RandomState.Draws)
+		}
 	}
 
 	return nil

@@ -100,9 +100,14 @@ func (l *Level) RandomDraws() uint64 {
 }
 
 // SetRandomDraws restores the level random source by replaying its seed cursor.
-func (l *Level) SetRandomDraws(draws uint64) {
-	l.rngSource = newTrackedRandomSourceAt(l.Seed, draws)
+func (l *Level) SetRandomDraws(draws uint64) error {
+	rngSource, err := newTrackedRandomSourceAt(l.Seed, draws)
+	if err != nil {
+		return err
+	}
+	l.rngSource = rngSource
 	l.rng = l.rngSource.rand()
+	return nil
 }
 
 // Generate generates the dungeon layout
