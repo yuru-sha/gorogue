@@ -315,7 +315,6 @@ go test ./internal/core/command ./internal/core/cli ./internal/ui/screen
 - **影響**: フレームレートの低下、操作レスポンス悪化
 - **原因**: 全タイル描画によるCPU負荷
 - **対策候補**:
-  - 視界ベースのカリング実装
   - タイル描画の最適化
   - 差分描画システムの強化
 - **優先度**: 中
