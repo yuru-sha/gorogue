@@ -1,14 +1,14 @@
 # GoRogue - Go言語で実装されたローグライクゲーム
 # PyRogue (https://github.com/yuru-sha/pyrogue) を参考に作成
 
-.PHONY: setup setup-dev build run clean test lint deps dev help check-setup check-setup-dev ci-checks qa-all
+.PHONY: setup setup-dev build run clean test lint deps dev help check-setup check-setup-dev check-golangci-lint-version ci-checks qa-all
 
 # 設定変数
 GO_VERSION := 1.24.5
 BINARY_NAME := gorogue
 BUILD_DIR := bin
 LOG_DIR := logs
-GOLANGCI_LINT_VERSION := v1.61.0
+GOLANGCI_LINT_VERSION := v1.64.8
 
 # SDL2専用設定
 RENDER_MODE := sdl2
@@ -35,14 +35,16 @@ $(SETUP_MARKER):
 
 # 開発環境セットアップ（SDL2統合）
 setup-dev: setup $(SETUP_DEV_MARKER)
+	@$(MAKE) check-golangci-lint-version
 
 $(SETUP_DEV_MARKER):
 	@echo "🚀 Setting up development environment..."
 	@echo "Installing development tools..."
-	@command -v golangci-lint >/dev/null 2>&1 || { \
+	@if ! command -v golangci-lint >/dev/null 2>&1; then \
 		echo "Installing golangci-lint..."; \
 		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin $(GOLANGCI_LINT_VERSION); \
-	}
+	fi
+	@$(MAKE) check-golangci-lint-version
 	@command -v staticcheck >/dev/null 2>&1 || { \
 		echo "Installing staticcheck..."; \
 		go install honnef.co/go/tools/cmd/staticcheck@latest; \
@@ -71,6 +73,20 @@ $(SETUP_DEV_MARKER):
 	@echo "✅ Development environment setup complete!"
 	@touch $(SETUP_DEV_MARKER)
 
+check-golangci-lint-version:
+	@command -v golangci-lint >/dev/null 2>&1 || { \
+		echo "❌ golangci-lint is not installed. Run 'make setup-dev'."; \
+		exit 1; \
+	}
+	@actual_version="$$(golangci-lint --version 2>/dev/null | sed -n 's/^golangci-lint has version \([^ ]*\).*$$/\1/p' | sed 's/^v//')"; \
+	if [ -z "$$actual_version" ]; then \
+		echo "❌ Could not determine the installed golangci-lint version."; \
+		exit 1; \
+	elif [ "$$actual_version" != "$(patsubst v%,%,$(GOLANGCI_LINT_VERSION))" ]; then \
+		echo "❌ Unsupported golangci-lint version: $$actual_version (expected $(GOLANGCI_LINT_VERSION))."; \
+		exit 1; \
+	fi
+
 # セットアップ確認
 check-setup:
 	@if [ ! -f $(SETUP_MARKER) ]; then \
@@ -79,7 +95,7 @@ check-setup:
 	fi
 	@echo "✅ Basic setup verified"
 
-check-setup-dev:
+check-setup-dev: check-golangci-lint-version
 	@if [ ! -f $(SETUP_DEV_MARKER) ]; then \
 		echo "❌ Development setup not found. Run 'make setup-dev' first."; \
 		exit 1; \
@@ -247,4 +263,4 @@ help:
 	@echo "  make run         # Start playing!"
 
 # デフォルトターゲット
-.DEFAULT_GOAL := help 
+.DEFAULT_GOAL := help
