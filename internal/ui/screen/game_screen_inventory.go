@@ -3,15 +3,13 @@ package screen
 import (
 	"fmt"
 
+	"github.com/yuru-sha/gorogue/internal/core/command"
 	gameitem "github.com/yuru-sha/gorogue/internal/game/item"
 )
 
 // showInventory displays the player's inventory
 func (s *GameScreen) showInventory() {
-	listing := s.player.Inventory.GetInventoryListing(s.player.IdentifyMgr)
-	for _, line := range listing {
-		s.AddMessage(line)
-	}
+	s.addCommandResult(s.executeCommand(command.Command{Type: command.CmdInventory}))
 }
 
 // enterEquipMode enters equipment selection mode
