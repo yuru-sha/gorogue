@@ -119,6 +119,7 @@ func useScrollOfTeleportation(player *actor.Player, level *dungeon.Level) *Effec
 		if tile.Walkable() {
 			player.Position.X = x
 			player.Position.Y = y
+			level.UpdateVisibility(x, y)
 			logger.Debug("Player teleported", "x", x, "y", y)
 			return &EffectResult{
 				Message:    "You suddenly find yourself somewhere else!",

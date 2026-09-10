@@ -54,8 +54,8 @@ func (t *Tile) Walkable() bool {
 func NewTile(tileType TileType) *Tile {
 	t := &Tile{
 		Type:       tileType,
-		Visible:    true, // すべてのタイルを可視化（簡素化のため）
-		Explored:   true, // FOV未実装のため、現状は可視タイルを探索済みとする
+		Visible:    false,
+		Explored:   false,
 		IsWalkable: IsWalkable(tileType),
 	}
 	switch tileType {

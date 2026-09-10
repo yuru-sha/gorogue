@@ -155,6 +155,9 @@ func (s *GameScreen) drawDungeon(grid *gruid.Grid) {
 	for y := 0; y < s.level.Height; y++ {
 		for x := 0; x < s.level.Width; x++ {
 			tile := s.level.GetTile(x, y)
+			if tile == nil || (!tile.Visible && !tile.Explored) {
+				continue
+			}
 			grid.Set(gruid.Point{X: x, Y: y + 2}, gruid.Cell{
 				Rune:  tile.Rune,
 				Style: gruid.Style{Fg: tile.Color, Bg: 0x000000},
@@ -167,6 +170,10 @@ func (s *GameScreen) drawDungeon(grid *gruid.Grid) {
 func (s *GameScreen) drawEntities(grid *gruid.Grid) {
 	// アイテムの描画（最初に描画）
 	for _, item := range s.level.Items {
+		tile := s.level.GetTile(item.Position.X, item.Position.Y)
+		if tile == nil || !tile.Visible {
+			continue
+		}
 		grid.Set(gruid.Point{X: item.Position.X, Y: item.Position.Y + 2}, gruid.Cell{
 			Rune:  item.Symbol,
 			Style: gruid.Style{Fg: item.Color, Bg: 0x000000},
@@ -175,7 +182,8 @@ func (s *GameScreen) drawEntities(grid *gruid.Grid) {
 
 	// モンスターの描画（アイテムの上に描画）
 	for _, monster := range s.level.Monsters {
-		if monster.IsAlive() {
+		tile := s.level.GetTile(monster.Position.X, monster.Position.Y)
+		if monster.IsAlive() && tile != nil && tile.Visible {
 			grid.Set(gruid.Point{X: monster.Position.X, Y: monster.Position.Y + 2}, gruid.Cell{
 				Rune:  monster.Type.Symbol,
 				Style: gruid.Style{Fg: monster.Color, Bg: 0x000000},

@@ -84,9 +84,6 @@ func (s *GameScreen) handleNormalInput(key gruid.Key) state.GameState {
 		s.handleFight()
 	case command.CmdDisarm:
 		s.handleDisarm()
-	case command.CmdToggleFOV:
-		s.handleToggleFOV()
-
 	// Stair commands
 	case command.CmdGoUpstairs:
 		return s.handleStairs(true)
