@@ -3,6 +3,7 @@ package screen
 import (
 	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/state"
+	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
@@ -13,7 +14,7 @@ type SymbolScreen struct {
 	grid   gruid.Grid
 }
 
-// PyRogue準拠のシンボル説明データ
+// シンボル説明データ。モンスター名はactor.MonsterTypesを正規ソースとする。
 var symbolExplanations = []struct {
 	symbol string
 	name   string
@@ -30,33 +31,33 @@ var symbolExplanations = []struct {
 	// プレイヤー
 	{"@", "you"},
 
-	// モンスター（PyRogue準拠）
-	{"A", "giant ant"},
-	{"B", "bat"},
-	{"C", "centaur"},
-	{"D", "dragon"},
-	{"E", "floating eye"},
-	{"F", "violet fungi"},
-	{"G", "gnome"},
-	{"H", "hobgoblin"},
-	{"I", "invisible stalker"},
-	{"J", "jackal"},
-	{"K", "kobold"},
-	{"L", "leprechaun"},
-	{"M", "mimic"},
-	{"N", "nymph"},
-	{"O", "orc"},
-	{"P", "purple worm"},
-	{"Q", "quasit"},
-	{"R", "rust monster"},
-	{"S", "snake"},
-	{"T", "troll"},
-	{"U", "umber hulk"},
-	{"V", "vampire"},
-	{"W", "wraith"},
-	{"X", "xorn"},
-	{"Y", "yeti"},
-	{"Z", "zombie"},
+	// モンスター
+	{"A", actor.MonsterTypes['A'].Name},
+	{"B", actor.MonsterTypes['B'].Name},
+	{"C", actor.MonsterTypes['C'].Name},
+	{"D", actor.MonsterTypes['D'].Name},
+	{"E", actor.MonsterTypes['E'].Name},
+	{"F", actor.MonsterTypes['F'].Name},
+	{"G", actor.MonsterTypes['G'].Name},
+	{"H", actor.MonsterTypes['H'].Name},
+	{"I", actor.MonsterTypes['I'].Name},
+	{"J", actor.MonsterTypes['J'].Name},
+	{"K", actor.MonsterTypes['K'].Name},
+	{"L", actor.MonsterTypes['L'].Name},
+	{"M", actor.MonsterTypes['M'].Name},
+	{"N", actor.MonsterTypes['N'].Name},
+	{"O", actor.MonsterTypes['O'].Name},
+	{"P", actor.MonsterTypes['P'].Name},
+	{"Q", actor.MonsterTypes['Q'].Name},
+	{"R", actor.MonsterTypes['R'].Name},
+	{"S", actor.MonsterTypes['S'].Name},
+	{"T", actor.MonsterTypes['T'].Name},
+	{"U", actor.MonsterTypes['U'].Name},
+	{"V", actor.MonsterTypes['V'].Name},
+	{"W", actor.MonsterTypes['W'].Name},
+	{"X", actor.MonsterTypes['X'].Name},
+	{"Y", actor.MonsterTypes['Y'].Name},
+	{"Z", actor.MonsterTypes['Z'].Name},
 
 	// アイテム（PyRogue準拠）
 	{")", "weapon"},
