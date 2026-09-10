@@ -76,15 +76,26 @@ func TestSymbolScreenDrawRendersEveryLegendEntry(t *testing.T) {
 		seenSymbols[tt.symbol] = struct{}{}
 	}
 	legendMonsterNames := make(map[rune]string, len(actor.MonsterTypes))
-	for _, tt := range tests {
-		if len(tt.symbol) == 1 && tt.symbol[0] >= 'A' && tt.symbol[0] <= 'Z' {
-			legendMonsterNames[rune(tt.symbol[0])] = tt.name
+	for y := 0; y < grid.Size().Y; y++ {
+		for x := 0; x < grid.Size().X; x++ {
+			cell := grid.At(gruid.Point{X: x, Y: y})
+			if cell.Style.Fg != 0xFF0000 || cell.Rune < 'A' || cell.Rune > 'Z' {
+				continue
+			}
+			if _, exists := legendMonsterNames[cell.Rune]; exists {
+				t.Errorf("duplicate rendered monster symbol %c", cell.Rune)
+				continue
+			}
+			legendMonsterNames[cell.Rune] = legendNameAt(&grid, x, y)
 		}
 	}
 	if len(legendMonsterNames) != len(actor.MonsterTypes) {
 		t.Errorf("legend monster entries = %d, runtime roster = %d", len(legendMonsterNames), len(actor.MonsterTypes))
 	}
 	for symbol, monsterType := range actor.MonsterTypes {
+		if symbol != monsterType.Symbol {
+			t.Errorf("runtime monster map key %c does not match MonsterType.Symbol %c", symbol, monsterType.Symbol)
+		}
 		name, exists := legendMonsterNames[symbol]
 		if !exists {
 			t.Errorf("runtime monster %c is missing from the legend", symbol)
@@ -92,6 +103,11 @@ func TestSymbolScreenDrawRendersEveryLegendEntry(t *testing.T) {
 		}
 		if name != monsterType.Name {
 			t.Errorf("legend name for %c = %q, runtime name = %q", symbol, name, monsterType.Name)
+		}
+	}
+	for symbol := range legendMonsterNames {
+		if _, exists := actor.MonsterTypes[symbol]; !exists {
+			t.Errorf("legend monster %c is missing from the runtime roster", symbol)
 		}
 	}
 
@@ -112,4 +128,16 @@ func TestSymbolScreenDrawRendersEveryLegendEntry(t *testing.T) {
 			}
 		})
 	}
+}
+
+func legendNameAt(grid *gruid.Grid, x, y int) string {
+	name := make([]rune, 0)
+	for x += 2; x < grid.Size().X; x++ {
+		cell := grid.At(gruid.Point{X: x, Y: y})
+		if cell.Style.Fg != 0xCCCCCC {
+			break
+		}
+		name = append(name, cell.Rune)
+	}
+	return string(name)
 }
