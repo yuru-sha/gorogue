@@ -47,3 +47,4 @@ saves/
 .agents/skills/*
 !.agents/skills/gorogue-verify/
 !.agents/skills/gorogue-verify/**
+.codex/config.toml
