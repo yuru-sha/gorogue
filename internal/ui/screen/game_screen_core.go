@@ -145,6 +145,7 @@ func (s *GameScreen) executeCommand(cmd command.Command, args ...string) command
 		s.level = result.Level
 	}
 	if s.wizardMode != nil && s.level != nil {
+		s.wizardMode.Player = s.player
 		s.wizardMode.SetLevel(s.level)
 	}
 	if s.cliMode != nil {

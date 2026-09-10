@@ -267,6 +267,7 @@ func (s *GameScreen) handleCLIInput(key gruid.Key) state.GameState {
 			s.dungeonManager = s.cliMode.Dungeon
 			s.level = s.cliMode.Level
 			if s.wizardMode != nil && s.level != nil {
+				s.wizardMode.Player = s.player
 				s.wizardMode.SetLevel(s.level)
 			}
 
