@@ -40,7 +40,7 @@ go build ./cmd/gorogue
 make setup-dev
 ```
 
-`make setup-dev`および`make ci-checks`は、golangci-lint v1.64.8を使用します。GoのbinディレクトリがPATHに含まれていない場合も、セットアップはインストール先をPATHに追加して実行します。別のバージョンがPATH上にある場合、セットアップはエラーで停止します。
+`make setup-dev`および`make ci-checks`は、golangci-lint v1.64.8を使用します。GoのbinディレクトリがPATHに含まれていない場合も、セットアップとlintはインストール先の実行ファイルを直接使用します。PATH上に別のバージョンがある場合は、そのバージョンを検査してエラーで停止します。
 
 クリーンセットアップからツールの導入とバージョン検査を検証する場合は、セットアップマーカーを削除してから次を実行します。
 

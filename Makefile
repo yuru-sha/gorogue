@@ -10,7 +10,9 @@ BUILD_DIR := bin
 LOG_DIR := logs
 GOLANGCI_LINT_VERSION := v1.64.8
 GO_BIN_DIR := $(shell go env GOPATH)/bin
-export PATH := $(GO_BIN_DIR):$(PATH)
+GOLANGCI_LINT := $(shell command -v golangci-lint 2>/dev/null || printf '%s\n' "$(GO_BIN_DIR)/golangci-lint")
+STATICCHECK := $(shell command -v staticcheck 2>/dev/null || printf '%s\n' "$(GO_BIN_DIR)/staticcheck")
+GOIMPORTS := $(shell command -v goimports 2>/dev/null || printf '%s\n' "$(GO_BIN_DIR)/goimports")
 
 # SDL2専用設定
 RENDER_MODE := sdl2
@@ -42,19 +44,19 @@ setup-dev: setup $(SETUP_DEV_MARKER)
 $(SETUP_DEV_MARKER):
 	@echo "🚀 Setting up development environment..."
 	@echo "Installing development tools..."
-	@if ! command -v golangci-lint >/dev/null 2>&1; then \
+	@if [ ! -x "$(GOLANGCI_LINT)" ]; then \
 		echo "Installing golangci-lint..."; \
 		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(GO_BIN_DIR)" $(GOLANGCI_LINT_VERSION); \
 	fi
 	@$(MAKE) check-golangci-lint-version
-	@command -v staticcheck >/dev/null 2>&1 || { \
+	@if [ ! -x "$(STATICCHECK)" ]; then \
 		echo "Installing staticcheck..."; \
 		go install honnef.co/go/tools/cmd/staticcheck@latest; \
-	}
-	@command -v goimports >/dev/null 2>&1 || { \
+	fi
+	@if [ ! -x "$(GOIMPORTS)" ]; then \
 		echo "Installing goimports..."; \
 		go install golang.org/x/tools/cmd/goimports@latest; \
-	}
+	fi
 	@echo "🎮 Setting up SDL2 environment..."
 	@echo "Checking SDL2 installation..."
 	@if command -v pkg-config >/dev/null 2>&1; then \
@@ -76,11 +78,11 @@ $(SETUP_DEV_MARKER):
 	@touch $(SETUP_DEV_MARKER)
 
 check-golangci-lint-version:
-	@command -v golangci-lint >/dev/null 2>&1 || { \
+	@test -x "$(GOLANGCI_LINT)" || { \
 		echo "❌ golangci-lint is not installed. Run 'make setup-dev'."; \
 		exit 1; \
 	}
-	@actual_version="$$(golangci-lint --version 2>/dev/null | sed -n 's/^golangci-lint has version \([^ ]*\).*$$/\1/p' | sed 's/^v//')"; \
+	@actual_version="$$('$(GOLANGCI_LINT)' --version 2>/dev/null | sed -n 's/^golangci-lint has version \([^ ]*\).*$$/\1/p' | sed 's/^v//')"; \
 	if [ -z "$$actual_version" ]; then \
 		echo "❌ Could not determine the installed golangci-lint version."; \
 		exit 1; \
@@ -154,8 +156,8 @@ lint: check-setup-dev
 	@echo "🔍 Running linters..."
 	@go fmt ./...
 	@go vet ./...
-	@golangci-lint run
-	@staticcheck ./...
+	@"$(GOLANGCI_LINT)" run
+	@"$(STATICCHECK)" ./...
 	@echo "✅ Linting complete"
 
 # 依存関係の更新
@@ -200,7 +202,7 @@ qa-all: check-setup-dev
 fmt: check-setup-dev
 	@echo "📝 Formatting code..."
 	@go fmt ./...
-	@goimports -w .
+	@"$(GOIMPORTS)" -w .
 	@echo "✅ Code formatted"
 
 # ログの確認
