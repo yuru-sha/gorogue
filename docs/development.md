@@ -194,14 +194,14 @@ go test -bench=. ./...
 
 ### 概要
 
-GoRogueは、GUIとCLIの両エンジンで統一されたコマンド処理システムを実装しています。新しいコマンドを追加する際は、以下の手順に従ってください。
+ゲームプレイの実行本体は `internal/core/command/executor.go` の `command.Execute` です。GUIは `Parser` でキーを構造化コマンドへ変換し、CLIは文字列を構造化コマンドへ変換して、どちらも同じ実行本体を呼び出します。新しいコマンドを追加する際は、以下の手順に従ってください。
 
 ### 新しいコマンドの追加手順
 
 #### 1. CommandHandlerの拡張
 
 ```go
-// internal/game/command/handler.go
+// internal/core/command/executor.go
 type CommandHandler struct {
     game *Game
 }
@@ -230,7 +230,7 @@ func (h *CommandHandler) handleNewCommand(args []string) CommandResult {
 #### 2. GameLogicの拡張
 
 ```go
-// internal/game/game.go
+// internal/game/ (既存のゲームルール)
 func (g *Game) HandleNewAction() bool {
     // 新しいアクションの実装
     if g.canPerformAction() {
@@ -245,7 +245,7 @@ func (g *Game) HandleNewAction() bool {
 #### 3. キー入力マッピングの追加（GUI用）
 
 ```go
-// internal/ui/input_handler.go
+// internal/core/command/parser.go
 func (h *InputHandler) KeyToCommand(key tcell.Key, ch rune) string {
     // 既存のキーマッピング...
 
@@ -261,7 +261,7 @@ func (h *InputHandler) KeyToCommand(key tcell.Key, ch rune) string {
 #### 4. ヘルプテキストの更新
 
 ```go
-// internal/game/command/handler.go
+// internal/core/command/executor.go
 func (h *CommandHandler) handleHelp() CommandResult {
     helpText := `Available Commands:
   ...existing commands...
@@ -277,7 +277,7 @@ func (h *CommandHandler) handleHelp() CommandResult {
 #### 5. テストの作成
 
 ```go
-// internal/game/command/handler_test.go
+// internal/ui/screen/gameplay_parity_test.go
 func TestNewCommand(t *testing.T) {
     // 新しいコマンドのテスト
     handler := NewCommandHandler(mockGame)
@@ -310,7 +310,7 @@ func TestNewCommand(t *testing.T) {
 
 ```bash
 # CLIモードで新しいコマンドをテスト
-go run ./cmd/gorogue --cli
+go run ./cmd/gorogue-cli
 > help           # ヘルプの確認
 > newcommand     # 新しいコマンドのテスト
 ```
@@ -319,7 +319,7 @@ go run ./cmd/gorogue --cli
 
 ```bash
 # 新しいコマンドのテストを実行
-go test ./internal/game/command/ -run TestNewCommand -v
+go test ./internal/core/command/ -run TestNewCommand -v
 ```
 
 ### トラブルシューティング

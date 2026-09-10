@@ -13,6 +13,7 @@ import (
 	"github.com/yuru-sha/gorogue/internal/core/cli"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
+	"github.com/yuru-sha/gorogue/internal/game/save"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
@@ -60,9 +61,15 @@ func main() {
 	// Initialize the same generated game world used by the GUI.
 	player := actor.NewPlayerWithSeed(1, 1, seed)
 	dungeonManager := dungeon.NewDungeonManagerWithSeed(player, seed)
+	saveIntegration := save.NewSaveGameIntegration()
+	if err := saveIntegration.Initialize(); err != nil {
+		logger.Warn("Failed to initialize save integration", "error", err)
+	}
+	saveIntegration.SetGameState(player, dungeonManager)
 
 	// Initialize CLI mode
 	cliMode := cli.NewCLIModeWithDungeonManager(dungeonManager, player)
+	cliMode.SetSaveIntegration(saveIntegration)
 	cliMode.IsActive = true
 
 	if *interactive {

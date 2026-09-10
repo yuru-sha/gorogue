@@ -47,6 +47,8 @@ const (
 	CmdWizard  // Toggle wizard mode (^W)
 	CmdCLI     // Enter CLI mode (:)
 	CmdSymbol  // Show symbol explanation (/)
+	CmdSave    // Save game
+	CmdLoad    // Load game
 	CmdUnknown // Unknown command
 )
 
@@ -135,6 +137,10 @@ func (t Type) String() string {
 		return "CLI Mode"
 	case CmdSymbol:
 		return "Symbol Explanation"
+	case CmdSave:
+		return "Save"
+	case CmdLoad:
+		return "Load"
 	default:
 		return "Unknown"
 	}

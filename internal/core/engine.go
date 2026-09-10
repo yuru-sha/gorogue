@@ -20,17 +20,18 @@ const (
 
 // Engine represents the game engine and implements gruid.Model interface
 type Engine struct {
-	grid           gruid.Grid
-	stateManager   *state.StateManager
-	dungeonManager *dungeon.DungeonManager
-	player         *actor.Player
-	gameScreen     *uiscreen.GameScreen
-	menuScreen     *uiscreen.MenuScreen
-	helpScreen     *uiscreen.HelpScreen
-	gameOverScreen *uiscreen.GameOverScreen
-	victoryScreen  *uiscreen.VictoryScreen
-	symbolScreen   *uiscreen.SymbolScreen
-	msgs           []gruid.Msg
+	grid            gruid.Grid
+	stateManager    *state.StateManager
+	dungeonManager  *dungeon.DungeonManager
+	player          *actor.Player
+	gameScreen      *uiscreen.GameScreen
+	menuScreen      *uiscreen.MenuScreen
+	helpScreen      *uiscreen.HelpScreen
+	gameOverScreen  *uiscreen.GameOverScreen
+	victoryScreen   *uiscreen.VictoryScreen
+	symbolScreen    *uiscreen.SymbolScreen
+	saveIntegration *save.SaveGameIntegration
+	msgs            []gruid.Msg
 }
 
 // NewEngine creates and initializes a new game engine
@@ -76,6 +77,7 @@ func NewEngineWithSeed(seed int64) *Engine {
 	gameScreen := uiscreen.NewGameScreen(screenWidth, screenHeight, player)
 	gameScreen.SetLevel(level)                   // ダンジョンレベルを設定
 	gameScreen.SetDungeonManager(dungeonManager) // ダンジョンマネージャーを設定
+	gameScreen.SetSaveIntegration(saveIntegration)
 	menuScreen := uiscreen.NewMenuScreen(screenWidth, screenHeight)
 	helpScreen := uiscreen.NewHelpScreen(screenWidth, screenHeight)
 	symbolScreen := uiscreen.NewSymbolScreen(screenWidth, screenHeight)
@@ -101,17 +103,18 @@ func NewEngineWithSeed(seed int64) *Engine {
 	stateManager.SetState(state.StateMenu)
 
 	engine := &Engine{
-		grid:           grid,
-		stateManager:   stateManager,
-		dungeonManager: dungeonManager,
-		player:         player,
-		gameScreen:     gameScreen,
-		menuScreen:     menuScreen,
-		helpScreen:     helpScreen,
-		gameOverScreen: gameOverScreen,
-		victoryScreen:  victoryScreen,
-		symbolScreen:   symbolScreen,
-		msgs:           make([]gruid.Msg, 0),
+		grid:            grid,
+		stateManager:    stateManager,
+		dungeonManager:  dungeonManager,
+		player:          player,
+		gameScreen:      gameScreen,
+		menuScreen:      menuScreen,
+		helpScreen:      helpScreen,
+		gameOverScreen:  gameOverScreen,
+		victoryScreen:   victoryScreen,
+		symbolScreen:    symbolScreen,
+		saveIntegration: saveIntegration,
+		msgs:            make([]gruid.Msg, 0),
 	}
 	saveLoadScreen.SetOnLoad(engine.restoreLoadedGame)
 
@@ -124,6 +127,7 @@ func (e *Engine) restoreLoadedGame(player *actor.Player, dungeonManager *dungeon
 	e.gameScreen = uiscreen.NewGameScreen(screenWidth, screenHeight, player)
 	e.gameScreen.SetLevel(dungeonManager.GetCurrentLevel())
 	e.gameScreen.SetDungeonManager(dungeonManager)
+	e.gameScreen.SetSaveIntegration(e.saveIntegration)
 	e.stateManager.RegisterState(state.StateGame, e.gameScreen)
 }
 
