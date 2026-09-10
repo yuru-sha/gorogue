@@ -3,6 +3,7 @@
 package save
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -96,6 +97,139 @@ func TestSaveManager_SaveAndLoad(t *testing.T) {
 	}
 	if loadedData.DungeonData.CurrentFloor != 1 {
 		t.Errorf("Expected CurrentFloor 1, got %d", loadedData.DungeonData.CurrentFloor)
+	}
+}
+
+func TestSaveManagerRejectsUnsupportedSaveVersion(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "gorogue_test_*")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	sm := NewSaveManager()
+	sm.saveDir = tempDir
+	if err := sm.Initialize(); err != nil {
+		t.Fatalf("Initialize failed: %v", err)
+	}
+
+	if err := sm.SaveGame(&SaveData{
+		Version: "1.2.0",
+		PlayerData: Player{
+			Level: 1,
+			HP:    20,
+			MaxHP: 20,
+		},
+		DungeonData: Dungeon{CurrentFloor: 1},
+	}); err != nil {
+		t.Fatalf("SaveGame failed: %v", err)
+	}
+
+	if _, err := sm.LoadGame(); err == nil {
+		t.Fatal("LoadGame should reject an unsupported save version")
+	}
+}
+
+func TestSaveManagerImportRejectsUnsupportedSaveVersion(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "gorogue_test_*")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	importPath := filepath.Join(tempDir, "old.sav")
+	data, err := json.Marshal(&SaveData{
+		Version: "1.2.0",
+		PlayerData: Player{
+			Level: 1,
+			HP:    20,
+			MaxHP: 20,
+		},
+		DungeonData: Dungeon{CurrentFloor: 1},
+	})
+	if err != nil {
+		t.Fatalf("json.Marshal failed: %v", err)
+	}
+	if err := os.WriteFile(importPath, data, 0600); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+
+	sm := NewSaveManager()
+	sm.saveDir = tempDir
+	if err := sm.Initialize(); err != nil {
+		t.Fatalf("Initialize failed: %v", err)
+	}
+
+	if err := sm.ImportSave(importPath); err == nil {
+		t.Fatal("ImportSave should reject an unsupported save version")
+	}
+	if sm.FileExists() {
+		t.Fatal("ImportSave should not create a main save for an unsupported version")
+	}
+}
+
+func TestSaveManagerImportRejectsUnrestorableRandomCursor(t *testing.T) {
+	logger.Setup()
+	testCases := []struct {
+		name    string
+		dungeon Dungeon
+	}{
+		{
+			name: "dungeon",
+			dungeon: Dungeon{
+				CurrentFloor: 1,
+				RandomState:  RandomState{Draws: ^uint64(0)},
+			},
+		},
+		{
+			name: "floor",
+			dungeon: Dungeon{
+				CurrentFloor: 1,
+				Floors: map[int]*Floor{
+					1: {RandomState: RandomState{Draws: ^uint64(0)}},
+				},
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			tempDir, err := os.MkdirTemp("", "gorogue_test_*")
+			if err != nil {
+				t.Fatalf("Failed to create temp directory: %v", err)
+			}
+			defer os.RemoveAll(tempDir)
+
+			importPath := filepath.Join(tempDir, "corrupt.sav")
+			data, err := json.Marshal(&SaveData{
+				Version: SaveVersion,
+				PlayerData: Player{
+					Level: 1,
+					HP:    20,
+					MaxHP: 20,
+				},
+				DungeonData: testCase.dungeon,
+			})
+			if err != nil {
+				t.Fatalf("json.Marshal failed: %v", err)
+			}
+			if err := os.WriteFile(importPath, data, 0600); err != nil {
+				t.Fatalf("WriteFile failed: %v", err)
+			}
+
+			sm := NewSaveManager()
+			sm.saveDir = tempDir
+			if err := sm.Initialize(); err != nil {
+				t.Fatalf("Initialize failed: %v", err)
+			}
+
+			if err := sm.ImportSave(importPath); err == nil {
+				t.Fatal("ImportSave should reject an unbounded random cursor")
+			}
+			if sm.FileExists() {
+				t.Fatal("ImportSave should not create a main save for an unbounded random cursor")
+			}
+		})
 	}
 }
 

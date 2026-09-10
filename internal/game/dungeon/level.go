@@ -34,35 +34,32 @@ type Level struct {
 	Monsters      []*actor.Monster
 	Items         []*item.Item
 	rng           *rand.Rand
+	rngSource     *trackedRandomSource
 }
 
 // NewLevel creates a new dungeon level using the builder pattern
 func NewLevel(width, height, floorNum int) *Level {
-	return newLevelWithRand(width, height, floorNum, newRandom())
+	return newLevelWithRandomSource(width, height, floorNum, newTrackedRandomSource(time.Now().UnixNano()))
 }
 
 // NewLevelWithSeed creates a reproducible dungeon level.
 func NewLevelWithSeed(width, height, floorNum int, seed int64) *Level {
-	level := newLevelWithRand(width, height, floorNum, rand.New(rand.NewSource(seed)))
+	level := newLevelWithRandomSource(width, height, floorNum, newTrackedRandomSource(seed))
 	level.Seed = seed
 	return level
 }
 
 func newRandom() *rand.Rand {
-	return rand.New(rand.NewSource(time.Now().UnixNano()))
+	return newTrackedRandomSource(time.Now().UnixNano()).rand()
 }
 
-func newLevelWithRand(width, height, floorNum int, rng *rand.Rand) *Level {
-	if rng == nil {
-		rng = newRandom()
-	}
-
+func newLevelWithRandomSource(width, height, floorNum int, source *trackedRandomSource) *Level {
 	var level *Level
 
 	// 特別な階層（迷路階層）のチェック
 	if floorNum == 7 || floorNum == 13 || floorNum == 19 {
 		// 迷路階層を生成
-		mazeBuilder := NewMazeBuilderWithRand(width, height, floorNum, rng)
+		mazeBuilder := NewMazeBuilderWithRand(width, height, floorNum, source.rand())
 		level = mazeBuilder.Build()
 		logger.Info("Created maze level",
 			"width", width,
@@ -72,7 +69,7 @@ func newLevelWithRand(width, height, floorNum int, rng *rand.Rand) *Level {
 		)
 	} else {
 		// 通常の階層を生成
-		builder := NewDungeonBuilderWithRand(width, height, floorNum, rng)
+		builder := NewDungeonBuilderWithRand(width, height, floorNum, source.rand())
 		level = builder.Build()
 		logger.Debug("Created normal level",
 			"width", width,
@@ -82,14 +79,35 @@ func newLevelWithRand(width, height, floorNum int, rng *rand.Rand) *Level {
 		)
 	}
 
+	level.rngSource = source
 	return level
 }
 
 func (l *Level) random() *rand.Rand {
 	if l.rng == nil {
-		l.rng = newRandom()
+		l.rngSource = newTrackedRandomSource(time.Now().UnixNano())
+		l.rng = l.rngSource.rand()
 	}
 	return l.rng
+}
+
+// RandomDraws returns the number of values consumed by the level random source.
+func (l *Level) RandomDraws() uint64 {
+	if l.rngSource == nil {
+		return 0
+	}
+	return l.rngSource.draws
+}
+
+// SetRandomDraws restores the level random source by replaying its seed cursor.
+func (l *Level) SetRandomDraws(draws uint64) error {
+	rngSource, err := newTrackedRandomSourceAt(l.Seed, draws)
+	if err != nil {
+		return err
+	}
+	l.rngSource = rngSource
+	l.rng = l.rngSource.rand()
+	return nil
 }
 
 // Generate generates the dungeon layout

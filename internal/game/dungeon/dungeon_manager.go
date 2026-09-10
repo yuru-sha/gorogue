@@ -23,6 +23,7 @@ type DungeonManager struct {
 	seed         int64
 	floorSeeds   map[int]int64
 	rng          *rand.Rand
+	rngSource    *trackedRandomSource
 }
 
 // NewDungeonManager creates a new dungeon manager
@@ -32,13 +33,15 @@ func NewDungeonManager(player *actor.Player) *DungeonManager {
 
 // NewDungeonManagerWithSeed creates a dungeon manager with reproducible random state.
 func NewDungeonManagerWithSeed(player *actor.Player, seed int64) *DungeonManager {
+	rngSource := newTrackedRandomSource(seed)
 	dm := &DungeonManager{
 		levels:       make(map[int]*Level),
 		currentFloor: 1,
 		player:       player,
 		seed:         seed,
 		floorSeeds:   make(map[int]int64),
-		rng:          rand.New(rand.NewSource(seed)),
+		rng:          rngSource.rand(),
+		rngSource:    rngSource,
 	}
 	player.SetRandomSource(dm.rng)
 
@@ -92,6 +95,28 @@ func (dm *DungeonManager) FloorSeeds() map[int]int64 {
 // SetFloorSeed records a seed restored from a save file.
 func (dm *DungeonManager) SetFloorSeed(floor int, seed int64) {
 	dm.floorSeeds[floor] = seed
+}
+
+// RandomDraws returns the number of values consumed by the gameplay random source.
+func (dm *DungeonManager) RandomDraws() uint64 {
+	if dm.rngSource == nil {
+		return 0
+	}
+	return dm.rngSource.draws
+}
+
+// SetRandomDraws restores the gameplay random source by replaying its seed cursor.
+func (dm *DungeonManager) SetRandomDraws(draws uint64) error {
+	rngSource, err := newTrackedRandomSourceAt(dm.seed, draws)
+	if err != nil {
+		return err
+	}
+	dm.rngSource = rngSource
+	dm.rng = dm.rngSource.rand()
+	if dm.player != nil {
+		dm.player.SetRandomSource(dm.rng)
+	}
+	return nil
 }
 
 // generateLevel generates a new level for the given floor
