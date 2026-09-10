@@ -10,9 +10,9 @@ BUILD_DIR := bin
 LOG_DIR := logs
 GOLANGCI_LINT_VERSION := v1.64.8
 GO_BIN_DIR := $(shell go env GOPATH)/bin
-GOLANGCI_LINT := $(shell command -v golangci-lint 2>/dev/null || printf '%s\n' "$(GO_BIN_DIR)/golangci-lint")
-STATICCHECK := $(shell command -v staticcheck 2>/dev/null || printf '%s\n' "$(GO_BIN_DIR)/staticcheck")
-GOIMPORTS := $(shell command -v goimports 2>/dev/null || printf '%s\n' "$(GO_BIN_DIR)/goimports")
+GOLANGCI_LINT ?= $(shell command -v golangci-lint 2>/dev/null || printf '%s\n' "$(GO_BIN_DIR)/golangci-lint")
+STATICCHECK ?= $(shell command -v staticcheck 2>/dev/null || printf '%s\n' "$(GO_BIN_DIR)/staticcheck")
+GOIMPORTS ?= $(shell command -v goimports 2>/dev/null || printf '%s\n' "$(GO_BIN_DIR)/goimports")
 
 # SDL2専用設定
 RENDER_MODE := sdl2
