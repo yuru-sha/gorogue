@@ -309,6 +309,7 @@ func (sc *SaveConverter) convertSaveDungeon(saveDungeon Dungeon, player *actor.P
 	if !dungeonManager.MoveToFloor(saveDungeon.CurrentFloor) {
 		return nil, fmt.Errorf("failed to set current floor: %d", saveDungeon.CurrentFloor)
 	}
+	dungeonManager.SetRandomDraws(saveDungeon.RandomState.Draws)
 
 	return dungeonManager, nil
 }
@@ -326,6 +327,7 @@ func (sc *SaveConverter) convertSaveFloor(saveFloor Floor) (*dungeon.Level, erro
 		Monsters:    make([]*actor.Monster, 0),
 		Items:       make([]*item.Item, 0),
 	}
+	level.SetRandomDraws(saveFloor.RandomState.Draws)
 
 	// Convert tiles
 	for y := 0; y < saveFloor.Height; y++ {

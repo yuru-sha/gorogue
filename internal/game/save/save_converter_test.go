@@ -3,6 +3,7 @@
 package save
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/yuru-sha/gorogue/internal/game/actor"
@@ -151,6 +152,58 @@ func TestSaveConverterPreservesExploredState(t *testing.T) {
 	}
 	if restored.Tiles[0][0].Explored {
 		t.Fatal("unexplored tile was restored as explored")
+	}
+}
+
+func TestSaveConverterPreservesRuntimeRandomState(t *testing.T) {
+	const seed int64 = 12345
+	logger.Setup()
+
+	player := actor.NewPlayerWithSeed(0, 0, seed)
+	dungeonManager := dungeon.NewDungeonManagerWithSeed(player, seed)
+	if !dungeonManager.MoveToFloor(5) {
+		t.Fatal("MoveToFloor(5) failed")
+	}
+
+	player.RandomSource().Int63()
+	level := dungeonManager.GetCurrentLevel()
+	level.ShouldGenerateSpecialRoom()
+	if dungeonManager.RandomDraws() == 0 || level.RandomDraws() == 0 {
+		t.Fatal("test setup did not advance both runtime random sources")
+	}
+
+	saveData := ToSaveData(player, dungeonManager, GameInfo{}, Stats{}, Settings{})
+	encoded, err := json.Marshal(saveData)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	var persisted SaveData
+	if err := json.Unmarshal(encoded, &persisted); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v", err)
+	}
+
+	expectedManagerValue := player.RandomSource().Int63()
+	expectedLevelResult := level.ShouldGenerateSpecialRoom()
+	expectedLevelDraws := level.RandomDraws()
+
+	restoredPlayer, restoredDungeonManager, err := NewSaveConverter().FromSaveData(&persisted)
+	if err != nil {
+		t.Fatalf("FromSaveData() error = %v", err)
+	}
+
+	if got := restoredDungeonManager.RandomDraws(); got != persisted.DungeonData.RandomState.Draws {
+		t.Fatalf("manager random draws = %d, want %d", got, persisted.DungeonData.RandomState.Draws)
+	}
+	if got := restoredPlayer.RandomSource().Int63(); got != expectedManagerValue {
+		t.Errorf("next manager random value = %d, want %d", got, expectedManagerValue)
+	}
+
+	restoredLevel := restoredDungeonManager.GetCurrentLevel()
+	if got := restoredLevel.ShouldGenerateSpecialRoom(); got != expectedLevelResult {
+		t.Errorf("next level random result = %t, want %t", got, expectedLevelResult)
+	}
+	if got := restoredLevel.RandomDraws(); got != expectedLevelDraws {
+		t.Errorf("level random draws = %d, want %d", got, expectedLevelDraws)
 	}
 }
 

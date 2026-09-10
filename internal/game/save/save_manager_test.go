@@ -99,6 +99,36 @@ func TestSaveManager_SaveAndLoad(t *testing.T) {
 	}
 }
 
+func TestSaveManagerRejectsUnsupportedSaveVersion(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "gorogue_test_*")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	sm := NewSaveManager()
+	sm.saveDir = tempDir
+	if err := sm.Initialize(); err != nil {
+		t.Fatalf("Initialize failed: %v", err)
+	}
+
+	if err := sm.SaveGame(&SaveData{
+		Version: "1.1.0",
+		PlayerData: Player{
+			Level: 1,
+			HP:    20,
+			MaxHP: 20,
+		},
+		DungeonData: Dungeon{CurrentFloor: 1},
+	}); err != nil {
+		t.Fatalf("SaveGame failed: %v", err)
+	}
+
+	if _, err := sm.LoadGame(); err == nil {
+		t.Fatal("LoadGame should reject an unsupported save version")
+	}
+}
+
 // TestSaveManager_FileExists tests file existence check
 func TestSaveManager_FileExists(t *testing.T) {
 	// Create temporary directory for testing

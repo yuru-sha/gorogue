@@ -423,16 +423,12 @@ func (sm *SaveManager) verifySaveData(saveData *SaveData) error {
 
 // checkVersionCompatibility checks if the save file version is compatible
 func (sm *SaveManager) checkVersionCompatibility(saveData *SaveData) error {
-	// Simple version check - in a real implementation, this would be more sophisticated
 	if saveData.Version != SaveVersion {
-		// For now, we'll accept any version and attempt to load
 		logger.Warn("Save file version mismatch",
 			"save_version", saveData.Version,
 			"current_version", SaveVersion,
 		)
-
-		// Future: implement version migration logic here
-		return nil
+		return fmt.Errorf("unsupported save file version %q (expected %q)", saveData.Version, SaveVersion)
 	}
 
 	return nil

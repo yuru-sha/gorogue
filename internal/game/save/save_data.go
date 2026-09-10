@@ -12,7 +12,7 @@ import (
 )
 
 // SaveVersion represents the save file format version
-const SaveVersion = "1.1.0"
+const SaveVersion = "1.2.0"
 
 // SaveData represents the complete game state
 type SaveData struct {
@@ -108,22 +108,29 @@ type Dungeon struct {
 	Floors        map[int]*Floor `json:"floors"`
 	VisitedFloors map[int]bool   `json:"visited_floors"`
 	FloorSeeds    map[int]int64  `json:"floor_seeds"` // For regeneration consistency
+	RandomState   RandomState    `json:"random_state"`
+}
+
+// RandomState stores the deterministic cursor for a gameplay random source.
+type RandomState struct {
+	Draws uint64 `json:"draws"`
 }
 
 // Floor represents a single dungeon floor state
 type Floor struct {
-	FloorNumber int       `json:"floor_number"`
-	Width       int       `json:"width"`
-	Height      int       `json:"height"`
-	Tiles       [][]Tile  `json:"tiles"`
-	Rooms       []Room    `json:"rooms"`
-	Monsters    []Monster `json:"monsters"`
-	Items       []Item    `json:"items"`
-	Visited     bool      `json:"visited"`
-	Seed        int64     `json:"seed"`
-	IsGenerated bool      `json:"is_generated"`
-	IsMaze      bool      `json:"is_maze"`
-	IsSpecial   bool      `json:"is_special"`
+	FloorNumber int         `json:"floor_number"`
+	Width       int         `json:"width"`
+	Height      int         `json:"height"`
+	Tiles       [][]Tile    `json:"tiles"`
+	Rooms       []Room      `json:"rooms"`
+	Monsters    []Monster   `json:"monsters"`
+	Items       []Item      `json:"items"`
+	Visited     bool        `json:"visited"`
+	Seed        int64       `json:"seed"`
+	IsGenerated bool        `json:"is_generated"`
+	IsMaze      bool        `json:"is_maze"`
+	IsSpecial   bool        `json:"is_special"`
+	RandomState RandomState `json:"random_state"`
 }
 
 // Tile represents a single tile in the dungeon
@@ -380,6 +387,7 @@ func ConvertDungeonToSave(dungeonManager *dungeon.DungeonManager) Dungeon {
 		Floors:        make(map[int]*Floor),
 		VisitedFloors: make(map[int]bool),
 		FloorSeeds:    dungeonManager.FloorSeeds(),
+		RandomState:   RandomState{Draws: dungeonManager.RandomDraws()},
 	}
 
 	// Convert each floor
@@ -411,6 +419,7 @@ func ConvertLevelToSave(level *dungeon.Level) *Floor {
 		IsGenerated: true,
 		IsMaze:      level.FloorNumber == 7 || level.FloorNumber == 13 || level.FloorNumber == 19,
 		IsSpecial:   level.FloorNumber%5 == 0,
+		RandomState: RandomState{Draws: level.RandomDraws()},
 	}
 
 	// Convert tiles
