@@ -176,6 +176,8 @@ func (im *IdentificationManager) initializeAppearances(rng *rand.Rand) {
 }
 
 // GetDisplayName returns the display name for an item (identified or unidentified)
+//
+//nolint:gocyclo // Item categories have distinct display-name rules.
 func (im *IdentificationManager) GetDisplayName(itm *item.Item) string {
 	switch itm.Type {
 	case item.ItemScroll:

@@ -20,6 +20,12 @@ type GameOverScreen struct {
 	menuItems  []string
 }
 
+const (
+	gameOverKeyDown  = "Down"
+	gameOverKeyEnter = "Enter"
+	gameOverKeySpace = "Space"
+)
+
 // NewGameOverScreen creates a new game over screen
 func NewGameOverScreen(width, height int, scoreEntry *score.ScoreEntry) *GameOverScreen {
 	menuItems := []string{"R) Restart", "M) Main Menu", "Q) Quit"}
@@ -35,30 +41,31 @@ func NewGameOverScreen(width, height int, scoreEntry *score.ScoreEntry) *GameOve
 
 // HandleInput handles input events
 func (s *GameOverScreen) HandleInput(msg gruid.Msg) state.GameState {
-	switch msg := msg.(type) {
-	case gruid.MsgKeyDown:
-		switch msg.Key {
-		case "Up":
-			s.selected = (s.selected - 1 + len(s.menuItems)) % len(s.menuItems)
-		case "Down":
-			s.selected = (s.selected + 1) % len(s.menuItems)
-		case "Enter":
+	keyMsg, ok := msg.(gruid.MsgKeyDown)
+	if !ok {
+		return state.StateGameOver
+	}
+	switch keyMsg.Key {
+	case "Up":
+		s.selected = (s.selected - 1 + len(s.menuItems)) % len(s.menuItems)
+	case gameOverKeyDown:
+		s.selected = (s.selected + 1) % len(s.menuItems)
+	case gameOverKeyEnter:
+		return s.handleMenuSelection()
+	case gameOverKeySpace:
+		s.showStats = !s.showStats
+	default:
+		// キーによる直接選択
+		switch keyMsg.Key {
+		case "r", "R":
+			s.selected = 0
 			return s.handleMenuSelection()
-		case "Space":
-			s.showStats = !s.showStats
-		default:
-			// キーによる直接選択
-			switch msg.Key {
-			case "r", "R":
-				s.selected = 0
-				return s.handleMenuSelection()
-			case "m", "M":
-				s.selected = 1
-				return s.handleMenuSelection()
-			case "q", "Q":
-				s.selected = 2
-				return s.handleMenuSelection()
-			}
+		case "m", "M":
+			s.selected = 1
+			return s.handleMenuSelection()
+		case "q", "Q":
+			s.selected = 2
+			return s.handleMenuSelection()
 		}
 	}
 
@@ -116,7 +123,7 @@ func (s *GameOverScreen) Draw(grid *gruid.Grid) {
 	// ゲームオーバータイトルの描画
 	titleY := 2
 	for i, line := range gameOverArt {
-		if len(line) > 0 {
+		if line != "" {
 			titleX := (s.width - len(line)) / 2
 			if titleX < 0 {
 				titleX = 0

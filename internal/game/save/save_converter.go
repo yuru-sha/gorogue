@@ -73,6 +73,8 @@ func (sc *SaveConverter) FromSaveData(saveData *SaveData) (*actor.Player, *dunge
 }
 
 // convertSavePlayer converts save player data to player object
+//
+//nolint:gocritic // Conversion accepts the decoded value and does not retain it.
 func (sc *SaveConverter) convertSavePlayer(savePlayer Player, seed int64) (*actor.Player, error) {
 	// Create player with base stats
 	player := actor.NewPlayerWithSeed(savePlayer.X, savePlayer.Y, seed)
@@ -119,7 +121,8 @@ func (sc *SaveConverter) convertInventory(saveInventory []InventoryItem, invento
 	// Clear existing inventory
 	inventory.Items = make([]*item.Item, 0, len(saveInventory))
 
-	for _, saveItem := range saveInventory {
+	for i := range saveInventory {
+		saveItem := saveInventory[i]
 		gameItem, err := sc.convertSaveItemToGameItem(saveItem)
 		if err != nil {
 			logger.Warn("Failed to convert inventory item",
@@ -186,6 +189,8 @@ func (sc *SaveConverter) convertEquipment(saveEquipment Equipment, equipment *in
 }
 
 // convertSaveItemToGameItem converts save item to game item
+//
+//nolint:gocritic // Conversion accepts the decoded value and does not retain it.
 func (sc *SaveConverter) convertSaveItemToGameItem(saveItem InventoryItem) (*item.Item, error) {
 	// Convert item type
 	itemType, err := sc.convertStringToItemType(saveItem.Type)
@@ -216,6 +221,8 @@ func (sc *SaveConverter) convertSaveItemToGameItem(saveItem InventoryItem) (*ite
 }
 
 // convertFloorItemToGameItem converts save floor item to game item
+//
+//nolint:gocritic // Conversion accepts the decoded value and does not retain it.
 func (sc *SaveConverter) convertFloorItemToGameItem(saveItem Item) (*item.Item, error) {
 	// Convert item type
 	itemType, err := sc.convertStringToItemType(saveItem.Type)
@@ -225,7 +232,7 @@ func (sc *SaveConverter) convertFloorItemToGameItem(saveItem Item) (*item.Item, 
 
 	// Create game item
 	gameItem := &item.Item{
-		Entity:       entity.NewEntity(saveItem.X, saveItem.Y, saveItem.Symbol, gruid.Color(saveItem.Color)),
+		Entity:       entity.NewEntity(saveItem.X, saveItem.Y, saveItem.Symbol, gruid.Color(saveItem.Color)), //nolint:gosec // saved colors are uint32 gruid values
 		Type:         itemType,
 		Name:         saveItem.Name,
 		RealName:     saveItem.RealName,
@@ -317,6 +324,8 @@ func (sc *SaveConverter) convertSaveDungeon(saveDungeon Dungeon, player *actor.P
 }
 
 // convertSaveFloor converts save floor to level
+//
+//nolint:gocritic // Conversion accepts the decoded value and does not retain it.
 func (sc *SaveConverter) convertSaveFloor(saveFloor Floor) (*dungeon.Level, error) {
 	// Create level
 	level := &dungeon.Level{
@@ -360,7 +369,8 @@ func (sc *SaveConverter) convertSaveFloor(saveFloor Floor) (*dungeon.Level, erro
 	}
 
 	// Convert rooms
-	for _, saveRoom := range saveFloor.Rooms {
+	for i := range saveFloor.Rooms {
+		saveRoom := saveFloor.Rooms[i]
 		room := &dungeon.Room{
 			X:         saveRoom.X,
 			Y:         saveRoom.Y,
@@ -373,7 +383,8 @@ func (sc *SaveConverter) convertSaveFloor(saveFloor Floor) (*dungeon.Level, erro
 	}
 
 	// Convert monsters
-	for _, saveMonster := range saveFloor.Monsters {
+	for i := range saveFloor.Monsters {
+		saveMonster := saveFloor.Monsters[i]
 		monster, err := sc.convertSaveMonster(saveMonster)
 		if err != nil {
 			logger.Warn("Failed to convert monster",
@@ -386,7 +397,8 @@ func (sc *SaveConverter) convertSaveFloor(saveFloor Floor) (*dungeon.Level, erro
 	}
 
 	// Convert items
-	for _, saveItem := range saveFloor.Items {
+	for i := range saveFloor.Items {
+		saveItem := saveFloor.Items[i]
 		item, err := sc.convertFloorItemToGameItem(saveItem)
 		if err != nil {
 			logger.Warn("Failed to convert item",
@@ -430,6 +442,8 @@ func (sc *SaveConverter) convertStringToTileType(tileTypeStr string) (dungeon.Ti
 }
 
 // convertSaveMonster converts save monster to monster
+//
+//nolint:gocritic // Conversion accepts the decoded value and does not retain it.
 func (sc *SaveConverter) convertSaveMonster(saveMonster Monster) (*actor.Monster, error) {
 	// Get monster type
 	monsterType, exists := actor.MonsterTypes[rune(saveMonster.Type[0])]
@@ -439,7 +453,7 @@ func (sc *SaveConverter) convertSaveMonster(saveMonster Monster) (*actor.Monster
 
 	// Create monster
 	monster := &actor.Monster{
-		Actor:          actor.NewActor(saveMonster.X, saveMonster.Y, saveMonster.Symbol, gruid.Color(saveMonster.Color), saveMonster.HP, saveMonster.Attack, saveMonster.Defense),
+		Actor:          actor.NewActor(saveMonster.X, saveMonster.Y, saveMonster.Symbol, gruid.Color(saveMonster.Color), saveMonster.HP, saveMonster.Attack, saveMonster.Defense), //nolint:gosec // saved colors are uint32 gruid values
 		Type:           monsterType,
 		TurnCount:      saveMonster.TurnCount,
 		IsActive:       saveMonster.IsActive,
@@ -617,6 +631,8 @@ func (sc *SaveConverter) RepairSaveData(saveData *SaveData) error {
 }
 
 // repairPlayerData repairs player data
+//
+//nolint:gocyclo // Repair rules are field-specific and preserve old save compatibility.
 func (sc *SaveConverter) repairPlayerData(playerData *Player) error {
 	// Clamp values to valid ranges
 	if playerData.Level < 1 {

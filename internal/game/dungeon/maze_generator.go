@@ -145,18 +145,3 @@ func (g *MazeGenerator) connectsFloorAreas(x, y int) bool {
 	// If we have floors in at least 2 directions, this wall connects areas
 	return floorCount >= 2
 }
-
-// findFloorTiles finds all floor tiles in the maze (for stair placement)
-func (g *MazeGenerator) findFloorTiles() []Position {
-	var floorTiles []Position
-
-	for y := 0; y < g.level.Height; y++ {
-		for x := 0; x < g.level.Width; x++ {
-			if g.level.GetTile(x, y).Type == TileFloor {
-				floorTiles = append(floorTiles, Position{X: x, Y: y})
-			}
-		}
-	}
-
-	return floorTiles
-}

@@ -11,8 +11,11 @@ import (
 	"github.com/yuru-sha/gorogue/internal/game/item"
 )
 
-// SaveVersion represents the save file format version
-const SaveVersion = "1.3.0"
+const (
+	// SaveVersion represents the save file format version
+	SaveVersion  = "1.3.0"
+	unknownValue = "unknown"
+)
 
 // SaveData represents the complete game state
 type SaveData struct {
@@ -290,6 +293,8 @@ type SaveMetadata struct {
 // ConversionHelpers for converting between save format and game objects
 
 // ToSaveData converts game state to save data format
+//
+//nolint:gocritic // Save values are copied into an independent serialized snapshot.
 func ToSaveData(
 	player *actor.Player,
 	dungeonManager *dungeon.DungeonManager,
@@ -538,7 +543,7 @@ func ConvertItemTypeToString(itemType item.ItemType) string {
 	case item.ItemAmulet:
 		return "amulet"
 	default:
-		return "unknown"
+		return unknownValue
 	}
 }
 
@@ -566,7 +571,7 @@ func ConvertTileTypeToString(tileType dungeon.TileType) string {
 	case dungeon.TileLava:
 		return "lava"
 	default:
-		return "unknown"
+		return unknownValue
 	}
 }
 
@@ -586,7 +591,7 @@ func ConvertAIStateToString(aiState actor.AIState) string {
 	case actor.StateFlee:
 		return "flee"
 	default:
-		return "unknown"
+		return unknownValue
 	}
 }
 

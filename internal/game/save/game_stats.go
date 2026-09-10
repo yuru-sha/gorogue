@@ -37,6 +37,8 @@ func (gs *GameStats) GetStats() Stats {
 }
 
 // LoadStats loads statistics from save data
+//
+//nolint:gocritic // Stats is copied into the manager as an immutable save snapshot.
 func (gs *GameStats) LoadStats(stats Stats) {
 	gs.stats = stats
 	logger.Debug("Game statistics loaded",
@@ -350,16 +352,17 @@ func (gs *GameStats) GetAchievements() []string {
 
 // formatPlayTime formats play time in a human-readable format
 func formatPlayTime(seconds int64) string {
-	if seconds < 60 {
+	switch {
+	case seconds < 60:
 		return fmt.Sprintf("%d seconds", seconds)
-	} else if seconds < 3600 {
+	case seconds < 3600:
 		minutes := seconds / 60
-		seconds = seconds % 60
+		seconds %= 60
 		return fmt.Sprintf("%d:%02d", minutes, seconds)
-	} else {
+	default:
 		hours := seconds / 3600
 		minutes := (seconds % 3600) / 60
-		seconds = seconds % 60
+		seconds %= 60
 		return fmt.Sprintf("%d:%02d:%02d", hours, minutes, seconds)
 	}
 }

@@ -32,6 +32,8 @@ type Result struct {
 }
 
 // Execute runs a gameplay command for either the GUI or CLI entry point.
+//
+//nolint:gocyclo // This is the single command dispatch point shared by GUI and CLI.
 func Execute(ctx *Context, cmd Command, args ...string) Result {
 	if ctx == nil {
 		return Result{Message: "Game state is unavailable."}

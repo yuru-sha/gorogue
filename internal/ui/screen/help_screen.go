@@ -46,10 +46,10 @@ func (s *HelpScreen) Draw(dst *gruid.Grid) {
 
 	// Group commands by category
 	categories := map[string][]string{
-		"Movement":   []string{"h,j,k,l", "y,u,b,n", "Arrow keys"},
-		"Actions":    []string{"x", "i", ",", "d", "a", "q", "r", "w", "t", ".", "s", "o", "c"},
-		"Navigation": []string{"<", ">"},
-		"System":     []string{"Q", "?", "ESC", "Ctrl+W", ":"},
+		"Movement":   {"h,j,k,l", "y,u,b,n", "Arrow keys"},
+		"Actions":    {"x", "i", ",", "d", "a", "q", "r", "w", "t", ".", "s", "o", "c"},
+		"Navigation": {"<", ">"},
+		"System":     {"Q", "?", "ESC", "Ctrl+W", ":"},
 	}
 
 	// Draw commands by category
@@ -94,8 +94,7 @@ func (s *HelpScreen) Draw(dst *gruid.Grid) {
 
 // HandleInput handles input events for the help screen
 func (s *HelpScreen) HandleInput(msg gruid.Msg) state.GameState {
-	switch msg.(type) {
-	case gruid.MsgKeyDown:
+	if _, ok := msg.(gruid.MsgKeyDown); ok {
 		// Any key returns to game
 		return state.StateGame
 	}
@@ -115,25 +114,4 @@ func (s *HelpScreen) drawString(x, y int, str string, fg, bg gruid.Color) {
 			})
 		}
 	}
-}
-
-// drawBox draws a box border
-func (s *HelpScreen) drawBox(x, y, w, h int, fg, bg gruid.Color) {
-	// Top and bottom borders
-	for i := x; i < x+w; i++ {
-		s.grid.Set(gruid.Point{X: i, Y: y}, gruid.Cell{Rune: '─', Style: gruid.Style{Fg: fg, Bg: bg}})
-		s.grid.Set(gruid.Point{X: i, Y: y + h - 1}, gruid.Cell{Rune: '─', Style: gruid.Style{Fg: fg, Bg: bg}})
-	}
-
-	// Left and right borders
-	for i := y; i < y+h; i++ {
-		s.grid.Set(gruid.Point{X: x, Y: i}, gruid.Cell{Rune: '│', Style: gruid.Style{Fg: fg, Bg: bg}})
-		s.grid.Set(gruid.Point{X: x + w - 1, Y: i}, gruid.Cell{Rune: '│', Style: gruid.Style{Fg: fg, Bg: bg}})
-	}
-
-	// Corners
-	s.grid.Set(gruid.Point{X: x, Y: y}, gruid.Cell{Rune: '┌', Style: gruid.Style{Fg: fg, Bg: bg}})
-	s.grid.Set(gruid.Point{X: x + w - 1, Y: y}, gruid.Cell{Rune: '┐', Style: gruid.Style{Fg: fg, Bg: bg}})
-	s.grid.Set(gruid.Point{X: x, Y: y + h - 1}, gruid.Cell{Rune: '└', Style: gruid.Style{Fg: fg, Bg: bg}})
-	s.grid.Set(gruid.Point{X: x + w - 1, Y: y + h - 1}, gruid.Cell{Rune: '┘', Style: gruid.Style{Fg: fg, Bg: bg}})
 }

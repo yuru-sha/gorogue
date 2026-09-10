@@ -7,10 +7,9 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	"os"
 
 	"github.com/anaseto/gruid"
-	"github.com/anaseto/gruid-sdl"
+	sdl "github.com/anaseto/gruid-sdl"
 	"github.com/yuru-sha/gorogue/internal/config"
 	"github.com/yuru-sha/gorogue/internal/core"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
@@ -76,9 +75,9 @@ func (tm *ASCIITileManager) GetImage(cell gruid.Cell) image.Image {
 
 // gruidColorToRGBA converts gruid.Color to color.RGBA with consistent alpha
 func (tm *ASCIITileManager) gruidColorToRGBA(c gruid.Color) color.RGBA {
-	r := uint8((c >> 16) & 0xFF)
-	g := uint8((c >> 8) & 0xFF)
-	b := uint8(c & 0xFF)
+	r := uint8((c >> 16) & 0xFF) //nolint:gosec // the mask limits the value to uint8 range
+	g := uint8((c >> 8) & 0xFF)  //nolint:gosec // the mask limits the value to uint8 range
+	b := uint8(c & 0xFF)         //nolint:gosec // the mask limits the value to uint8 range
 	// Force alpha to 255 for consistent display
 	return color.RGBA{r, g, b, 255}
 }
@@ -93,7 +92,7 @@ func (tm *ASCIITileManager) drawCharacter(img *image.RGBA, r rune, textColor col
 		Dst:  img,
 		Src:  &image.Uniform{textColor},
 		Face: face,
-		Dot:  fixed.Point26_6{X: fixed.Int26_6(1 << 6), Y: fixed.Int26_6(tm.cellHeight-2) << 6},
+		Dot:  fixed.Point26_6{X: fixed.I(1), Y: fixed.I(tm.cellHeight - 2)},
 	}
 
 	// Draw the character
@@ -123,7 +122,6 @@ func main() {
 	engine := core.NewEngine()
 	if engine == nil {
 		logger.Fatal("Failed to initialize game engine")
-		os.Exit(1)
 	}
 
 	// SDL2ドライバーの設定 - 固定サイズ
@@ -140,7 +138,6 @@ func main() {
 	// ドライバーの初期化
 	if err := driver.Init(); err != nil {
 		logger.Fatal("Failed to initialize SDL driver", "error", err.Error())
-		os.Exit(1)
 	}
 	defer driver.Close()
 
@@ -153,6 +150,5 @@ func main() {
 	// アプリケーションの実行
 	if err := app.Start(context.Background()); err != nil {
 		logger.Fatal("Game terminated with error", "error", err.Error())
-		os.Exit(1)
 	}
 }

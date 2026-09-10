@@ -184,8 +184,8 @@ func (c *RoomConnector) connectAdjacentRooms(r1, r2 *Room) {
 	// 共有する壁の範囲を計算
 	if r1.X+r1.Width+1 == r2.X || r2.X+r2.Width+1 == r1.X {
 		// 水平方向に隣接
-		minY := max(r1.Y, r2.Y) + 1
-		maxY := min(r1.Y+r1.Height, r2.Y+r2.Height) - 1
+		minY := maxInt(r1.Y, r2.Y) + 1
+		maxY := minInt(r1.Y+r1.Height, r2.Y+r2.Height) - 1
 
 		if minY <= maxY {
 			// ランダムな位置に通路を作成
@@ -203,8 +203,8 @@ func (c *RoomConnector) connectAdjacentRooms(r1, r2 *Room) {
 		}
 	} else {
 		// 垂直方向に隣接
-		minX := max(r1.X, r2.X) + 1
-		maxX := min(r1.X+r1.Width, r2.X+r2.Width) - 1
+		minX := maxInt(r1.X, r2.X) + 1
+		maxX := minInt(r1.X+r1.Width, r2.X+r2.Width) - 1
 
 		if minX <= maxX {
 			// ランダムな位置に通路を作成
@@ -268,6 +268,8 @@ func (c *RoomConnector) placeDoors(r1, r2 *Room, x1, y1, x2, y2 int) {
 }
 
 // placeDoorAtRoomBoundary places a door where corridor meets room boundary
+//
+//nolint:gocyclo // Door placement handles the four room-boundary orientations together.
 func (c *RoomConnector) placeDoorAtRoomBoundary(room *Room, x1, y1, x2, y2 int) {
 	// 水平方向のドア配置
 	if x1 < room.X && x2 >= room.X {
