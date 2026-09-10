@@ -2,6 +2,22 @@ package command
 
 import "strings"
 
+type directionMetadata struct {
+	commandType Type
+	name        string
+}
+
+var directions = map[Direction]directionMetadata{
+	{X: -1, Y: 0}:  {commandType: CmdMoveWest, name: "west"},
+	{X: 1, Y: 0}:   {commandType: CmdMoveEast, name: "east"},
+	{X: 0, Y: -1}:  {commandType: CmdMoveNorth, name: "north"},
+	{X: 0, Y: 1}:   {commandType: CmdMoveSouth, name: "south"},
+	{X: -1, Y: -1}: {commandType: CmdMoveNorthWest, name: "northwest"},
+	{X: 1, Y: -1}:  {commandType: CmdMoveNorthEast, name: "northeast"},
+	{X: -1, Y: 1}:  {commandType: CmdMoveSouthWest, name: "southwest"},
+	{X: 1, Y: 1}:   {commandType: CmdMoveSouthEast, name: "southeast"},
+}
+
 // ParseDirection converts a text direction into a movement vector.
 func ParseDirection(input string) (Direction, bool) {
 	switch strings.ToLower(strings.TrimSpace(input)) {
@@ -28,26 +44,16 @@ func ParseDirection(input string) (Direction, bool) {
 
 // NewMoveCommand creates a movement command for a direction.
 func NewMoveCommand(direction Direction) Command {
-	var commandType Type
-	switch direction {
-	case Direction{X: -1, Y: 0}:
-		commandType = CmdMoveWest
-	case Direction{X: 1, Y: 0}:
-		commandType = CmdMoveEast
-	case Direction{X: 0, Y: -1}:
-		commandType = CmdMoveNorth
-	case Direction{X: 0, Y: 1}:
-		commandType = CmdMoveSouth
-	case Direction{X: -1, Y: -1}:
-		commandType = CmdMoveNorthWest
-	case Direction{X: 1, Y: -1}:
-		commandType = CmdMoveNorthEast
-	case Direction{X: -1, Y: 1}:
-		commandType = CmdMoveSouthWest
-	case Direction{X: 1, Y: 1}:
-		commandType = CmdMoveSouthEast
-	default:
+	metadata, ok := directions[direction]
+	if !ok {
 		return Command{Type: CmdUnknown, Direction: direction}
 	}
-	return Command{Type: commandType, Direction: direction}
+	return Command{Type: metadata.commandType, Direction: direction}
+}
+
+func directionName(direction Direction) string {
+	if metadata, ok := directions[direction]; ok {
+		return metadata.name
+	}
+	return "unknown direction"
 }

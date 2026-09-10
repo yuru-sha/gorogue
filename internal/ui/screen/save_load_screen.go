@@ -4,7 +4,6 @@ package screen
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/command"
@@ -170,7 +169,7 @@ func (s *SaveLoadScreen) performSave() state.GameState {
 		return state.StateGame
 	}
 	result := command.Execute(&command.Context{Save: s.saveIntegration}, command.Command{Type: command.CmdSave})
-	if strings.HasPrefix(result.Message, "Save failed:") {
+	if result.Error {
 		s.setMessage(result.Message, s.colorError)
 		return state.StateGame
 	}
@@ -180,17 +179,12 @@ func (s *SaveLoadScreen) performSave() state.GameState {
 
 // performLoad performs load operation
 func (s *SaveLoadScreen) performLoad() state.GameState {
-	if !s.saveManager.FileExists() {
-		s.setMessage("No save file found", s.colorError)
-		return state.StateGame
-	}
-
 	if s.saveIntegration == nil || s.onLoad == nil {
 		s.setMessage("Load integration is not configured", s.colorError)
 		return state.StateGame
 	}
 	result := command.Execute(&command.Context{Save: s.saveIntegration}, command.Command{Type: command.CmdLoad})
-	if strings.HasPrefix(result.Message, "Load failed:") {
+	if result.Error {
 		s.setMessage(result.Message, s.colorError)
 		return state.StateGame
 	}

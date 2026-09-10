@@ -23,6 +23,7 @@ type Context struct {
 // Result describes the observable outcome of a gameplay command.
 type Result struct {
 	Message      string
+	Error        bool
 	TurnConsumed bool
 	Victory      bool
 	Player       *actor.Player
@@ -104,7 +105,7 @@ func executeMove(ctx *Context, direction Direction) Result {
 		message += "\n" + pickupMessage
 	}
 	advanceMonsters(ctx)
-	return result(ctx, message, true)
+	return turnResult(ctx, message)
 }
 
 func executeFight(ctx *Context, cmd Command, args []string) Result {
@@ -118,6 +119,9 @@ func executeFight(ctx *Context, cmd Command, args []string) Result {
 		y, errY := strconv.Atoi(args[1])
 		if errX != nil || errY != nil {
 			return result(ctx, "Invalid coordinates.")
+		}
+		if !adjacent(ctx.Player.Position.X, ctx.Player.Position.Y, x, y) {
+			return result(ctx, "You can only attack an adjacent monster.")
 		}
 		monster = ctx.Level.GetMonsterAt(x, y)
 	} else {
@@ -141,16 +145,17 @@ func executeAttack(ctx *Context, monster *actor.Monster) Result {
 	monster.TakeDamage(damage)
 	if monster.IsAlive() {
 		advanceMonsters(ctx)
-		return result(ctx, fmt.Sprintf("Attacked %s for %d damage! (%d HP remaining)",
-			monster.Type.Name, damage, monster.HP), true)
+		return turnResult(ctx, fmt.Sprintf("Attacked %s for %d damage! (%d HP remaining)",
+			monster.Type.Name, damage, monster.HP))
 	}
 
 	exp := monster.MaxHP + monster.Attack
 	gold := monster.MaxHP / 2
 	ctx.Player.GainExp(exp)
 	ctx.Player.AddGold(gold)
-	return result(ctx, fmt.Sprintf("Killed %s! Gained %d experience and %d gold.",
-		monster.Type.Name, exp, gold), true)
+	advanceMonsters(ctx)
+	return turnResult(ctx, fmt.Sprintf("Killed %s! Gained %d experience and %d gold.",
+		monster.Type.Name, exp, gold))
 }
 
 func executePickUp(ctx *Context, args []string) Result {
@@ -176,11 +181,14 @@ func executePickUp(ctx *Context, args []string) Result {
 				pickedUp++
 			}
 		}
-		return result(ctx, fmt.Sprintf("Picked up %d items.", pickedUp), pickedUp > 0)
+		if pickedUp > 0 {
+			return turnResult(ctx, fmt.Sprintf("Picked up %d items.", pickedUp))
+		}
+		return result(ctx, "Picked up 0 items.")
 	}
 
 	message := pickUpAt(ctx, ctx.Player.Position.X, ctx.Player.Position.Y)
-	return result(ctx, message, message != "")
+	return turnResult(ctx, message)
 }
 
 func pickUpAt(ctx *Context, x, y int) string {
@@ -215,7 +223,7 @@ func executeDrop(ctx *Context, args []string) Result {
 
 	ctx.Level.AddItem(item, ctx.Player.Position.X, ctx.Player.Position.Y)
 	ctx.Player.Inventory.RemoveItem(index)
-	return result(ctx, fmt.Sprintf("Dropped %s.", ctx.Player.IdentifyMgr.GetDisplayName(item)), true)
+	return turnResult(ctx, fmt.Sprintf("Dropped %s.", ctx.Player.IdentifyMgr.GetDisplayName(item)))
 }
 
 func executeEquip(ctx *Context, args []string) Result {
@@ -234,7 +242,7 @@ func executeEquip(ctx *Context, args []string) Result {
 	}
 
 	ctx.Player.Inventory.RemoveItem(index)
-	return result(ctx, fmt.Sprintf("Equipped %s.", ctx.Player.IdentifyMgr.GetDisplayName(item)), true)
+	return turnResult(ctx, fmt.Sprintf("Equipped %s.", ctx.Player.IdentifyMgr.GetDisplayName(item)))
 }
 
 func executeUnequip(ctx *Context, args []string) Result {
@@ -261,6 +269,9 @@ func executeUnequip(ctx *Context, args []string) Result {
 	if slotName == "" {
 		return result(ctx, "Unknown slot. Use: weapon, armor, ring-left, ring-right")
 	}
+	if equipped := equippedItem(ctx.Player, slotName); equipped != nil && equipped.IsCursed {
+		return result(ctx, fmt.Sprintf("You can't remove the cursed %s.", slot))
+	}
 
 	item := ctx.Player.Equipment.UnequipItem(slotName)
 	if item == nil {
@@ -270,7 +281,7 @@ func executeUnequip(ctx *Context, args []string) Result {
 		ctx.Player.Equipment.EquipItem(item)
 		return result(ctx, "Inventory is full! Cannot unequip.")
 	}
-	return result(ctx, fmt.Sprintf("Unequipped %s.", ctx.Player.IdentifyMgr.GetDisplayName(item)), true)
+	return turnResult(ctx, fmt.Sprintf("Unequipped %s.", ctx.Player.IdentifyMgr.GetDisplayName(item)))
 }
 
 func executeItem(ctx *Context, commandType Type, args []string) Result {
@@ -284,7 +295,7 @@ func executeItem(ctx *Context, commandType Type, args []string) Result {
 
 	var message string
 	var identified bool
-	turnConsumed := false
+	turnConsumed := true
 	switch commandType {
 	case CmdUse:
 		switch item.Type {
@@ -298,7 +309,6 @@ func executeItem(ctx *Context, commandType Type, args []string) Result {
 			ctx.Player.EatFood(item.Value)
 			message = fmt.Sprintf("You ate %s.", ctx.Player.IdentifyMgr.GetDisplayName(item))
 			identified = true
-			turnConsumed = true
 		default:
 			return result(ctx, "That item cannot be used.")
 		}
@@ -321,7 +331,6 @@ func executeItem(ctx *Context, commandType Type, args []string) Result {
 		ctx.Player.EatFood(item.Value)
 		message = fmt.Sprintf("You ate %s.", ctx.Player.IdentifyMgr.GetDisplayName(item))
 		identified = true
-		turnConsumed = true
 	}
 
 	if identified {
@@ -331,7 +340,9 @@ func executeItem(ctx *Context, commandType Type, args []string) Result {
 	if turnConsumed {
 		advanceMonsters(ctx)
 	}
-	return result(ctx, message, turnConsumed)
+	commandResult := result(ctx, message)
+	commandResult.TurnConsumed = turnConsumed
+	return commandResult
 }
 
 func executeLook(ctx *Context, args []string) Result {
@@ -405,9 +416,9 @@ func executeWait(ctx *Context, args []string) Result {
 		advanceMonsters(ctx)
 	}
 	if len(args) == 0 {
-		return result(ctx, "You rest.", true)
+		return turnResult(ctx, "You rest.")
 	}
-	return result(ctx, fmt.Sprintf("Rested for %d turns. (Healed %d HP)", turns, healAmount), true)
+	return turnResult(ctx, fmt.Sprintf("Rested for %d turns. (Healed %d HP)", turns, healAmount))
 }
 
 func executeSearch(ctx *Context) Result {
@@ -415,7 +426,7 @@ func executeSearch(ctx *Context) Result {
 		return result(ctx, "Game state is unavailable.")
 	}
 	advanceMonsters(ctx)
-	return result(ctx, "You search the area.", true)
+	return turnResult(ctx, "You search the area.")
 }
 
 func executeDoor(ctx *Context, cmd Command, args []string) Result {
@@ -438,7 +449,7 @@ func executeDoor(ctx *Context, cmd Command, args []string) Result {
 		case dungeon.TileDoor, dungeon.TileDoorClosed:
 			ctx.Level.SetTile(targetX, targetY, dungeon.TileOpenDoor)
 			advanceMonsters(ctx)
-			return result(ctx, "You open the door.", true)
+			return turnResult(ctx, "You open the door.")
 		case dungeon.TileDoorOpen, dungeon.TileOpenDoor:
 			return result(ctx, "The door is already open.")
 		default:
@@ -458,7 +469,7 @@ func executeDoor(ctx *Context, cmd Command, args []string) Result {
 		}
 		ctx.Level.SetTile(targetX, targetY, dungeon.TileDoor)
 		advanceMonsters(ctx)
-		return result(ctx, "You close the door.", true)
+		return turnResult(ctx, "You close the door.")
 	case dungeon.TileDoor, dungeon.TileDoorClosed:
 		return result(ctx, "The door is already closed.")
 	default:
@@ -476,9 +487,9 @@ func executeStairs(ctx *Context, goUp bool) Result {
 		}
 		ctx.Level = ctx.Dungeon.GetCurrentLevel()
 		if ctx.Dungeon.CheckVictoryCondition() {
-			return result(ctx, "You returned to the surface and won.", true, true)
+			return victoryResult(ctx, "You returned to the surface and won.")
 		}
-		return result(ctx, fmt.Sprintf("Climbed to floor %d.", ctx.Dungeon.GetCurrentFloor()), true)
+		return turnResult(ctx, fmt.Sprintf("Climbed to floor %d.", ctx.Dungeon.GetCurrentFloor()))
 	}
 
 	if !ctx.Dungeon.CanGoDownstairs() || !ctx.Dungeon.GoDownstairs() {
@@ -488,28 +499,28 @@ func executeStairs(ctx *Context, goUp bool) Result {
 	if ctx.Dungeon.IsOnFinalFloor() {
 		ctx.Dungeon.PlaceAmuletOfYendor()
 	}
-	return result(ctx, fmt.Sprintf("Descended to floor %d.", ctx.Dungeon.GetCurrentFloor()), true)
+	return turnResult(ctx, fmt.Sprintf("Descended to floor %d.", ctx.Dungeon.GetCurrentFloor()))
 }
 
 func executeSave(ctx *Context) Result {
 	if ctx == nil || ctx.Save == nil {
-		return result(ctx, "Save/load is unavailable.")
+		return failure(ctx, "Save/load is unavailable.")
 	}
 	if ctx.Player != nil && ctx.Dungeon != nil {
 		ctx.Save.SetGameState(ctx.Player, ctx.Dungeon)
 	}
 	if err := ctx.Save.SaveGame(); err != nil {
-		return result(ctx, fmt.Sprintf("Save failed: %v", err))
+		return failure(ctx, fmt.Sprintf("Save failed: %v", err))
 	}
 	return result(ctx, "Game saved.")
 }
 
 func executeLoad(ctx *Context) Result {
 	if ctx == nil || ctx.Save == nil {
-		return result(ctx, "Save/load is unavailable.")
+		return failure(ctx, "Save/load is unavailable.")
 	}
 	if err := ctx.Save.LoadGame(); err != nil {
-		return result(ctx, fmt.Sprintf("Load failed: %v", err))
+		return failure(ctx, fmt.Sprintf("Load failed: %v", err))
 	}
 	ctx.Player, ctx.Dungeon = ctx.Save.GetGameState()
 	if ctx.Dungeon != nil {
@@ -544,6 +555,21 @@ func inventoryItemError(args []string) string {
 	return fmt.Sprintf("No item at slot %s.", args[0])
 }
 
+func equippedItem(player *actor.Player, slot string) *gameitem.Item {
+	switch slot {
+	case "weapon":
+		return player.Equipment.Weapon
+	case "armor":
+		return player.Equipment.Armor
+	case "ring_left":
+		return player.Equipment.RingLeft
+	case "ring_right":
+		return player.Equipment.RingRight
+	default:
+		return nil
+	}
+}
+
 func resolveDirection(cmd Command, args []string) (Direction, bool) {
 	if cmd.Direction != (Direction{}) {
 		return cmd.Direction, true
@@ -554,27 +580,16 @@ func resolveDirection(cmd Command, args []string) (Direction, bool) {
 	return ParseDirection(args[0])
 }
 
-func directionName(direction Direction) string {
-	switch direction {
-	case Direction{X: -1, Y: 0}:
-		return "west"
-	case Direction{X: 1, Y: 0}:
-		return "east"
-	case Direction{X: 0, Y: -1}:
-		return "north"
-	case Direction{X: 0, Y: 1}:
-		return "south"
-	case Direction{X: -1, Y: -1}:
-		return "northwest"
-	case Direction{X: 1, Y: -1}:
-		return "northeast"
-	case Direction{X: -1, Y: 1}:
-		return "southwest"
-	case Direction{X: 1, Y: 1}:
-		return "southeast"
-	default:
-		return "unknown direction"
+func adjacent(x1, y1, x2, y2 int) bool {
+	dx := x2 - x1
+	if dx < 0 {
+		dx = -dx
 	}
+	dy := y2 - y1
+	if dy < 0 {
+		dy = -dy
+	}
+	return dx <= 1 && dy <= 1 && (dx != 0 || dy != 0)
 }
 
 func unavailable(ctx *Context) bool {
@@ -587,18 +602,30 @@ func advanceMonsters(ctx *Context) {
 	}
 }
 
-func result(ctx *Context, message string, flags ...bool) Result {
+func result(ctx *Context, message string) Result {
 	result := Result{Message: message}
 	if ctx != nil {
 		result.Player = ctx.Player
 		result.Level = ctx.Level
 		result.Dungeon = ctx.Dungeon
 	}
-	if len(flags) > 0 {
-		result.TurnConsumed = flags[0]
-	}
-	if len(flags) > 1 {
-		result.Victory = flags[1]
-	}
+	return result
+}
+
+func turnResult(ctx *Context, message string) Result {
+	result := result(ctx, message)
+	result.TurnConsumed = true
+	return result
+}
+
+func victoryResult(ctx *Context, message string) Result {
+	result := turnResult(ctx, message)
+	result.Victory = true
+	return result
+}
+
+func failure(ctx *Context, message string) Result {
+	result := result(ctx, message)
+	result.Error = true
 	return result
 }

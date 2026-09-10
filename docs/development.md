@@ -194,97 +194,41 @@ go test -bench=. ./...
 
 ### 概要
 
-ゲームプレイの実行本体は `internal/core/command/executor.go` の `command.Execute` です。GUIは `Parser` でキーを構造化コマンドへ変換し、CLIは文字列を構造化コマンドへ変換して、どちらも同じ実行本体を呼び出します。新しいコマンドを追加する際は、以下の手順に従ってください。
+GUIとCLIのゲームプレイ操作は、`internal/core/command.Execute` を共通の実行本体として使用します。GUIは `Parser` でキー入力を `Command` に変換し、CLIは `internal/core/cli/game_commands.go` でテキスト入力を `Command` に変換します。新しいゲームプレイ操作は共通実行本体に追加し、両方の入口から呼び出してください。
 
 ### 新しいコマンドの追加手順
 
-#### 1. CommandHandlerの拡張
+#### 1. コマンド種別と入口を追加
 
 ```go
-// internal/core/command/executor.go
-type CommandHandler struct {
-    game *Game
-}
+// internal/core/command/types.go
+// Type に CmdNewAction を追加する
 
-func (h *CommandHandler) HandleCommand(command string, args []string) CommandResult {
-    // 既存のコマンド処理...
-
-    // 新しいコマンドを追加
-    case "newcommand", "nc":
-        return h.handleNewCommand(args)
-    
-    default:
-        return CommandResult{Success: false, Message: "Unknown command"}
-}
-
-func (h *CommandHandler) handleNewCommand(args []string) CommandResult {
-    // 新しいコマンドの処理実装
-    success := h.game.HandleNewAction()
-    if success {
-        return CommandResult{Success: true, ShouldEndTurn: true}
-    }
-    return CommandResult{Success: false, Message: "Cannot perform action"}
-}
-```
-
-#### 2. GameLogicの拡張
-
-```go
-// internal/game/ (既存のゲームルール)
-func (g *Game) HandleNewAction() bool {
-    // 新しいアクションの実装
-    if g.canPerformAction() {
-        g.executeAction()
-        g.AddMessage("Action performed successfully")
-        return true
-    }
-    return false
-}
-```
-
-#### 3. キー入力マッピングの追加（GUI用）
-
-```go
 // internal/core/command/parser.go
-func (h *InputHandler) KeyToCommand(key tcell.Key, ch rune) string {
-    // 既存のキーマッピング...
+p.keyMap["x"] = Command{Type: CmdNewAction}
 
-    // 新しいキーマッピングを追加
-    case 'x', 'X':
-        return "newcommand"
-    
-    default:
-        return ""
-}
+// internal/core/cli/game_commands.go
+return c.executeGameplay(Command{Type: CmdNewAction}, args...)
 ```
 
-#### 4. ヘルプテキストの更新
+#### 2. 共通実行本体を実装
 
 ```go
 // internal/core/command/executor.go
-func (h *CommandHandler) handleHelp() CommandResult {
-    helpText := `Available Commands:
-  ...existing commands...
-
-  New Commands:
-    newcommand/nc - Perform new action
-    `
-    h.game.AddMessage(helpText)
-    return CommandResult{Success: true}
+func executeNewAction(ctx *Context, args []string) Result {
+    // ゲーム状態の検証と状態変更をここに実装する
+    return turnResult(ctx, "Action performed successfully.")
 }
 ```
 
-#### 5. テストの作成
+`Execute` の switch に `CmdNewAction` を追加し、ターン消費やエラーは `Result` に設定します。GUI側は `GameScreen.executeCommand`、CLI側は `CLIMode.executeGameplay` を経由させ、入口ごとにゲームルールを複製しないでください。
+
+#### 3. テストの作成
 
 ```go
 // internal/ui/screen/gameplay_parity_test.go
-func TestNewCommand(t *testing.T) {
-    // 新しいコマンドのテスト
-    handler := NewCommandHandler(mockGame)
-    
-    result := handler.HandleCommand("newcommand", nil)
-    assert.True(t, result.Success)
-    assert.True(t, result.ShouldEndTurn)
+func TestGameplayCommandsHaveGUICLIParity(t *testing.T) {
+    // GUIキー入力とCLIコマンドで、状態・メッセージ・ターン消費を比較する
 }
 ```
 
@@ -312,14 +256,14 @@ func TestNewCommand(t *testing.T) {
 # CLIモードで新しいコマンドをテスト
 go run ./cmd/gorogue-cli
 > help           # ヘルプの確認
-> newcommand     # 新しいコマンドのテスト
+> move east      # ゲームプレイコマンドのテスト
 ```
 
 #### 単体テストの実行
 
 ```bash
-# 新しいコマンドのテストを実行
-go test ./internal/core/command/ -run TestNewCommand -v
+# 共通実行本体とGUI/CLIのパリティテストを実行
+go test ./internal/core/command ./internal/core/cli ./internal/ui/screen
 ```
 
 ### トラブルシューティング
@@ -327,11 +271,11 @@ go test ./internal/core/command/ -run TestNewCommand -v
 #### よくある問題
 
 1. **コマンドが認識されない**
-   - `HandleCommand`メソッドでの条件分岐を確認
+   - `command.Execute` の `switch` とCLIのコマンド登録を確認
    - コマンド名のスペルチェック
 
 2. **キー入力が反応しない**
-   - `KeyToCommand`メソッドのキーマッピングを確認
+   - `command.Parser` のキーマッピングを確認
    - キーコードの正確性をチェック
 
 3. **テストが失敗する**
