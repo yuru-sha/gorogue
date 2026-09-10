@@ -42,6 +42,14 @@ make setup-dev
 
 `make setup-dev`および`make ci-checks`は、golangci-lint v1.64.8をサポートします。別のバージョンがPATH上にある場合、セットアップはエラーで停止します。
 
+クリーンセットアップから検証する場合は、セットアップマーカーを削除してから次を実行します。
+
+```bash
+rm -f .setup-check .setup-dev-check
+make setup-dev
+make ci-checks
+```
+
 ## プロジェクト構造
 
 ```
