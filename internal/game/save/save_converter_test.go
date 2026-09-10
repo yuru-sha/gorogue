@@ -138,19 +138,20 @@ func TestSaveConverterPreservesExploredState(t *testing.T) {
 		FloorNumber: 1,
 		Tiles:       [][]*dungeon.Tile{{dungeon.NewTile(dungeon.TileFloor)}},
 	}
-	level.Tiles[0][0].Explored = false
+	level.Tiles[0][0].Explored = true
+	level.Tiles[0][0].Visible = false
 
 	saved := ConvertLevelToSave(level)
-	if saved.Tiles[0][0].Explored {
-		t.Fatal("unexplored tile was saved as explored")
+	if !saved.Tiles[0][0].Explored || saved.Tiles[0][0].Visible {
+		t.Fatal("tile visibility state was not saved")
 	}
 
 	restored, err := NewSaveConverter().convertSaveFloor(*saved)
 	if err != nil {
 		t.Fatalf("convertSaveFloor() error = %v", err)
 	}
-	if restored.Tiles[0][0].Explored {
-		t.Fatal("unexplored tile was restored as explored")
+	if !restored.Tiles[0][0].Explored || restored.Tiles[0][0].Visible {
+		t.Fatal("tile visibility state was not restored")
 	}
 }
 

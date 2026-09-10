@@ -47,6 +47,7 @@ func (s *GameScreen) tryMovePlayer(dx, dy int) {
 
 	// 移動実行
 	s.player.Position.Move(dx, dy)
+	s.level.UpdateVisibility(s.player.Position.X, s.player.Position.Y)
 	logger.Debug("Player moved",
 		"new_x", s.player.Position.X,
 		"new_y", s.player.Position.Y,
@@ -198,13 +199,6 @@ func (s *GameScreen) handleFight() {
 func (s *GameScreen) handleDisarm() {
 	s.AddMessage("Disarm trap which direction? (hjklybnu)")
 	// TODO: Implement directional disarm functionality
-	// For now, just provide the message
-}
-
-// handleToggleFOV toggles field of view display
-func (s *GameScreen) handleToggleFOV() {
-	s.AddMessage("FOV display toggled")
-	// TODO: Implement FOV toggle functionality
 	// For now, just provide the message
 }
 

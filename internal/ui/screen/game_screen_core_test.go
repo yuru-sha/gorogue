@@ -82,3 +82,77 @@ func TestEatingAdvancesMonsterTurn(t *testing.T) {
 		t.Fatal("eaten food was not removed")
 	}
 }
+
+func occludedTestFloor() *dungeon.Level {
+	level := &dungeon.Level{
+		Width:  7,
+		Height: 5,
+		Tiles:  make([][]*dungeon.Tile, 5),
+	}
+	for y := range level.Tiles {
+		level.Tiles[y] = make([]*dungeon.Tile, level.Width)
+		for x := range level.Tiles[y] {
+			level.Tiles[y][x] = dungeon.NewTile(dungeon.TileWall)
+		}
+	}
+	for _, position := range [][2]int{{1, 2}, {2, 2}, {4, 2}} {
+		level.SetTile(position[0], position[1], dungeon.TileFloor)
+	}
+	return level
+}
+
+func TestDrawHidesUnexploredTerrainAndEntities(t *testing.T) {
+	player := actor.NewPlayer(1, 2)
+	level := occludedTestFloor()
+	monster := actor.NewMonster(4, 2, 'B')
+	level.Monsters = []*actor.Monster{monster}
+	screen := NewGameScreen(80, 50, player)
+	screen.SetLevel(level)
+	grid := gruid.NewGrid(80, 50)
+
+	screen.Draw(&grid)
+
+	if got := grid.At(gruid.Point{X: 4, Y: 4}).Rune; got != ' ' {
+		t.Fatalf("unexplored tile was drawn as %q", got)
+	}
+	if got := grid.At(gruid.Point{X: 1, Y: 4}).Rune; got != player.Symbol {
+		t.Fatalf("player was drawn as %q, want %q", got, player.Symbol)
+	}
+}
+
+func TestDrawShowsExploredTerrainWithoutOutOfFOVEntities(t *testing.T) {
+	player := actor.NewPlayer(1, 2)
+	level := occludedTestFloor()
+	monster := actor.NewMonster(4, 2, 'B')
+	level.Monsters = []*actor.Monster{monster}
+	screen := NewGameScreen(80, 50, player)
+	screen.SetLevel(level)
+	level.UpdateVisibility(4, 2)
+	level.UpdateVisibility(1, 2)
+	grid := gruid.NewGrid(80, 50)
+
+	screen.Draw(&grid)
+
+	farTile := level.GetTile(4, 2)
+	if farTile.Visible || !farTile.Explored {
+		t.Fatalf("explored tile state = visible:%t explored:%t", farTile.Visible, farTile.Explored)
+	}
+	if got := grid.At(gruid.Point{X: 4, Y: 4}).Rune; got != farTile.Rune {
+		t.Fatalf("explored terrain was drawn as %q, want %q", got, farTile.Rune)
+	}
+	if got := grid.At(gruid.Point{X: 4, Y: 4}).Rune; got == monster.Type.Symbol {
+		t.Fatal("out-of-FOV monster was drawn")
+	}
+}
+
+func TestTabDoesNotClaimToToggleUnimplementedFOV(t *testing.T) {
+	player := actor.NewPlayer(1, 2)
+	screen := NewGameScreen(80, 50, player)
+	screen.SetLevel(occludedTestFloor())
+
+	screen.HandleInput(gruid.MsgKeyDown{Key: gruid.KeyTab})
+
+	if strings.Contains(strings.Join(screen.messages, "\n"), "FOV display toggled") {
+		t.Fatal("Tab advertised an unimplemented FOV toggle")
+	}
+}

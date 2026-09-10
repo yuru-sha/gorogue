@@ -60,6 +60,7 @@ func (sc *SaveConverter) FromSaveData(saveData *SaveData) (*actor.Player, *dunge
 			)
 			sc.resetPlayerToSafePosition(player, currentLevel)
 		}
+		currentLevel.UpdateVisibility(player.Position.X, player.Position.Y)
 	}
 
 	logger.Info("Successfully converted save data to game objects",
