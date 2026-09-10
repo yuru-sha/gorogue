@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/anaseto/gruid"
+	"github.com/yuru-sha/gorogue/internal/core/command"
 	"github.com/yuru-sha/gorogue/internal/core/state"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
@@ -167,33 +168,29 @@ func (s *SaveLoadScreen) performSave() state.GameState {
 		s.setMessage("Save integration is not configured", s.colorError)
 		return state.StateGame
 	}
-	if err := s.saveIntegration.SaveGame(); err != nil {
-		s.setMessage(fmt.Sprintf("Save failed: %v", err), s.colorError)
+	result := command.Execute(&command.Context{Save: s.saveIntegration}, command.Command{Type: command.CmdSave})
+	if result.Error {
+		s.setMessage(result.Message, s.colorError)
 		return state.StateGame
 	}
-	s.setMessage("Game saved", s.colorSuccess)
+	s.setMessage(result.Message, s.colorSuccess)
 	return state.StateGame
 }
 
 // performLoad performs load operation
 func (s *SaveLoadScreen) performLoad() state.GameState {
-	if !s.saveManager.FileExists() {
-		s.setMessage("No save file found", s.colorError)
-		return state.StateGame
-	}
-
 	if s.saveIntegration == nil || s.onLoad == nil {
 		s.setMessage("Load integration is not configured", s.colorError)
 		return state.StateGame
 	}
-	if err := s.saveIntegration.LoadGame(); err != nil {
-		s.setMessage(fmt.Sprintf("Load failed: %v", err), s.colorError)
+	result := command.Execute(&command.Context{Save: s.saveIntegration}, command.Command{Type: command.CmdLoad})
+	if result.Error {
+		s.setMessage(result.Message, s.colorError)
 		return state.StateGame
 	}
 
-	player, dungeonManager := s.saveIntegration.GetGameState()
-	s.onLoad(player, dungeonManager)
-	s.setMessage("Game loaded", s.colorSuccess)
+	s.onLoad(result.Player, result.Dungeon)
+	s.setMessage(result.Message, s.colorSuccess)
 	return state.StateGame
 }
 

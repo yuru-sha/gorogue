@@ -5,9 +5,11 @@ import (
 	"strconv"
 	"strings"
 
+	gamecommand "github.com/yuru-sha/gorogue/internal/core/command"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
 	"github.com/yuru-sha/gorogue/internal/game/item"
+	"github.com/yuru-sha/gorogue/internal/game/save"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
@@ -23,6 +25,7 @@ type CLIMode struct {
 	Level    *dungeon.Level
 	Player   *actor.Player
 	Dungeon  *dungeon.DungeonManager
+	Save     *save.SaveGameIntegration
 	Commands map[string]*Command
 }
 
@@ -136,13 +139,13 @@ func (c *CLIMode) registerCommands() {
 		{
 			Name:        "save",
 			Description: "Save game state",
-			Usage:       "save [filename]",
+			Usage:       "save",
 			Handler:     c.saveCommand,
 		},
 		{
 			Name:        "load",
 			Description: "Load game state",
-			Usage:       "load [filename]",
+			Usage:       "load",
 			Handler:     c.loadCommand,
 		},
 		{
@@ -205,6 +208,30 @@ func (c *CLIMode) Toggle() {
 // SetLevel updates the level reference
 func (c *CLIMode) SetLevel(level *dungeon.Level) {
 	c.Level = level
+}
+
+// SetSaveIntegration binds save/load gameplay commands to the shared save state.
+func (c *CLIMode) SetSaveIntegration(integration *save.SaveGameIntegration) {
+	c.Save = integration
+}
+
+func (c *CLIMode) executeGameplay(cmd gamecommand.Command, args ...string) string {
+	result := gamecommand.Execute(&gamecommand.Context{
+		Player:  c.Player,
+		Level:   c.Level,
+		Dungeon: c.Dungeon,
+		Save:    c.Save,
+	}, cmd, args...)
+	if result.Player != nil {
+		c.Player = result.Player
+	}
+	if result.Dungeon != nil {
+		c.Dungeon = result.Dungeon
+	}
+	if result.Level != nil {
+		c.Level = result.Level
+	}
+	return result.Message
 }
 
 // helpCommand shows help information
@@ -462,8 +489,7 @@ func (c *CLIMode) mapCommand(args []string) string {
 // inventoryCommand manages inventory
 func (c *CLIMode) inventoryCommand(args []string) string {
 	if len(args) == 0 {
-		listing := c.Player.Inventory.GetInventoryListing(c.Player.IdentifyMgr)
-		return strings.Join(listing, "\n")
+		return c.executeGameplay(gamecommand.Command{Type: gamecommand.CmdInventory})
 	}
 
 	if args[0] == "clear" {
@@ -477,24 +503,12 @@ func (c *CLIMode) inventoryCommand(args []string) string {
 
 // saveCommand saves game state
 func (c *CLIMode) saveCommand(args []string) string {
-	filename := "debug_save.json"
-	if len(args) > 0 {
-		filename = args[0]
-	}
-
-	// TODO: Implement save functionality
-	return fmt.Sprintf("Game saved to %s (TODO: implement)", filename)
+	return c.executeGameplay(gamecommand.Command{Type: gamecommand.CmdSave})
 }
 
 // loadCommand loads game state
 func (c *CLIMode) loadCommand(args []string) string {
-	filename := "debug_save.json"
-	if len(args) > 0 {
-		filename = args[0]
-	}
-
-	// TODO: Implement load functionality
-	return fmt.Sprintf("Game loaded from %s (TODO: implement)", filename)
+	return c.executeGameplay(gamecommand.Command{Type: gamecommand.CmdLoad})
 }
 
 // setCommand sets player attributes

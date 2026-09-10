@@ -6,8 +6,6 @@ import (
 	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/command"
 	"github.com/yuru-sha/gorogue/internal/core/state"
-	gameitem "github.com/yuru-sha/gorogue/internal/game/item"
-	"github.com/yuru-sha/gorogue/internal/game/magic"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
@@ -23,6 +21,8 @@ func (s *GameScreen) HandleInput(msg gruid.Msg) state.GameState {
 			return s.handleUnequipInput(msg.Key)
 		case ModeDrop:
 			return s.handleDropInput(msg.Key)
+		case ModeUse:
+			return s.handleUseInput(msg.Key)
 		case ModeQuaff:
 			return s.handleQuaffInput(msg.Key)
 		case ModeRead:
@@ -49,7 +49,7 @@ func (s *GameScreen) handleNormalInput(key gruid.Key) state.GameState {
 	// Movement commands
 	case command.CmdMoveWest, command.CmdMoveEast, command.CmdMoveNorth, command.CmdMoveSouth,
 		command.CmdMoveNorthWest, command.CmdMoveNorthEast, command.CmdMoveSouthWest, command.CmdMoveSouthEast:
-		s.tryMovePlayer(cmd.Direction.X, cmd.Direction.Y)
+		s.addCommandResult(s.executeCommand(cmd))
 
 	// Action commands
 	case command.CmdLook:
@@ -88,12 +88,7 @@ func (s *GameScreen) handleNormalInput(key gruid.Key) state.GameState {
 	case command.CmdGoUpstairs:
 		return s.handleStairs(true)
 	case command.CmdGoDownstairs:
-		// Check if we're on stairs - if so, go down, otherwise wait
-		if s.canGoDownstairs() {
-			s.handleStairs(false)
-		} else {
-			s.handleWait()
-		}
+		return s.handleStairs(false)
 
 	// System commands
 	case command.CmdQuit:
@@ -130,40 +125,14 @@ func (s *GameScreen) handleNormalInput(key gruid.Key) state.GameState {
 
 // handleStairs handles stair movement
 func (s *GameScreen) handleStairs(goUp bool) state.GameState {
-	if s.dungeonManager == nil {
-		s.AddMessage("Dungeon manager not available")
-		return state.StateGame
-	}
-
+	commandType := command.CmdGoDownstairs
 	if goUp {
-		if s.dungeonManager.CanGoUpstairs() {
-			if s.dungeonManager.GoUpstairs() {
-				s.level = s.dungeonManager.GetCurrentLevel()
-				s.wizardMode.SetLevel(s.level)
-				s.AddMessage(fmt.Sprintf("階層 %d へ上がった", s.dungeonManager.GetCurrentFloor()))
-				if s.dungeonManager.CheckVictoryCondition() {
-					return state.StateVictory
-				}
-			}
-		} else {
-			s.AddMessage("ここには上り階段がない")
-		}
-	} else {
-		if s.dungeonManager.CanGoDownstairs() {
-			if s.dungeonManager.GoDownstairs() {
-				s.level = s.dungeonManager.GetCurrentLevel()
-				s.wizardMode.SetLevel(s.level)
-				s.AddMessage(fmt.Sprintf("階層 %d へ下りた", s.dungeonManager.GetCurrentFloor()))
-
-				// 最終階層に到達した場合、イェンダーの魔除けを配置
-				if s.dungeonManager.IsOnFinalFloor() {
-					s.dungeonManager.PlaceAmuletOfYendor()
-					s.AddMessage("この階層には強力な魔力を感じる...")
-				}
-			}
-		} else {
-			s.AddMessage("ここには下り階段がない")
-		}
+		commandType = command.CmdGoUpstairs
+	}
+	result := s.executeCommand(command.Command{Type: commandType})
+	s.addCommandResult(result)
+	if result.Victory {
+		return state.StateVictory
 	}
 	return state.StateGame
 }
@@ -177,24 +146,18 @@ func (s *GameScreen) handleEquipInput(key gruid.Key) state.GameState {
 		return state.StateGame
 	default:
 		if len(string(key)) == 1 && string(key)[0] >= 'a' && string(key)[0] <= 'z' {
-			index := int(string(key)[0] - 'a')
-			if index < len(s.equippableItems) {
-				item := s.equippableItems[index]
-				if s.player.Equipment.EquipItem(item) {
-					// インベントリからアイテムを削除
-					for i, invItem := range s.player.Inventory.Items {
-						if invItem == item {
-							s.player.Inventory.RemoveItem(i)
-							break
-						}
-					}
-					displayName := s.player.IdentifyMgr.GetDisplayName(item)
-					s.AddMessage(fmt.Sprintf("You equipped %s.", displayName))
-				} else {
-					s.AddMessage("You can't equip that item.")
-				}
-			} else {
+			selection := int(string(key)[0] - 'a')
+			if selection >= len(s.equippableItems) {
 				s.AddMessage("Invalid selection.")
+			} else {
+				selected := s.equippableItems[selection]
+				for index, item := range s.player.Inventory.Items {
+					if item == selected {
+						result := s.executeCommand(command.Command{Type: command.CmdEquip}, string(rune('a'+index)))
+						s.addCommandResult(result)
+						break
+					}
+				}
 			}
 			s.inputMode = ModeNormal
 		}
@@ -226,34 +189,11 @@ func (s *GameScreen) handleUnequipInput(key gruid.Key) state.GameState {
 
 // unequipSlot unequips an item from a specific slot
 func (s *GameScreen) unequipSlot(slot, displaySlot string) {
-	var equipped *gameitem.Item
-	switch slot {
-	case "weapon":
-		equipped = s.player.Equipment.Weapon
-	case "armor":
-		equipped = s.player.Equipment.Armor
-	case "ring_left":
-		equipped = s.player.Equipment.RingLeft
-	case "ring_right":
-		equipped = s.player.Equipment.RingRight
+	result := s.executeCommand(command.Command{Type: command.CmdUnequip}, slot)
+	if result.Message == "No item equipped in "+slot+" slot." && displaySlot != slot {
+		result.Message = "You have no " + displaySlot + " equipped."
 	}
-	if equipped != nil && equipped.IsCursed {
-		s.AddMessage(fmt.Sprintf("You can't remove the cursed %s.", displaySlot))
-		return
-	}
-
-	if item := s.player.Equipment.UnequipItem(slot); item != nil {
-		if s.player.Inventory.AddItem(item) {
-			displayName := s.player.IdentifyMgr.GetDisplayName(item)
-			s.AddMessage(fmt.Sprintf("You took off %s.", displayName))
-		} else {
-			s.AddMessage("Your pack is full!")
-			// 装備を戻す
-			s.player.Equipment.EquipItem(item)
-		}
-	} else {
-		s.AddMessage(fmt.Sprintf("You have no %s equipped.", displaySlot))
-	}
+	s.addCommandResult(result)
 }
 
 // handleDropInput handles input in drop mode
@@ -265,16 +205,7 @@ func (s *GameScreen) handleDropInput(key gruid.Key) state.GameState {
 		return state.StateGame
 	default:
 		if len(string(key)) == 1 && string(key)[0] >= 'a' && string(key)[0] <= 'z' {
-			index := int(string(key)[0] - 'a')
-			if item := s.player.Inventory.GetItem(index); item != nil {
-				displayName := s.player.IdentifyMgr.GetDisplayName(item)
-				s.AddMessage(fmt.Sprintf("You dropped %s.", displayName))
-				// アイテムをプレイヤーの位置に配置
-				s.level.AddItem(item, s.player.Position.X, s.player.Position.Y)
-				s.player.Inventory.RemoveItem(index)
-			} else {
-				s.AddMessage("Invalid selection.")
-			}
+			s.addCommandResult(s.executeCommand(command.Command{Type: command.CmdDrop}, string(key)))
 			s.inputMode = ModeNormal
 		}
 	}
@@ -283,72 +214,24 @@ func (s *GameScreen) handleDropInput(key gruid.Key) state.GameState {
 
 // handleQuaffInput handles input in quaff mode
 func (s *GameScreen) handleQuaffInput(key gruid.Key) state.GameState {
-	switch key {
-	case gruid.KeyEscape:
-		s.inputMode = ModeNormal
-		s.AddMessage("Canceled.")
-		return state.StateGame
-	default:
-		if len(string(key)) == 1 && string(key)[0] >= 'a' && string(key)[0] <= 'z' {
-			index := int(string(key)[0] - 'a')
-			if item := s.player.Inventory.GetItem(index); item != nil {
-				if item.Type == gameitem.ItemPotion {
-					result := magic.UsePotion(item.Name, s.player)
-					s.AddMessage(result.Message)
-
-					if result.Identified {
-						s.player.IdentifyMgr.IdentifyByUse(item)
-					}
-
-					// ポーションを消費
-					s.player.Inventory.RemoveItem(index)
-				} else {
-					s.AddMessage("You can't drink that!")
-				}
-			} else {
-				s.AddMessage("Invalid selection.")
-			}
-			s.inputMode = ModeNormal
-		}
-	}
-	return state.StateGame
+	return s.handleItemSelection(key, command.CmdQuaff)
 }
 
 // handleReadInput handles input in read mode
 func (s *GameScreen) handleReadInput(key gruid.Key) state.GameState {
-	switch key {
-	case gruid.KeyEscape:
-		s.inputMode = ModeNormal
-		s.AddMessage("Canceled.")
-		return state.StateGame
-	default:
-		if len(string(key)) == 1 && string(key)[0] >= 'a' && string(key)[0] <= 'z' {
-			index := int(string(key)[0] - 'a')
-			if item := s.player.Inventory.GetItem(index); item != nil {
-				if item.Type == gameitem.ItemScroll {
-					result := magic.UseScroll(item.Name, s.player, s.level)
-					s.AddMessage(result.Message)
-
-					if result.Identified {
-						s.player.IdentifyMgr.IdentifyByUse(item)
-					}
-
-					// 巻物を消費
-					s.player.Inventory.RemoveItem(index)
-				} else {
-					s.AddMessage("You can't read that!")
-				}
-			} else {
-				s.AddMessage("Invalid selection.")
-			}
-			s.inputMode = ModeNormal
-		}
-	}
-	return state.StateGame
+	return s.handleItemSelection(key, command.CmdRead)
 }
 
 // handleEatInput handles food selection.
 func (s *GameScreen) handleEatInput(key gruid.Key) state.GameState {
+	return s.handleItemSelection(key, command.CmdEat)
+}
+
+func (s *GameScreen) handleUseInput(key gruid.Key) state.GameState {
+	return s.handleItemSelection(key, command.CmdUse)
+}
+
+func (s *GameScreen) handleItemSelection(key gruid.Key, commandType command.Type) state.GameState {
 	switch key {
 	case gruid.KeyEscape:
 		s.inputMode = ModeNormal
@@ -356,19 +239,7 @@ func (s *GameScreen) handleEatInput(key gruid.Key) state.GameState {
 		return state.StateGame
 	default:
 		if len(string(key)) == 1 && string(key)[0] >= 'a' && string(key)[0] <= 'z' {
-			index := int(string(key)[0] - 'a')
-			if item := s.player.Inventory.GetItem(index); item != nil {
-				if item.Type == gameitem.ItemFood {
-					s.player.EatFood(item.Value)
-					s.player.Inventory.RemoveItem(index)
-					s.AddMessage(fmt.Sprintf("You ate %s.", s.player.IdentifyMgr.GetDisplayName(item)))
-					s.level.UpdateMonsters(s.player)
-				} else {
-					s.AddMessage("You can't eat that!")
-				}
-			} else {
-				s.AddMessage("Invalid selection.")
-			}
+			s.addCommandResult(s.executeCommand(command.Command{Type: commandType}, string(key)))
 			s.inputMode = ModeNormal
 		}
 	}
@@ -389,8 +260,11 @@ func (s *GameScreen) handleCLIInput(key gruid.Key) state.GameState {
 			result := s.cliMode.ExecuteCommand(s.cliBuffer)
 			s.AddMessage(fmt.Sprintf("> %s", s.cliBuffer))
 			s.AddMessage(result)
-			if s.dungeonManager != nil {
-				s.level = s.dungeonManager.GetCurrentLevel()
+			s.player = s.cliMode.Player
+			s.dungeonManager = s.cliMode.Dungeon
+			s.level = s.cliMode.Level
+			if s.wizardMode != nil && s.level != nil {
+				s.wizardMode.Player = s.player
 				s.wizardMode.SetLevel(s.level)
 			}
 

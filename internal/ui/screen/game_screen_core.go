@@ -3,6 +3,8 @@
 package screen
 
 import (
+	"strings"
+
 	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/cli"
 	"github.com/yuru-sha/gorogue/internal/core/command"
@@ -10,6 +12,7 @@ import (
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
 	gameitem "github.com/yuru-sha/gorogue/internal/game/item"
+	"github.com/yuru-sha/gorogue/internal/game/save"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
@@ -21,6 +24,7 @@ const (
 	ModeEquip
 	ModeUnequip
 	ModeDrop
+	ModeUse
 	ModeQuaff
 	ModeRead
 	ModeEat
@@ -39,12 +43,13 @@ type GameScreen struct {
 	grid              gruid.Grid             // 画面全体のグリッド
 	wizardMode        *wizard.WizardMode     // ウィザードモード
 	cliMode           *cli.CLIMode           // CLIデバッグモード
-	inputMode         InputMode              // 現在の入力モード
-	equippableItems   []*gameitem.Item       // 装備可能アイテムリスト
-	cliBuffer         string                 // CLI入力バッファ
-	cliHistory        []string               // CLIコマンド履歴
-	cmdParser         *command.Parser        // Command parser
-	directionCallback func(dx, dy int)       // Direction mode callback
+	saveIntegration   *save.SaveGameIntegration
+	inputMode         InputMode        // 現在の入力モード
+	equippableItems   []*gameitem.Item // 装備可能アイテムリスト
+	cliBuffer         string           // CLI入力バッファ
+	cliHistory        []string         // CLIコマンド履歴
+	cmdParser         *command.Parser  // Command parser
+	directionCallback func(dx, dy int) // Direction mode callback
 }
 
 // NewGameScreen creates a new game screen
@@ -89,6 +94,7 @@ func (s *GameScreen) SetLevel(level *dungeon.Level) {
 	} else {
 		s.cliMode = cli.NewCLIMode(level, s.player)
 	}
+	s.cliMode.SetSaveIntegration(s.saveIntegration)
 	logger.Debug("Set dungeon level for game screen",
 		"width", level.Width,
 		"height", level.Height,
@@ -107,18 +113,67 @@ func (s *GameScreen) SetDungeonManager(dm *dungeon.DungeonManager) {
 		if s.cliMode == nil {
 			s.cliMode = cli.NewCLIModeWithDungeonManager(dm, s.player)
 		} else {
+			s.cliMode.Player = s.player
 			s.cliMode.Dungeon = dm
 			s.cliMode.SetLevel(s.level)
+		}
+		if s.cliMode != nil {
+			s.cliMode.SetSaveIntegration(s.saveIntegration)
 		}
 	}
 	logger.Debug("Set dungeon manager for game screen")
 }
 
+// SetSaveIntegration binds save/load commands to the shared save state.
+func (s *GameScreen) SetSaveIntegration(integration *save.SaveGameIntegration) {
+	s.saveIntegration = integration
+	if s.cliMode != nil {
+		s.cliMode.SetSaveIntegration(integration)
+	}
+}
+
+func (s *GameScreen) executeCommand(cmd command.Command, args ...string) command.Result {
+	result := command.Execute(&command.Context{
+		Player:  s.player,
+		Level:   s.level,
+		Dungeon: s.dungeonManager,
+		Save:    s.saveIntegration,
+	}, cmd, args...)
+	if result.Player != nil {
+		s.player = result.Player
+	}
+	if result.Dungeon != nil {
+		s.dungeonManager = result.Dungeon
+	}
+	if result.Level != nil {
+		s.level = result.Level
+	}
+	if s.wizardMode != nil && s.level != nil {
+		s.wizardMode.Player = s.player
+		s.wizardMode.SetLevel(s.level)
+	}
+	if s.cliMode != nil {
+		s.cliMode.Player = s.player
+		s.cliMode.Dungeon = s.dungeonManager
+		s.cliMode.SetLevel(s.level)
+		s.cliMode.SetSaveIntegration(s.saveIntegration)
+	}
+	return result
+}
+
+func (s *GameScreen) addCommandResult(result command.Result) {
+	if result.Message != "" {
+		s.AddMessage(result.Message)
+	}
+}
+
 // AddMessage adds a message to the message log
 func (s *GameScreen) AddMessage(msg string) {
-	s.messages = append(s.messages, msg)
-	if len(s.messages) > 7 {
-		s.messages = s.messages[len(s.messages)-7:]
+	for _, line := range strings.Split(msg, "\n") {
+		s.messages = append(s.messages, line)
+		if len(s.messages) > 7 {
+			s.messages = s.messages[len(s.messages)-7:]
+		}
 	}
 	logger.Debug("Added message to log",
 		"message", msg,
