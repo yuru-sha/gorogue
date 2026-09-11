@@ -1,13 +1,6 @@
 package screen
 
-import (
-	"github.com/yuru-sha/gorogue/internal/core/command"
-)
-
-// tryMovePlayer executes a movement command from a direction-based UI action.
-func (s *GameScreen) tryMovePlayer(dx, dy int) {
-	s.addCommandResult(s.executeCommand(command.NewMoveCommand(command.Direction{X: dx, Y: dy})))
-}
+import "github.com/yuru-sha/gorogue/internal/core/command"
 
 func (s *GameScreen) handleLook() {
 	s.addCommandResult(s.executeCommand(command.Command{Type: command.CmdLook}))
@@ -57,10 +50,6 @@ func (s *GameScreen) doFight(dx, dy int) {
 
 func (s *GameScreen) handleDisarm() {
 	s.AddMessage("Disarm trap which direction? (hjklybnu)")
-}
-
-func (s *GameScreen) canGoDownstairs() bool {
-	return s.dungeonManager != nil && s.dungeonManager.CanGoDownstairs()
 }
 
 func (s *GameScreen) doOpenDoor(dx, dy int) {

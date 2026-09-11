@@ -22,7 +22,7 @@ func (l *Level) UpdateVisibility(x, y int) {
 	fov := rl.NewFOV(gruid.NewRange(0, 0, l.Width, l.Height))
 	visible := fov.SSCVisionMap(
 		gruid.Point{X: x, Y: y},
-		max(l.Width, l.Height),
+		maxInt(l.Width, l.Height),
 		func(p gruid.Point) bool {
 			tile := l.GetTile(p.X, p.Y)
 			return tile != nil && tile.Walkable()

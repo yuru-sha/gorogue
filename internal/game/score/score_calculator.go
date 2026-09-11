@@ -321,13 +321,14 @@ func (sc *ScoreCalculator) IsTimePenaltyEnabled() bool {
 
 // FormatPlayTime はプレイ時間を見やすい形式でフォーマットする
 func FormatPlayTime(seconds int64) string {
-	if seconds < 60 {
+	switch {
+	case seconds < 60:
 		return fmt.Sprintf("%d秒", seconds)
-	} else if seconds < 3600 {
+	case seconds < 3600:
 		minutes := seconds / 60
 		secs := seconds % 60
 		return fmt.Sprintf("%d分%d秒", minutes, secs)
-	} else {
+	default:
 		hours := seconds / 3600
 		minutes := (seconds % 3600) / 60
 		secs := seconds % 60

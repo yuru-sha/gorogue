@@ -56,7 +56,7 @@ func NewSaveManager() *SaveManager {
 // Initialize initializes the save manager
 func (sm *SaveManager) Initialize() error {
 	// Create save directory if it doesn't exist
-	if err := os.MkdirAll(sm.saveDir, 0755); err != nil {
+	if err := os.MkdirAll(sm.saveDir, 0o755); err != nil {
 		logger.Error("Failed to create save directory",
 			"path", sm.saveDir,
 			"error", err,
@@ -307,7 +307,7 @@ func (sm *SaveManager) getBackupFilePath() string {
 // writeSaveData writes save data to file
 func (sm *SaveManager) writeSaveData(saveData *SaveData, filename string) error {
 	// Create directory if it doesn't exist
-	if err := os.MkdirAll(filepath.Dir(filename), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(filename), 0o755); err != nil {
 		return err
 	}
 
@@ -372,6 +372,8 @@ func (sm *SaveManager) createMetadata(saveData *SaveData) *SaveMetadata {
 }
 
 // verifySaveData verifies the integrity of save data
+//
+//nolint:gocyclo // Save validation intentionally checks every persisted section together.
 func (sm *SaveManager) verifySaveData(saveData *SaveData) error {
 	// Check version
 	if saveData.Version == "" {
@@ -403,7 +405,8 @@ func (sm *SaveManager) verifySaveData(saveData *SaveData) error {
 
 	// Check for duplicate inventory slots
 	usedSlots := make(map[int]bool)
-	for _, item := range saveData.PlayerData.Inventory {
+	for i := range saveData.PlayerData.Inventory {
+		item := saveData.PlayerData.Inventory[i]
 		if item.Slot < 0 || item.Slot >= 26 {
 			return fmt.Errorf("invalid inventory slot: %d", item.Slot)
 		}

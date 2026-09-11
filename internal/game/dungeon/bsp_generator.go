@@ -339,8 +339,8 @@ func (g *BSPGenerator) createCorridorBetweenRooms(room1, room2 *Room, splitVerti
 func (g *BSPGenerator) createHorizontalCorridor(x1, x2, y int) []Position {
 	var corridor []Position
 
-	minX := min(x1, x2)
-	maxX := max(x1, x2)
+	minX := minInt(x1, x2)
+	maxX := maxInt(x1, x2)
 
 	for x := minX; x <= maxX; x++ {
 		if g.level.IsInBounds(x, y) {
@@ -366,8 +366,8 @@ func (g *BSPGenerator) createHorizontalCorridor(x1, x2, y int) []Position {
 func (g *BSPGenerator) createVerticalCorridor(y1, y2, x int) []Position {
 	var corridor []Position
 
-	minY := min(y1, y2)
-	maxY := max(y1, y2)
+	minY := minInt(y1, y2)
+	maxY := maxInt(y1, y2)
 
 	for y := minY; y <= maxY; y++ {
 		if g.level.IsInBounds(x, y) {
@@ -389,32 +389,18 @@ func (g *BSPGenerator) createVerticalCorridor(y1, y2, x int) []Position {
 	return corridor
 }
 
-// placeDoors is now a no-op since doors are placed during corridor creation (PyRogue style)
-func (g *BSPGenerator) placeDoors(node *BSPNode) {
-	// PyRogue style: doors are placed during corridor creation
-	// This method is kept for compatibility but does nothing
-	logger.Debug("Door placement completed during corridor creation")
-}
-
 // selectDoorType selects door type based on PyRogue probabilities
 func (g *BSPGenerator) selectDoorType() TileType {
 	rand_val := g.level.random().Float64()
 
-	if rand_val < 0.1 {
+	switch {
+	case rand_val < 0.1:
 		return TileSecretDoor // 10% secret doors
-	} else if rand_val < 0.4 {
+	case rand_val < 0.4:
 		return TileOpenDoor // 30% open doors
-	} else {
+	default:
 		return TileDoor // 60% normal doors
 	}
-}
-
-// PyRogue style: these functions are no longer needed since doors are placed during corridor creation
-
-// isInsideRoom checks if a position is inside a room
-func (g *BSPGenerator) isInsideRoom(x, y int, room *Room) bool {
-	return x >= room.X && x < room.X+room.Width &&
-		y >= room.Y && y < room.Y+room.Height
 }
 
 // isRoomBoundaryWall checks if a wall position is on the boundary of any room (PyRogue style)
@@ -447,7 +433,7 @@ func (g *BSPGenerator) calculateDepth(node *BSPNode) int {
 		rightDepth = g.calculateDepth(node.RightChild)
 	}
 
-	return 1 + max(leftDepth, rightDepth)
+	return 1 + maxInt(leftDepth, rightDepth)
 }
 
 // GetRoot returns the root node for debugging/testing

@@ -183,7 +183,8 @@ func (eq *Equipment) EquipItem(itm *item.Item) bool {
 			eq.RingLeft = itm
 			logger.Debug("Equipped ring on left hand", "ring", itm.Name)
 			return true
-		} else if eq.RingRight == nil {
+		}
+		if eq.RingRight == nil {
 			eq.RingRight = itm
 			logger.Debug("Equipped ring on right hand", "ring", itm.Name)
 			return true
@@ -235,11 +236,11 @@ func (eq *Equipment) UnequipItem(slot string) *item.Item {
 const noneEquipped = "None"
 
 // GetEquippedNames returns equipped item names for display
-func (eq *Equipment) GetEquippedNames() (string, string, string, string) {
-	weapon := noneEquipped
-	armor := noneEquipped
-	ringLeft := noneEquipped
-	ringRight := noneEquipped
+func (eq *Equipment) GetEquippedNames() (weapon, armor, ringLeft, ringRight string) {
+	weapon = noneEquipped
+	armor = noneEquipped
+	ringLeft = noneEquipped
+	ringRight = noneEquipped
 
 	if eq.Weapon != nil {
 		weapon = eq.Weapon.Name
@@ -254,7 +255,7 @@ func (eq *Equipment) GetEquippedNames() (string, string, string, string) {
 		ringRight = eq.RingRight.Name
 	}
 
-	return weapon, armor, ringLeft, ringRight
+	return
 }
 
 // GetAttackBonus returns attack bonus from equipped weapon

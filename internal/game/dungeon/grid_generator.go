@@ -227,13 +227,14 @@ func (g *GridGenerator) connectRooms() {
 		for cellIndex := range g.connectedCells {
 			adjacent := g.getAdjacentCells(cellIndex)
 			for _, adjIndex := range adjacent {
-				if !g.grid[adjIndex].Connected && g.isActiveCell(adjIndex) {
-					g.connectCells(cellIndex, adjIndex)
-					g.grid[adjIndex].Connected = true
-					g.connectedCells[adjIndex] = true
-					connectedAdjacent = true
-					break
+				if g.grid[adjIndex].Connected || !g.isActiveCell(adjIndex) {
+					continue
 				}
+				g.connectCells(cellIndex, adjIndex)
+				g.grid[adjIndex].Connected = true
+				g.connectedCells[adjIndex] = true
+				connectedAdjacent = true
+				break
 			}
 			if connectedAdjacent {
 				break

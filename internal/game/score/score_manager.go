@@ -72,7 +72,7 @@ func NewScoreManager() *ScoreManager {
 func (sm *ScoreManager) Initialize() error {
 	// スコアディレクトリの作成
 	scoreDir := filepath.Dir(sm.scoreFilePath)
-	if err := os.MkdirAll(scoreDir, 0755); err != nil {
+	if err := os.MkdirAll(scoreDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create score directory: %w", err)
 	}
 
@@ -102,6 +102,8 @@ func (sm *ScoreManager) createEmptyScoreFile() error {
 }
 
 // AddScore はスコアを追加する
+//
+//nolint:gocritic // ScoreEntry is copied at the storage boundary for value semantics.
 func (sm *ScoreManager) AddScore(entry ScoreEntry) error {
 	scoreFile, err := sm.readScoreFile()
 	if err != nil {
@@ -189,7 +191,8 @@ func (sm *ScoreManager) GetVictoryScores() ([]ScoreEntry, error) {
 	}
 
 	var victories []ScoreEntry
-	for _, entry := range scoreFile.Entries {
+	for i := range scoreFile.Entries {
+		entry := scoreFile.Entries[i]
 		if entry.IsVictory {
 			victories = append(victories, entry)
 		}
@@ -206,7 +209,8 @@ func (sm *ScoreManager) GetPlayerScores(playerName string) ([]ScoreEntry, error)
 	}
 
 	var playerScores []ScoreEntry
-	for _, entry := range scoreFile.Entries {
+	for i := range scoreFile.Entries {
+		entry := scoreFile.Entries[i]
 		if entry.PlayerName == playerName {
 			playerScores = append(playerScores, entry)
 		}
@@ -247,7 +251,8 @@ func (sm *ScoreManager) GetScoreStats() (*ScoreStats, error) {
 	}
 
 	totalScore := 0
-	for _, entry := range scoreFile.Entries {
+	for i := range scoreFile.Entries {
+		entry := scoreFile.Entries[i]
 		if entry.IsVictory {
 			stats.VictoryCount++
 		}
@@ -278,7 +283,7 @@ type ScoreStats struct {
 }
 
 // IsHighScore は指定されたスコアがハイスコアかどうかを判定する
-func (sm *ScoreManager) IsHighScore(score int) (bool, int, error) {
+func (sm *ScoreManager) IsHighScore(score int) (isHighScore bool, rank int, err error) {
 	scoreFile, err := sm.readScoreFile()
 	if err != nil {
 		return false, 0, fmt.Errorf("failed to read score file: %w", err)
@@ -294,7 +299,8 @@ func (sm *ScoreManager) IsHighScore(score int) (bool, int, error) {
 	if score > lowestScore {
 		// 順位を計算
 		rank := len(scoreFile.Entries) + 1
-		for i, entry := range scoreFile.Entries {
+		for i := range scoreFile.Entries {
+			entry := scoreFile.Entries[i]
 			if score > entry.Score {
 				rank = i + 1
 				break
@@ -322,7 +328,7 @@ func (sm *ScoreManager) BackupScores() error {
 	}
 
 	// バックアップファイルに書き込み
-	if err := os.WriteFile(backupPath, data, 0644); err != nil {
+	if err := os.WriteFile(backupPath, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write backup file: %w", err)
 	}
 
@@ -341,7 +347,7 @@ func (sm *ScoreManager) RestoreScores() error {
 	}
 
 	// 元ファイルに書き込み
-	if err := os.WriteFile(sm.scoreFilePath, data, 0644); err != nil {
+	if err := os.WriteFile(sm.scoreFilePath, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write score file: %w", err)
 	}
 
@@ -375,7 +381,7 @@ func (sm *ScoreManager) writeScoreFile(scoreFile *ScoreFile) error {
 
 	// 一時ファイルに書き込み
 	tempFile := sm.scoreFilePath + ".tmp"
-	if err := os.WriteFile(tempFile, data, 0644); err != nil {
+	if err := os.WriteFile(tempFile, data, 0o600); err != nil {
 		return err
 	}
 

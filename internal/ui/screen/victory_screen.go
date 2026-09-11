@@ -35,30 +35,31 @@ func NewVictoryScreen(width, height int, scoreEntry *score.ScoreEntry) *VictoryS
 
 // HandleInput handles input events
 func (s *VictoryScreen) HandleInput(msg gruid.Msg) state.GameState {
-	switch msg := msg.(type) {
-	case gruid.MsgKeyDown:
-		switch msg.Key {
-		case "Up":
-			s.selected = (s.selected - 1 + len(s.menuItems)) % len(s.menuItems)
-		case "Down":
-			s.selected = (s.selected + 1) % len(s.menuItems)
-		case "Enter":
+	keyMsg, ok := msg.(gruid.MsgKeyDown)
+	if !ok {
+		return state.StateVictory
+	}
+	switch keyMsg.Key {
+	case "Up":
+		s.selected = (s.selected - 1 + len(s.menuItems)) % len(s.menuItems)
+	case KEY_DOWN:
+		s.selected = (s.selected + 1) % len(s.menuItems)
+	case KEY_ENTER:
+		return s.handleMenuSelection()
+	case KEY_SPACE:
+		s.showStats = !s.showStats
+	default:
+		// キーによる直接選択
+		switch keyMsg.Key {
+		case "r", "R":
+			s.selected = 0
 			return s.handleMenuSelection()
-		case "Space":
-			s.showStats = !s.showStats
-		default:
-			// キーによる直接選択
-			switch msg.Key {
-			case "r", "R":
-				s.selected = 0
-				return s.handleMenuSelection()
-			case "m", "M":
-				s.selected = 1
-				return s.handleMenuSelection()
-			case "q", "Q":
-				s.selected = 2
-				return s.handleMenuSelection()
-			}
+		case "m", "M":
+			s.selected = 1
+			return s.handleMenuSelection()
+		case "q", "Q":
+			s.selected = 2
+			return s.handleMenuSelection()
 		}
 	}
 
@@ -116,7 +117,7 @@ func (s *VictoryScreen) Draw(grid *gruid.Grid) {
 	// 勝利タイトルの描画
 	titleY := 1
 	for i, line := range victoryArt {
-		if len(line) > 0 {
+		if line != "" {
 			titleX := (s.width - len(line)) / 2
 			if titleX < 0 {
 				titleX = 0
@@ -170,8 +171,8 @@ func (s *VictoryScreen) Draw(grid *gruid.Grid) {
 				fmt.Sprintf("Exploration Bonus: %d", s.calculateExplorationBonus()),
 			}
 
-			allStats := append(statsLines, bonusLines...)
-			for i, line := range allStats {
+			statsLines = append(statsLines, bonusLines...)
+			for i, line := range statsLines {
 				statsX := (s.width - len(line)) / 2
 				if statsX < 0 {
 					statsX = 0

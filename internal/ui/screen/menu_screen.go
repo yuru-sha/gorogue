@@ -20,15 +20,6 @@ var titleArt = []string{
 	"",
 }
 
-// PyRogue準拠のシンプルなメニュー
-var menuBox = []string{
-	"",
-	"New Game",
-	"Help",
-	"Quit",
-	"",
-}
-
 var version = "v0.3.0"
 
 // Colors (SDL2対応の16進数カラー)
@@ -53,7 +44,9 @@ type MenuScreen struct {
 func NewMenuScreen(width, height int) *MenuScreen {
 	// セーブマネージャーを初期化
 	saveManager := save.NewSaveManager()
-	saveManager.Initialize()
+	if err := saveManager.Initialize(); err != nil {
+		logger.Warn("Failed to initialize save manager", "error", err)
+	}
 
 	// セーブデータの存在をチェック
 	menuItems := []string{"New Game"}
@@ -74,10 +67,10 @@ func NewMenuScreen(width, height int) *MenuScreen {
 
 // HandleInput handles input events
 func (s *MenuScreen) HandleInput(msg gruid.Msg) state.GameState {
-	switch msg := msg.(type) {
-	case gruid.MsgKeyDown:
-		logger.Debug("MenuScreen key pressed", "key", msg.Key, "mod", msg.Mod)
-		switch msg.Key {
+	keyMsg, ok := msg.(gruid.MsgKeyDown)
+	if ok {
+		logger.Debug("MenuScreen key pressed", "key", keyMsg.Key, "mod", keyMsg.Mod)
+		switch keyMsg.Key {
 		case gruid.KeyArrowUp:
 			s.selected = (s.selected - 1 + len(s.menuItems)) % len(s.menuItems)
 			logger.Debug("Selected item changed", "selected", s.selected)
@@ -88,7 +81,7 @@ func (s *MenuScreen) HandleInput(msg gruid.Msg) state.GameState {
 			return s.handleMenuSelection()
 		default:
 			// キーによる直接選択（文字列での判定）
-			keyStr := string(msg.Key)
+			keyStr := string(keyMsg.Key)
 			switch keyStr {
 			case "n", "N":
 				s.selected = 0
@@ -156,7 +149,7 @@ func (s *MenuScreen) Draw(grid *gruid.Grid) {
 	// タイトルの描画
 	titleY := 2
 	for i, line := range titleArt {
-		if len(line) > 0 { // 空行以外のみ描画
+		if line != "" { // 空行以外のみ描画
 			titleX := (s.width - len(line)) / 2
 			if titleX < 0 {
 				titleX = 0

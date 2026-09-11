@@ -97,9 +97,8 @@ func (s *SaveLoadScreen) SetMode(mode SaveLoadMode) {
 
 // HandleInput handles input events
 func (s *SaveLoadScreen) HandleInput(msg gruid.Msg) state.GameState {
-	switch msg := msg.(type) {
-	case gruid.MsgKeyDown:
-		return s.handleKeyDown(string(msg.Key))
+	if keyMsg, ok := msg.(gruid.MsgKeyDown); ok {
+		return s.handleKeyDown(string(keyMsg.Key))
 	}
 	return state.StateGame
 }
