@@ -9,6 +9,7 @@ BINARY_NAME := gorogue
 BUILD_DIR := bin
 LOG_DIR := logs
 GOLANGCI_LINT_VERSION := v1.64.8
+STATICCHECK_VERSION := 2025.1.1
 GO_BIN_DIR := $(shell go env GOPATH)/bin
 GOLANGCI_LINT ?= $(shell command -v golangci-lint 2>/dev/null || printf '%s\n' "$(GO_BIN_DIR)/golangci-lint")
 STATICCHECK := $(shell command -v staticcheck 2>/dev/null || printf '%s\n' "$(GO_BIN_DIR)/staticcheck")
@@ -51,7 +52,7 @@ $(SETUP_DEV_MARKER):
 	@$(MAKE) check-golangci-lint-version
 	@if [ ! -x "$(STATICCHECK)" ]; then \
 		echo "Installing staticcheck..."; \
-		go install honnef.co/go/tools/cmd/staticcheck@latest; \
+		go install honnef.co/go/tools/cmd/staticcheck@$(STATICCHECK_VERSION); \
 	fi
 	@if [ ! -x "$(GOIMPORTS)" ]; then \
 		echo "Installing goimports..."; \

@@ -22,6 +22,7 @@ cache_control: {"type": "ephemeral"}
 - make（ビルドツール）
 - Git（バージョン管理）
 - golangci-lint v1.64.8（静的解析ツール。`make setup-dev`でバージョンを検査）
+- staticcheck 2025.1.1（`make setup-dev`で導入）
 
 ### セットアップ手順
 
@@ -55,6 +56,8 @@ make check-setup-dev
 ```bash
 make ci-checks
 ```
+
+GitHub Actions は [`quality.yml`](../.github/workflows/quality.yml) で、Pull Request と `main` への push ごとに品質チェックを実行します。CI は `go.mod` の Go 1.24.5、golangci-lint v1.64.8、staticcheck 2025.1.1 を使用し、ローカルのセットアップマーカーには依存しません。SDL2 開発ライブラリは GUI のビルドに必要なため導入しますが、CI で GUI を起動せず、テストはヘッドレスで実行します。フォーマットは `gofmt -l` で検査するだけで、tracked file を変更しません。
 
 ツールのバージョン検査は、隔離した実行ファイルを指定して次の回帰チェックでも確認できます。
 
