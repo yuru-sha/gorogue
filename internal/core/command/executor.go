@@ -374,11 +374,20 @@ func executeLook(ctx *Context, args []string) Result {
 	if !ctx.Level.IsInBounds(x, y) {
 		return result(ctx, "Out of bounds.")
 	}
+	tile := ctx.Level.GetTile(x, y)
+	if tile == nil || (!tile.Visible && !tile.Explored) {
+		return result(ctx, fmt.Sprintf("Position (%d, %d):\nYou cannot see that location.", x, y))
+	}
 
 	lines := []string{fmt.Sprintf("Position (%d, %d):", x, y)}
-	if tile := ctx.Level.GetTile(x, y); tile != nil {
-		lines = append(lines, fmt.Sprintf("Terrain: %s", tile.Type.String()))
+	lines = append(lines, fmt.Sprintf("Terrain: %s", tile.Type.String()))
+	if tile.Visible {
+		lines = appendVisibleLookDetails(ctx, lines, x, y)
 	}
+	return result(ctx, strings.Join(lines, "\n"))
+}
+
+func appendVisibleLookDetails(ctx *Context, lines []string, x, y int) []string {
 	if monster := ctx.Level.GetMonsterAt(x, y); monster != nil {
 		lines = append(lines, fmt.Sprintf("Monster: %s (HP: %d/%d)", monster.Type.Name, monster.HP, monster.MaxHP))
 	}
@@ -391,7 +400,7 @@ func executeLook(ctx *Context, args []string) Result {
 	if len(items) > 0 {
 		lines = append(lines, "Items: "+strings.Join(items, ", "))
 	}
-	return result(ctx, strings.Join(lines, "\n"))
+	return lines
 }
 
 func executeInventory(ctx *Context) Result {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
+	"github.com/yuru-sha/gorogue/internal/game/item"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
@@ -57,6 +58,55 @@ func TestCLIModeLevelCommandUsesDungeonManager(t *testing.T) {
 	}
 	if !strings.Contains(result, "Moved to floor 2") {
 		t.Fatalf("unexpected level command result: %s", result)
+	}
+}
+
+func TestCLILookRespectsVisibility(t *testing.T) {
+	level := &dungeon.Level{
+		Width:  5,
+		Height: 5,
+		Tiles:  make([][]*dungeon.Tile, 5),
+	}
+	for y := range level.Tiles {
+		level.Tiles[y] = make([]*dungeon.Tile, level.Width)
+		for x := range level.Tiles[y] {
+			level.Tiles[y][x] = dungeon.NewTile(dungeon.TileFloor)
+		}
+	}
+
+	visible := level.GetTile(2, 1)
+	visible.Visible = true
+	level.Monsters = []*actor.Monster{actor.NewMonster(2, 1, 'B')}
+	level.Items = []*item.Item{item.NewItem(2, 1, item.ItemFood, "visible ration", 1)}
+
+	explored := level.GetTile(3, 3)
+	explored.Explored = true
+	level.Monsters = append(level.Monsters, actor.NewMonster(3, 3, 'O'))
+	level.Items = append(level.Items, item.NewItem(3, 3, item.ItemFood, "remembered ration", 1))
+
+	level.Monsters = append(level.Monsters, actor.NewMonster(4, 4, 'Z'))
+	level.Items = append(level.Items, item.NewItem(4, 4, item.ItemFood, "hidden ration", 1))
+
+	cli := NewCLIMode(level, actor.NewPlayerWithSeed(1, 1, 42))
+	cli.IsActive = true
+
+	visibleResult := cli.ExecuteCommand("look 2 1")
+	if !strings.Contains(visibleResult, "Terrain: floor") ||
+		!strings.Contains(visibleResult, "Monster:") || !strings.Contains(visibleResult, "Items:") {
+		t.Fatalf("visible look result = %q", visibleResult)
+	}
+
+	exploredResult := cli.ExecuteCommand("look 3 3")
+	if !strings.Contains(exploredResult, "Terrain: floor") ||
+		strings.Contains(exploredResult, "Monster:") || strings.Contains(exploredResult, "Items:") {
+		t.Fatalf("explored look result = %q", exploredResult)
+	}
+
+	unexploredResult := cli.ExecuteCommand("look 4 4")
+	if !strings.Contains(unexploredResult, "You cannot see that location.") ||
+		strings.Contains(unexploredResult, "Terrain:") ||
+		strings.Contains(unexploredResult, "Monster:") || strings.Contains(unexploredResult, "Items:") {
+		t.Fatalf("unexplored look result = %q", unexploredResult)
 	}
 }
 
