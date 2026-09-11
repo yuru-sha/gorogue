@@ -3,6 +3,7 @@ package screen
 import (
 	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/state"
+	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
@@ -14,60 +15,47 @@ type SymbolScreen struct {
 }
 
 // PyRogue準拠のシンボル説明データ
-var symbolExplanations = []struct {
+type symbolExplanation struct {
 	symbol string
 	name   string
-}{
-	// 地形
-	{".", "floor"},
-	{"#", "wall"},
-	{"+", "closed door"},
-	{"-", "horizontal open door"},
-	{"|", "vertical open door"},
-	{"^", "trap"},
-	{"%", "stairs"},
+}
 
-	// プレイヤー
-	{"@", "you"},
+var symbolExplanations = newSymbolExplanations()
 
-	// モンスター（PyRogue準拠）
-	{"A", "giant ant"},
-	{"B", "bat"},
-	{"C", "centaur"},
-	{"D", "dragon"},
-	{"E", "floating eye"},
-	{"F", "violet fungi"},
-	{"G", "gnome"},
-	{"H", "hobgoblin"},
-	{"I", "invisible stalker"},
-	{"J", "jackal"},
-	{"K", "kobold"},
-	{"L", "leprechaun"},
-	{"M", "mimic"},
-	{"N", "nymph"},
-	{"O", "orc"},
-	{"P", "purple worm"},
-	{"Q", "quasit"},
-	{"R", "rust monster"},
-	{"S", "snake"},
-	{"T", "troll"},
-	{"U", "umber hulk"},
-	{"V", "vampire"},
-	{"W", "wraith"},
-	{"X", "xorn"},
-	{"Y", "yeti"},
-	{"Z", "zombie"},
+func newSymbolExplanations() []symbolExplanation {
+	explanations := []symbolExplanation{
+		// 地形
+		{".", "floor"},
+		{"#", "wall"},
+		{"+", "closed door"},
+		{"-", "horizontal open door"},
+		{"|", "vertical open door"},
+		{"^", "trap"},
+		{"%", "stairs"},
 
-	// アイテム（PyRogue準拠）
-	{")", "weapon"},
-	{"]", "armor"},
-	{"!", "potion"},
-	{"?", "scroll"},
-	{"/", "wand or staff"},
-	{"=", "ring"},
-	{",", "amulet"},
-	{":", "food"},
-	{"*", "gold"},
+		// プレイヤー
+		{"@", "you"},
+	}
+
+	// MonsterTypes is the canonical symbol-to-name mapping for gameplay.
+	for symbol := 'A'; symbol <= 'Z'; symbol++ {
+		if monster, ok := actor.MonsterTypes[symbol]; ok {
+			explanations = append(explanations, symbolExplanation{string(symbol), monster.Name})
+		}
+	}
+
+	return append(explanations,
+		// アイテム（PyRogue準拠）
+		symbolExplanation{")", "weapon"},
+		symbolExplanation{"]", "armor"},
+		symbolExplanation{"!", "potion"},
+		symbolExplanation{"?", "scroll"},
+		symbolExplanation{"/", "wand or staff"},
+		symbolExplanation{"=", "ring"},
+		symbolExplanation{",", "amulet"},
+		symbolExplanation{":", "food"},
+		symbolExplanation{"*", "gold"},
+	)
 }
 
 // NewSymbolScreen creates a new symbol explanation screen
@@ -164,7 +152,7 @@ func (s *SymbolScreen) drawSymbol(grid *gruid.Grid, x, y int, symbol, name strin
 
 // drawText draws text at the specified position with the given style
 func (s *SymbolScreen) drawText(grid *gruid.Grid, x, y int, text string, style gruid.Style) {
-	for i, r := range text {
+	for i, r := range []rune(text) {
 		pos := gruid.Point{X: x + i, Y: y}
 		if pos.X >= 0 && pos.X < grid.Size().X && pos.Y >= 0 && pos.Y < grid.Size().Y {
 			grid.Set(pos, gruid.Cell{Rune: r, Style: style})
