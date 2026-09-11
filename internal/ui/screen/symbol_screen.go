@@ -1,6 +1,8 @@
 package screen
 
 import (
+	"sort"
+
 	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/state"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
@@ -14,61 +16,54 @@ type SymbolScreen struct {
 	grid   gruid.Grid
 }
 
-// シンボル説明データ。モンスター名はactor.MonsterTypesを正規ソースとする。
-var symbolExplanations = []struct {
+type symbolExplanation struct {
 	symbol string
 	name   string
-}{
-	// 地形
-	{".", "floor"},
-	{"#", "wall"},
-	{"+", "closed door"},
-	{"-", "horizontal open door"},
-	{"|", "vertical open door"},
-	{"^", "trap"},
-	{"%", "stairs"},
+}
 
-	// プレイヤー
-	{"@", "you"},
+// シンボル説明データ。モンスター名はactor.MonsterTypesを正規ソースとする。
+func symbolExplanations() []symbolExplanation {
+	explanations := []symbolExplanation{
+		// 地形
+		{".", "floor"},
+		{"#", "wall"},
+		{"+", "closed door"},
+		{"-", "horizontal open door"},
+		{"|", "vertical open door"},
+		{"^", "trap"},
+		{"%", "stairs"},
+
+		// プレイヤー
+		{"@", "you"},
+	}
 
 	// モンスター
-	{"A", actor.MonsterTypes['A'].Name},
-	{"B", actor.MonsterTypes['B'].Name},
-	{"C", actor.MonsterTypes['C'].Name},
-	{"D", actor.MonsterTypes['D'].Name},
-	{"E", actor.MonsterTypes['E'].Name},
-	{"F", actor.MonsterTypes['F'].Name},
-	{"G", actor.MonsterTypes['G'].Name},
-	{"H", actor.MonsterTypes['H'].Name},
-	{"I", actor.MonsterTypes['I'].Name},
-	{"J", actor.MonsterTypes['J'].Name},
-	{"K", actor.MonsterTypes['K'].Name},
-	{"L", actor.MonsterTypes['L'].Name},
-	{"M", actor.MonsterTypes['M'].Name},
-	{"N", actor.MonsterTypes['N'].Name},
-	{"O", actor.MonsterTypes['O'].Name},
-	{"P", actor.MonsterTypes['P'].Name},
-	{"Q", actor.MonsterTypes['Q'].Name},
-	{"R", actor.MonsterTypes['R'].Name},
-	{"S", actor.MonsterTypes['S'].Name},
-	{"T", actor.MonsterTypes['T'].Name},
-	{"U", actor.MonsterTypes['U'].Name},
-	{"V", actor.MonsterTypes['V'].Name},
-	{"W", actor.MonsterTypes['W'].Name},
-	{"X", actor.MonsterTypes['X'].Name},
-	{"Y", actor.MonsterTypes['Y'].Name},
-	{"Z", actor.MonsterTypes['Z'].Name},
+	monsters := make([]actor.MonsterType, 0, len(actor.MonsterTypes))
+	for _, monsterType := range actor.MonsterTypes {
+		if monsterType.Symbol >= 'A' && monsterType.Symbol <= 'Z' {
+			monsters = append(monsters, monsterType)
+		}
+	}
+	sort.Slice(monsters, func(i, j int) bool {
+		return monsters[i].Symbol < monsters[j].Symbol
+	})
+	for _, monsterType := range monsters {
+		explanations = append(explanations, symbolExplanation{string(monsterType.Symbol), monsterType.Name})
+	}
 
 	// アイテム（PyRogue準拠）
-	{")", "weapon"},
-	{"]", "armor"},
-	{"!", "potion"},
-	{"?", "scroll"},
-	{"/", "wand or staff"},
-	{"=", "ring"},
-	{",", "amulet"},
-	{":", "food"},
-	{"*", "gold"},
+	explanations = append(explanations,
+		symbolExplanation{")", "weapon"},
+		symbolExplanation{"]", "armor"},
+		symbolExplanation{"!", "potion"},
+		symbolExplanation{"?", "scroll"},
+		symbolExplanation{"/", "wand or staff"},
+		symbolExplanation{"=", "ring"},
+		symbolExplanation{",", "amulet"},
+		symbolExplanation{":", "food"},
+		symbolExplanation{"*", "gold"},
+	)
+	return explanations
 }
 
 // NewSymbolScreen creates a new symbol explanation screen
@@ -115,11 +110,12 @@ func (s *SymbolScreen) Draw(grid *gruid.Grid) {
 	leftCol := 10
 	rightCol := 45
 	startY := 5
+	explanations := symbolExplanations()
 
 	// 左カラム
 	y := startY
-	for i := 0; i < len(symbolExplanations)/2 && y < s.height-3; i++ {
-		sym := symbolExplanations[i]
+	for i := 0; i < len(explanations)/2 && y < s.height-3; i++ {
+		sym := explanations[i]
 		s.drawSymbol(grid, leftCol, y, sym.symbol, sym.name)
 
 		y++
@@ -127,8 +123,8 @@ func (s *SymbolScreen) Draw(grid *gruid.Grid) {
 
 	// 右カラム
 	y = startY
-	for i := len(symbolExplanations) / 2; i < len(symbolExplanations) && y < s.height-3; i++ {
-		sym := symbolExplanations[i]
+	for i := len(explanations) / 2; i < len(explanations) && y < s.height-3; i++ {
+		sym := explanations[i]
 		s.drawSymbol(grid, rightCol, y, sym.symbol, sym.name)
 
 		y++

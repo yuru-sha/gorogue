@@ -130,6 +130,31 @@ func TestSymbolScreenDrawRendersEveryLegendEntry(t *testing.T) {
 	}
 }
 
+func TestSymbolScreenDrawUsesMonsterTypeSymbols(t *testing.T) {
+	originalA := actor.MonsterTypes['A']
+	originalB := actor.MonsterTypes['B']
+	t.Cleanup(func() {
+		actor.MonsterTypes['A'] = originalA
+		actor.MonsterTypes['B'] = originalB
+	})
+
+	a, b := originalA, originalB
+	a.Symbol, b.Symbol = b.Symbol, a.Symbol
+	actor.MonsterTypes['A'] = a
+	actor.MonsterTypes['B'] = b
+
+	screen := NewSymbolScreen(80, 50)
+	grid := gruid.NewGrid(80, 50)
+	screen.Draw(&grid)
+
+	if got, want := legendNameAt(&grid, 10, 13), b.Name; got != want {
+		t.Errorf("legend name for A = %q, want %q", got, want)
+	}
+	if got, want := legendNameAt(&grid, 10, 14), a.Name; got != want {
+		t.Errorf("legend name for B = %q, want %q", got, want)
+	}
+}
+
 func legendNameAt(grid *gruid.Grid, x, y int) string {
 	name := make([]rune, 0)
 	for x += 2; x < grid.Size().X; x++ {
