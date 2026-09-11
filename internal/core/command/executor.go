@@ -382,20 +382,25 @@ func executeLook(ctx *Context, args []string) Result {
 	lines := []string{fmt.Sprintf("Position (%d, %d):", x, y)}
 	lines = append(lines, fmt.Sprintf("Terrain: %s", tile.Type.String()))
 	if tile.Visible {
-		if monster := ctx.Level.GetMonsterAt(x, y); monster != nil {
-			lines = append(lines, fmt.Sprintf("Monster: %s (HP: %d/%d)", monster.Type.Name, monster.HP, monster.MaxHP))
-		}
-		items := make([]string, 0)
-		for _, item := range ctx.Level.Items {
-			if item.Position.X == x && item.Position.Y == y {
-				items = append(items, ctx.Player.IdentifyMgr.GetDisplayName(item))
-			}
-		}
-		if len(items) > 0 {
-			lines = append(lines, "Items: "+strings.Join(items, ", "))
-		}
+		lines = appendVisibleLookDetails(ctx, lines, x, y)
 	}
 	return result(ctx, strings.Join(lines, "\n"))
+}
+
+func appendVisibleLookDetails(ctx *Context, lines []string, x, y int) []string {
+	if monster := ctx.Level.GetMonsterAt(x, y); monster != nil {
+		lines = append(lines, fmt.Sprintf("Monster: %s (HP: %d/%d)", monster.Type.Name, monster.HP, monster.MaxHP))
+	}
+	items := make([]string, 0)
+	for _, item := range ctx.Level.Items {
+		if item.Position.X == x && item.Position.Y == y {
+			items = append(items, ctx.Player.IdentifyMgr.GetDisplayName(item))
+		}
+	}
+	if len(items) > 0 {
+		lines = append(lines, "Items: "+strings.Join(items, ", "))
+	}
+	return lines
 }
 
 func executeInventory(ctx *Context) Result {
