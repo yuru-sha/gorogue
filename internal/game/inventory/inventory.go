@@ -171,10 +171,18 @@ func (inv *Inventory) GetInventoryListing(identifyMgr *identification.Identifica
 func (eq *Equipment) EquipItem(itm *item.Item) bool {
 	switch itm.Type {
 	case item.ItemWeapon:
+		if eq.Weapon != nil {
+			logger.Debug("Weapon slot occupied")
+			return false
+		}
 		eq.Weapon = itm
 		logger.Debug("Equipped weapon", "weapon", itm.Name)
 		return true
 	case item.ItemArmor:
+		if eq.Armor != nil {
+			logger.Debug("Armor slot occupied")
+			return false
+		}
 		eq.Armor = itm
 		logger.Debug("Equipped armor", "armor", itm.Name)
 		return true
