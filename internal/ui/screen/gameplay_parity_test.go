@@ -336,6 +336,87 @@ func TestGameplayValidationHasGUICLIParity(t *testing.T) {
 	}
 }
 
+func TestEquipmentReplacementPreservesStateThroughEitherEntryPoint(t *testing.T) {
+	if err := logger.Setup(); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		name     string
+		itemType item.ItemType
+		oldName  string
+		newName  string
+		fillPack bool
+	}{
+		{name: "weapon", itemType: item.ItemWeapon, oldName: "old sword", newName: "new sword"},
+		{name: "armor", itemType: item.ItemArmor, oldName: "old armor", newName: "new armor"},
+		{name: "weapon with full inventory", itemType: item.ItemWeapon, oldName: "old sword", newName: "new sword", fillPack: true},
+		{name: "armor with full inventory", itemType: item.ItemArmor, oldName: "old armor", newName: "new armor", fillPack: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			setup := func(player *actor.Player) *item.Item {
+				old := item.NewItem(1, 1, tc.itemType, tc.oldName, 1)
+				candidate := item.NewItem(1, 1, tc.itemType, tc.newName, 1)
+				player.Equipment.EquipItem(old)
+				if tc.fillPack {
+					for i := 0; i < player.Inventory.Capacity-1; i++ {
+						player.Inventory.AddItem(item.NewItem(1, 1, item.ItemPotion, "filler", 1))
+					}
+				}
+				player.Inventory.AddItem(candidate)
+				return candidate
+			}
+
+			guiPlayer := actor.NewPlayerWithSeed(1, 1, 42)
+			guiCandidate := setup(guiPlayer)
+			gui := NewGameScreen(80, 50, guiPlayer)
+			gui.SetLevel(newTestFloor(5, 5))
+			gui.HandleInput(gruid.MsgKeyDown{Key: "w"})
+			gui.HandleInput(gruid.MsgKeyDown{Key: "a"})
+
+			cliPlayer := actor.NewPlayerWithSeed(1, 1, 42)
+			cliCandidate := setup(cliPlayer)
+			cliMode := cli.NewCLIMode(newTestFloor(5, 5), cliPlayer)
+			cliMode.IsActive = true
+			cliResult := cliMode.ExecuteCommand("equip " + string(rune('a'+len(cliPlayer.Inventory.Items)-1)))
+
+			check := func(player *actor.Player, candidate *item.Item) {
+				var equipped *item.Item
+				if tc.itemType == item.ItemWeapon {
+					equipped = player.Equipment.Weapon
+				} else {
+					equipped = player.Equipment.Armor
+				}
+				if equipped == nil || equipped.Name != tc.oldName {
+					t.Fatalf("equipped item changed: got %v", equipped)
+				}
+				preserved := false
+				for _, inventoryItem := range player.Inventory.Items {
+					if inventoryItem == candidate {
+						preserved = true
+						break
+					}
+				}
+				if !preserved {
+					t.Fatal("replacement item was removed from inventory")
+				}
+				expectedSize := 1
+				if tc.fillPack {
+					expectedSize = player.Inventory.Capacity
+				}
+				if len(player.Inventory.Items) != expectedSize {
+					t.Fatalf("inventory changed: got %d, want %d", len(player.Inventory.Items), expectedSize)
+				}
+			}
+			check(guiPlayer, guiCandidate)
+			check(cliPlayer, cliCandidate)
+			if got := gui.messages[len(gui.messages)-1]; got != cliResult {
+				t.Fatalf("message mismatch: GUI=%q CLI=%q", got, cliResult)
+			}
+		})
+	}
+}
+
 func TestCursedEquipmentCannotBeUnequippedThroughEitherEntryPoint(t *testing.T) {
 	if err := logger.Setup(); err != nil {
 		t.Fatal(err)
