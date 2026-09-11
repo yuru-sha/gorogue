@@ -255,6 +255,22 @@ func TestEquipmentEquipItem(t *testing.T) {
 	}
 }
 
+func TestEquipmentRejectsWeaponReplacement(t *testing.T) {
+	eq := NewEquipment()
+	weapon := item.NewItem(0, 0, item.ItemWeapon, "Equipped Sword", 100)
+	replacement := item.NewItem(0, 0, item.ItemWeapon, "Replacement Sword", 100)
+
+	if !eq.EquipItem(weapon) {
+		t.Fatal("initial weapon was not equipped")
+	}
+	if eq.EquipItem(replacement) {
+		t.Fatal("occupied weapon slot accepted a replacement")
+	}
+	if eq.Weapon != weapon {
+		t.Fatalf("weapon slot changed to %v", eq.Weapon)
+	}
+}
+
 func TestEquipmentUnequipItem(t *testing.T) {
 	eq := NewEquipment()
 	weapon := item.NewItem(0, 0, item.ItemWeapon, "Sword", 100)
