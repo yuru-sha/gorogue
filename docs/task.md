@@ -354,7 +354,7 @@ GoRogueは**完全なローグライクゲーム**として十分プレイ可能
 3.  **PyRogue準拠のスコアリング**: ゲームクリア後の楽しみを追加
 
 ## PyRogue準拠の開発環境
-- **言語**: Go 1.21+ (PyRogue準拠のクロスプラットフォーム対応)
+- **言語**: Go 1.24.5+ (PyRogue準拠のクロスプラットフォーム対応、バージョンは `go.mod` を正とする)
 - **フレームワーク**: Gruid (github.com/anaseto/gruid) (PyRogue準拠のターミナル風表示)
 - **グラフィックス**: SDL2 (GUI版), Terminal (CLI版) (PyRogue準拠の表示システム)
 - **開発ツール**: VS Code, Go tools, Claude Code (PyRogue準拠の開発フロー)

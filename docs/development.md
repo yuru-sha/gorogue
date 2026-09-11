@@ -18,7 +18,7 @@ cache_control: {"type": "ephemeral"}
 
 ### 必要条件
 
-- Go 1.22以上
+- Go 1.24.5以上（必要なバージョンは `go.mod` を正とする）
 - make（ビルドツール）
 - Git（バージョン管理）
 - golangci-lint v1.64.8（静的解析ツール。`make setup-dev`でバージョンを検査）
