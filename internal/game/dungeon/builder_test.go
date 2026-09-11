@@ -1,6 +1,8 @@
 package dungeon
 
 import (
+	"math/rand"
+	"strconv"
 	"testing"
 
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
@@ -86,6 +88,37 @@ func TestDungeonBuilderBuild(t *testing.T) {
 	minExpectedFloor := MinRoomSize * MinRoomSize
 	if floorCount < minExpectedFloor {
 		t.Errorf("Too few floor tiles: %d, expected at least %d", floorCount, minExpectedFloor)
+	}
+}
+
+func TestBuildExcludesDarkRoomGeneration(t *testing.T) {
+	darkFloors := []int{6, 10, 14, 17, 20, 23, 24}
+
+	for _, floor := range darkFloors {
+		t.Run("Floor"+strconv.Itoa(floor), func(t *testing.T) {
+			builder := NewDungeonBuilderWithRand(80, 41, floor, rand.New(rand.NewSource(42)))
+			level := builder.Build()
+
+			specialRooms := 0
+			for _, room := range level.Rooms {
+				if !room.IsSpecial {
+					continue
+				}
+				specialRooms++
+				if room.Width != 5 || room.Height != 5 {
+					t.Errorf("special room on floor %d has size %dx%d; dark-room generation must not mark ordinary rooms as special", floor, room.Width, room.Height)
+				}
+			}
+
+			if floor%5 != 0 {
+				if specialRooms != 0 {
+					t.Errorf("floor %d has %d special rooms from excluded dark-room generation", floor, specialRooms)
+				}
+				if len(level.Items) > len(level.Rooms) {
+					t.Errorf("floor %d has %d items for %d rooms; excluded dark-room generation must not add guaranteed items", floor, len(level.Items), len(level.Rooms))
+				}
+			}
+		})
 	}
 }
 

@@ -78,11 +78,6 @@ func (b *DungeonBuilder) Build() *Level {
 		b.generateIsolatedRooms()
 	}
 
-	// 暗い部屋の生成（深い階層）
-	if b.shouldGenerateDarkRooms() {
-		b.generateDarkRooms()
-	}
-
 	// 階段の配置
 	b.placeStairs()
 
@@ -130,23 +125,6 @@ func (b *DungeonBuilder) shouldGenerateIsolatedRooms() bool {
 		return floor == 11 || floor == 15 || floor == 18 // 11階、15階、18階で確実に生成
 	default:
 		return floor == 22 || floor == 25 // 22階、25階で確実に生成
-	}
-}
-
-// shouldGenerateDarkRooms determines if dark rooms should be generated
-func (b *DungeonBuilder) shouldGenerateDarkRooms() bool {
-	floor := b.level.FloorNumber
-
-	// PyRogue風の暗い部屋生成判定
-	switch {
-	case floor <= 5:
-		return false // 浅い階層では生成しない
-	case floor <= 12:
-		return floor == 6 || floor == 10 // 6階、10階で確実に生成
-	case floor <= 20:
-		return floor == 14 || floor == 17 || floor == 20 // 14階、17階、20階で確実に生成
-	default:
-		return floor == 23 || floor == 24 // 深層では23階、24階で確実に生成
 	}
 }
 
@@ -201,33 +179,6 @@ func (b *DungeonBuilder) generateIsolatedRooms() {
 				b.createSecretPassage(room)
 				break
 			}
-		}
-	}
-}
-
-// generateDarkRooms applies darkness to some rooms (PyRogue style)
-func (b *DungeonBuilder) generateDarkRooms() {
-	// Apply darkness to 30-50% of rooms
-	darkRoomCount := len(b.level.Rooms) * (30 + b.level.random().Intn(21)) / 100
-
-	// Shuffle rooms and make some of them dark
-	shuffledRooms := make([]*Room, len(b.level.Rooms))
-	copy(shuffledRooms, b.level.Rooms)
-	b.level.random().Shuffle(len(shuffledRooms), func(i, j int) {
-		shuffledRooms[i], shuffledRooms[j] = shuffledRooms[j], shuffledRooms[i]
-	})
-
-	for i := 0; i < darkRoomCount && i < len(shuffledRooms); i++ {
-		room := shuffledRooms[i]
-		room.IsSpecial = true // Mark as special to indicate it's dark
-
-		// Place a light source in the room (torch or similar)
-		lightX := room.X + room.Width/2
-		lightY := room.Y + room.Height/2
-		if b.level.IsInBounds(lightX, lightY) {
-			// Light source placement would go here
-			// For now, just log it
-			logger.Debug("Placed light source in dark room", "x", lightX, "y", lightY)
 		}
 	}
 }
