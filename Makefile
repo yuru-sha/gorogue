@@ -1,7 +1,7 @@
 # GoRogue - Go言語で実装されたローグライクゲーム
 # PyRogue (https://github.com/yuru-sha/pyrogue) を参考に作成
 
-.PHONY: setup setup-dev build run clean test lint deps dev help check-setup check-setup-dev check-golangci-lint-version ci-checks qa-all
+.PHONY: setup setup-dev build run clean test lint deps dev help check-setup check-setup-dev check-golangci-lint-version check-staticcheck-version ci-checks qa-all
 
 # 設定変数
 GO_VERSION := 1.24.5
@@ -9,6 +9,7 @@ BINARY_NAME := gorogue
 BUILD_DIR := bin
 LOG_DIR := logs
 GOLANGCI_LINT_VERSION := v1.64.8
+STATICCHECK_VERSION := 2025.1.1
 GO_BIN_DIR := $(shell go env GOPATH)/bin
 GOLANGCI_LINT ?= $(shell command -v golangci-lint 2>/dev/null || printf '%s\n' "$(GO_BIN_DIR)/golangci-lint")
 STATICCHECK := $(shell command -v staticcheck 2>/dev/null || printf '%s\n' "$(GO_BIN_DIR)/staticcheck")
@@ -39,7 +40,7 @@ $(SETUP_MARKER):
 
 # 開発環境セットアップ（SDL2統合）
 setup-dev: setup $(SETUP_DEV_MARKER)
-	@$(MAKE) check-golangci-lint-version
+	@$(MAKE) check-golangci-lint-version check-staticcheck-version
 
 $(SETUP_DEV_MARKER):
 	@echo "🚀 Setting up development environment..."
@@ -51,7 +52,7 @@ $(SETUP_DEV_MARKER):
 	@$(MAKE) check-golangci-lint-version
 	@if [ ! -x "$(STATICCHECK)" ]; then \
 		echo "Installing staticcheck..."; \
-		go install honnef.co/go/tools/cmd/staticcheck@latest; \
+		go install honnef.co/go/tools/cmd/staticcheck@$(STATICCHECK_VERSION); \
 	fi
 	@if [ ! -x "$(GOIMPORTS)" ]; then \
 		echo "Installing goimports..."; \
@@ -91,6 +92,20 @@ check-golangci-lint-version:
 		exit 1; \
 	fi
 
+check-staticcheck-version:
+	@test -x "$(STATICCHECK)" || { \
+		echo "❌ staticcheck is not installed. Run 'make setup-dev'."; \
+		exit 1; \
+	}
+	@actual_version="$$('$(STATICCHECK)' -version 2>/dev/null | sed -n 's/^staticcheck \([^ ]*\).*$$/\1/p')"; \
+	if [ -z "$$actual_version" ]; then \
+		echo "❌ Could not determine the installed staticcheck version."; \
+		exit 1; \
+	elif [ "$$actual_version" != "$(STATICCHECK_VERSION)" ]; then \
+		echo "❌ Unsupported staticcheck version: $$actual_version (expected $(STATICCHECK_VERSION))."; \
+		exit 1; \
+	fi
+
 # セットアップ確認
 check-setup:
 	@if [ ! -f $(SETUP_MARKER) ]; then \
@@ -99,7 +114,7 @@ check-setup:
 	fi
 	@echo "✅ Basic setup verified"
 
-check-setup-dev: check-golangci-lint-version
+check-setup-dev: check-golangci-lint-version check-staticcheck-version
 	@if [ ! -f $(SETUP_DEV_MARKER) ]; then \
 		echo "❌ Development setup not found. Run 'make setup-dev' first."; \
 		exit 1; \

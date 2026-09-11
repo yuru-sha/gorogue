@@ -1,0 +1,51 @@
+name: Quality checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install SDL2 development libraries
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libsdl2-dev pkg-config
+
+      - name: Check workflow contract
+        run: ./scripts/test-quality-workflow.sh
+
+      - name: Check formatting
+        run: test -z "$(gofmt -l $(git ls-files '*.go'))"
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Install golangci-lint
+        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
+
+      - name: Run golangci-lint
+        run: |
+          "$(go env GOPATH)/bin/golangci-lint" run
+
+      - name: Install staticcheck
+        run: go install honnef.co/go/tools/cmd/staticcheck@2025.1.1
+
+      - name: Run staticcheck
+        run: |
+          "$(go env GOPATH)/bin/staticcheck" ./...
