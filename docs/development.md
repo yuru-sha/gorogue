@@ -22,7 +22,7 @@ cache_control: {"type": "ephemeral"}
 - make（ビルドツール）
 - Git（バージョン管理）
 - golangci-lint v1.64.8（静的解析ツール。`make setup-dev`でバージョンを検査）
-- staticcheck 2025.1.1（`make setup-dev`で導入）
+- staticcheck 2025.1.1（`make setup-dev`でバージョンを検査）
 
 ### セットアップ手順
 
@@ -41,7 +41,7 @@ go build ./cmd/gorogue
 make setup-dev
 ```
 
-`make setup-dev`および`make ci-checks`は、golangci-lint v1.64.8を使用します。GoのbinディレクトリがPATHに含まれていない場合も、セットアップとlintはインストール先の実行ファイルを直接使用します。PATH上に別のバージョンがある場合は、そのバージョンを検査してエラーで停止します。
+`make setup-dev`および`make ci-checks`は、golangci-lint v1.64.8とstaticcheck 2025.1.1を使用します。GoのbinディレクトリがPATHに含まれていない場合も、セットアップとlintはインストール先の実行ファイルを直接使用します。PATH上に別のバージョンがある場合は、そのバージョンを検査してエラーで停止します。
 
 クリーンセットアップからツールの導入とバージョン検査を検証する場合は、セットアップマーカーを削除してから次を実行します。
 
