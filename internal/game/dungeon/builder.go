@@ -8,6 +8,8 @@ import (
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
+const DUNGEON_TYPE_MAZE = "maze"
+
 // DungeonBuilder is responsible for building dungeon levels
 type DungeonBuilder struct {
 	level         *Level
@@ -55,7 +57,7 @@ func (b *DungeonBuilder) Build() *Level {
 	dungeonType := b.determineDungeonType()
 
 	switch dungeonType {
-	case "maze":
+	case DUNGEON_TYPE_MAZE:
 		b.generateMaze()
 		logger.Info("Built maze dungeon", "floor", b.level.FloorNumber)
 	case "bsp":
@@ -67,7 +69,7 @@ func (b *DungeonBuilder) Build() *Level {
 	}
 
 	// 特別な部屋の生成（迷路以外）
-	if dungeonType != "maze" && b.shouldGenerateSpecialRoom() {
+	if dungeonType != DUNGEON_TYPE_MAZE && b.shouldGenerateSpecialRoom() {
 		b.generateSpecialRoom()
 	}
 
@@ -108,7 +110,7 @@ func (b *DungeonBuilder) determineDungeonType() string {
 	// PyRogue風の階層別ダンジョンタイプ
 	switch {
 	case floor == 7 || floor == 13 || floor == 19:
-		return "maze"
+		return DUNGEON_TYPE_MAZE
 	default:
 		return "bsp"
 	}
@@ -283,12 +285,12 @@ func (b *DungeonBuilder) createSecretPassage(room *Room) {
 		endY := nearestRoom.Y + nearestRoom.Height/2
 
 		// Create L-shaped passage
-		for x := min(startX, endX); x <= max(startX, endX); x++ {
+		for x := minInt(startX, endX); x <= maxInt(startX, endX); x++ {
 			if b.level.IsInBounds(x, startY) {
 				b.level.SetTile(x, startY, TileFloor)
 			}
 		}
-		for y := min(startY, endY); y <= max(startY, endY); y++ {
+		for y := minInt(startY, endY); y <= maxInt(startY, endY); y++ {
 			if b.level.IsInBounds(endX, y) {
 				b.level.SetTile(endX, y, TileFloor)
 			}
@@ -329,14 +331,6 @@ func (b *DungeonBuilder) generateRooms() {
 	}
 
 	logger.Debug("Generated rooms", "count", len(b.level.Rooms))
-}
-
-// generateRoomsWithGrid generates rooms using the original Rogue 3x3 grid system
-func (b *DungeonBuilder) generateRoomsWithGrid() {
-	gridGenerator := NewGridGenerator(b.level)
-	gridGenerator.GenerateRooms()
-
-	logger.Debug("Generated rooms with 3x3 grid system", "count", len(b.level.Rooms))
 }
 
 // generateRoomsWithBSP generates rooms using PyRogue-style BSP system
@@ -432,21 +426,6 @@ func (b *DungeonBuilder) createGoneRoom(x, y, width, height int) {
 		"width", width,
 		"height", height,
 	)
-}
-
-// connectRooms connects all rooms using Rogue-style algorithm
-func (b *DungeonBuilder) connectRooms() {
-	if len(b.level.Rooms) < 2 {
-		return
-	}
-
-	b.roomConnector.Connect()
-}
-
-// placeDoors places doors at room entrances
-func (b *DungeonBuilder) placeDoors() {
-	doorPlacer := NewDoorPlacer(b.level)
-	doorPlacer.PlaceDoors()
 }
 
 // shouldGenerateSpecialRoom determines if a special room should be generated

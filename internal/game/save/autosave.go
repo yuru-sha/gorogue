@@ -404,7 +404,7 @@ func (asm *AutoSaveManager) ForceAutoSave(saveData *SaveData) error {
 }
 
 // GetRecommendedInterval returns a recommended save interval based on game state
-func (asm *AutoSaveManager) GetRecommendedInterval(playerLevel int, currentFloor int) int {
+func (asm *AutoSaveManager) GetRecommendedInterval(playerLevel, currentFloor int) int {
 	// Base interval
 	interval := 100
 

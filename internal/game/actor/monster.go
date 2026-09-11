@@ -516,21 +516,23 @@ func (m *Monster) hasLineOfSight(targetX, targetY int, level LevelCollisionCheck
 func (m *Monster) UpdateAIState(player *Player, level LevelCollisionChecker, canSeePlayer bool, distance float64) {
 	oldState := m.AIState
 
-	if canSeePlayer {
+	switch {
+	case canSeePlayer:
 		// Player is visible
 		m.LastPlayerPos = entity.Position{X: player.Position.X, Y: player.Position.Y}
 		m.AlertLevel = 10
 		m.SearchTurns = 0
 
-		if distance <= 1.5 {
+		switch {
+		case distance <= 1.5:
 			m.AIState = StateAttack
-		} else if m.HP < m.MaxHP/3 && m.Type.Symbol != 'D' && m.Type.Symbol != 'T' {
+		case m.HP < m.MaxHP/3 && m.Type.Symbol != 'D' && m.Type.Symbol != 'T':
 			// Weak monsters flee when low on health (except dragons and trolls)
 			m.AIState = StateFlee
-		} else {
+		default:
 			m.AIState = StateChase
 		}
-	} else if distance <= float64(m.DetectionRange) {
+	case distance <= float64(m.DetectionRange):
 		// Player is close but not visible
 		if m.AlertLevel < 5 {
 			m.AlertLevel += 2
@@ -538,7 +540,7 @@ func (m *Monster) UpdateAIState(player *Player, level LevelCollisionChecker, can
 		if m.AlertLevel >= 5 && m.LastPlayerPos.X != -1 {
 			m.AIState = StateSearch
 		}
-	} else {
+	default:
 		// Player is not detected
 		if m.AlertLevel > 0 && m.LastPlayerPos.X != -1 {
 			m.AIState = StateSearch
@@ -594,7 +596,7 @@ func (m *Monster) behaviorChase(player *Player, level LevelCollisionChecker) {
 	// Use A* pathfinding for intelligent monsters
 	if m.isIntelligent() {
 		path := m.FindPathToPlayer(player, level)
-		if path != nil && len(path) > 1 {
+		if len(path) > 1 {
 			if m.MoveAlongPath(path, level) {
 				return
 			}

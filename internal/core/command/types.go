@@ -64,6 +64,8 @@ type Direction struct {
 }
 
 // String returns the string representation of a command type
+//
+//nolint:gocyclo // The command enum is intentionally rendered in one exhaustive switch.
 func (t Type) String() string {
 	switch t {
 	case CmdMoveWest:

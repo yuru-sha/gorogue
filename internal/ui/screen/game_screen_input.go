@@ -11,36 +11,38 @@ import (
 
 // HandleInput handles input events
 func (s *GameScreen) HandleInput(msg gruid.Msg) state.GameState {
-	switch msg := msg.(type) {
-	case gruid.MsgKeyDown:
+	keyMsg, ok := msg.(gruid.MsgKeyDown)
+	if ok {
 		// モード別の処理
 		switch s.inputMode {
 		case ModeEquip:
-			return s.handleEquipInput(msg.Key)
+			return s.handleEquipInput(keyMsg.Key)
 		case ModeUnequip:
-			return s.handleUnequipInput(msg.Key)
+			return s.handleUnequipInput(keyMsg.Key)
 		case ModeDrop:
-			return s.handleDropInput(msg.Key)
+			return s.handleDropInput(keyMsg.Key)
 		case ModeUse:
-			return s.handleUseInput(msg.Key)
+			return s.handleUseInput(keyMsg.Key)
 		case ModeQuaff:
-			return s.handleQuaffInput(msg.Key)
+			return s.handleQuaffInput(keyMsg.Key)
 		case ModeRead:
-			return s.handleReadInput(msg.Key)
+			return s.handleReadInput(keyMsg.Key)
 		case ModeEat:
-			return s.handleEatInput(msg.Key)
+			return s.handleEatInput(keyMsg.Key)
 		case ModeCLI:
-			return s.handleCLIInput(msg.Key)
+			return s.handleCLIInput(keyMsg.Key)
 		case ModeDirection:
-			return s.handleDirectionInput(msg.Key)
+			return s.handleDirectionInput(keyMsg.Key)
 		default: // ModeNormal
-			return s.handleNormalInput(msg.Key)
+			return s.handleNormalInput(keyMsg.Key)
 		}
 	}
 	return state.StateGame
 }
 
 // handleNormalInput handles input in normal mode
+//
+//nolint:gocyclo // Normal-mode input is the exhaustive mapping of gameplay commands.
 func (s *GameScreen) handleNormalInput(key gruid.Key) state.GameState {
 	// Parse the key into a command
 	cmd := s.cmdParser.Parse(key)

@@ -50,7 +50,7 @@ make setup-dev
 make check-setup-dev
 ```
 
-`make ci-checks`は全体の品質ゲートです。現行コードに既存する83件のlint指摘は[#26](https://github.com/yuru-sha/gorogue/issues/26)で追跡しており、解消されるまではこのコマンドが失敗します。
+`make ci-checks`は全体の品質ゲートです。既存のlint指摘は[#26](https://github.com/yuru-sha/gorogue/issues/26)で解消済みで、以後の新しい指摘もこのコマンドで検出されます。
 
 ```bash
 make ci-checks

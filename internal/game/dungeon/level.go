@@ -240,7 +240,7 @@ func (l *Level) ConnectRoomPair(r1, r2 *Room) {
 
 // CreateHorizontalCorridor creates a horizontal corridor
 func (l *Level) CreateHorizontalCorridor(x1, x2, y int) {
-	for x := min(x1, x2); x <= max(x1, x2); x++ {
+	for x := minInt(x1, x2); x <= maxInt(x1, x2); x++ {
 		if l.GetTile(x, y).Type == TileWall {
 			l.SetTile(x, y, TileFloor)
 		}
@@ -249,7 +249,7 @@ func (l *Level) CreateHorizontalCorridor(x1, x2, y int) {
 
 // CreateVerticalCorridor creates a vertical corridor
 func (l *Level) CreateVerticalCorridor(y1, y2, x int) {
-	for y := min(y1, y2); y <= max(y1, y2); y++ {
+	for y := minInt(y1, y2); y <= maxInt(y1, y2); y++ {
 		if l.GetTile(x, y).Type == TileWall {
 			l.SetTile(x, y, TileFloor)
 		}
@@ -359,14 +359,14 @@ func (l *Level) ShouldGenerateSpecialRoom() bool {
 }
 
 // Helper functions
-func min(a, b int) int {
+func minInt(a, b int) int {
 	if a < b {
 		return a
 	}
 	return b
 }
 
-func max(a, b int) int {
+func maxInt(a, b int) int {
 	if a > b {
 		return a
 	}

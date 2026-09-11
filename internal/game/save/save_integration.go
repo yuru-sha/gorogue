@@ -200,6 +200,8 @@ func (sgi *SaveGameIntegration) GetGameState() (*actor.Player, *dungeon.DungeonM
 }
 
 // SetGameInfo sets the game information
+//
+//nolint:gocritic // GameInfo is copied into the integration's current snapshot.
 func (sgi *SaveGameIntegration) SetGameInfo(gameInfo GameInfo) {
 	sgi.gameInfo = gameInfo
 }

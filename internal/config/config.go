@@ -29,7 +29,9 @@ const (
 
 // 初期化時に.envファイルを読み込む
 func init() {
-	LoadEnv()
+	if err := LoadEnv(); err != nil {
+		log.Printf("Warning: failed to load environment: %v", err)
+	}
 }
 
 // LoadEnv は .env ファイルを読み込む
@@ -62,7 +64,7 @@ func GetBool(key string, defaultValue bool) bool {
 }
 
 // GetString は環境変数を文字列として読み込む
-func GetString(key string, defaultValue string) string {
+func GetString(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
 	}

@@ -69,16 +69,15 @@ func NewSymbolScreen(width, height int) *SymbolScreen {
 
 // HandleInput handles input events
 func (s *SymbolScreen) HandleInput(msg gruid.Msg) state.GameState {
-	switch msg := msg.(type) {
-	case gruid.MsgKeyDown:
-		logger.Debug("SymbolScreen key pressed", "key", msg.Key)
-		switch msg.Key {
+	if keyMsg, ok := msg.(gruid.MsgKeyDown); ok {
+		logger.Debug("SymbolScreen key pressed", "key", keyMsg.Key)
+		switch keyMsg.Key {
 		case gruid.KeyEscape, gruid.KeyEnter, gruid.KeySpace:
 			// 任意のキーで前の画面に戻る
 			return state.StateGame
 		default:
 			// 文字キーでも戻れるように
-			keyStr := string(msg.Key)
+			keyStr := string(keyMsg.Key)
 			if len(keyStr) == 1 {
 				return state.StateGame
 			}
