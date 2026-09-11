@@ -56,6 +56,12 @@ make check-setup-dev
 make ci-checks
 ```
 
+ツールのバージョン検査は、隔離した実行ファイルを指定して次の回帰チェックでも確認できます。
+
+```bash
+./scripts/test-golangci-lint-version.sh
+```
+
 ## プロジェクト構造
 
 ```
