@@ -122,9 +122,9 @@ func (c *CLIMode) gameCommand(args []string) string {
 	switch strings.ToLower(args[0]) {
 	case "new":
 		return "Starting new game. (TODO: implement new game)"
-	case "save":
+	case commandSave:
 		return c.executeGameplay(gamecommand.Command{Type: gamecommand.CmdSave})
-	case "load":
+	case commandLoad:
 		return c.executeGameplay(gamecommand.Command{Type: gamecommand.CmdLoad})
 	case "quit":
 		return "Use 'quit' or 'exit' to quit CLI."

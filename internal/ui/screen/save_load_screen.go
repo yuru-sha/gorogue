@@ -61,7 +61,7 @@ func NewSaveLoadScreen(width, height int, saveManager *save.SaveManager) *SaveLo
 		selected:       0,
 		saveManager:    saveManager,
 		message:        "",
-		menuOptions:    []string{"Save Game", "Load Game", "Back"},
+		menuOptions:    []string{"Save Game", loadGameMenuItem, "Back"},
 		colorNormal:    gruid.Color(0xFFFFFF), // White
 		colorSelected:  gruid.Color(0xFFFF00), // Yellow
 		colorHighlight: gruid.Color(0x00FF00), // Green

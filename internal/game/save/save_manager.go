@@ -26,6 +26,8 @@ const (
 
 	// BackupExtension is the file extension for backup files
 	BackupExtension = ".bak"
+
+	noSaveFileMessage = "No save file"
 )
 
 // SaveManager manages save file operations
@@ -196,7 +198,7 @@ func (sm *SaveManager) AutoSave(saveData *SaveData) error {
 // GetSaveInfo returns formatted information about the save file
 func (sm *SaveManager) GetSaveInfo() (string, error) {
 	if !sm.FileExists() {
-		return "No save file", nil
+		return noSaveFileMessage, nil
 	}
 
 	metadata, err := sm.GetSaveMetadata()
@@ -578,12 +580,12 @@ func (sm *SaveManager) GetDetailedSaveInfo() (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"char_name":    metadata.CharName,
 		"level":        metadata.Level,
-		"floor":        metadata.Floor,
+		saveFloorKey:   metadata.Floor,
 		"play_time":    metadata.PlayTime,
 		"turn_count":   metadata.TurnCount,
 		"is_completed": metadata.IsCompleted,
 		"is_victory":   metadata.IsVictory,
-		"version":      metadata.Version,
+		saveVersionKey: metadata.Version,
 		"saved_at":     metadata.SavedAt,
 		"file_size":    info.Size(),
 		"checksum":     checksum,

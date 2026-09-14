@@ -887,14 +887,14 @@ func (l *Level) GetItemAt(x, y int) *item.Item {
 }
 
 // RemoveItem removes an item from the level
-func (l *Level) RemoveItem(item *item.Item) {
+func (l *Level) RemoveItem(gameItem *item.Item) {
 	for i, it := range l.Items {
-		if it == item {
+		if it == gameItem {
 			l.Items = append(l.Items[:i], l.Items[i+1:]...)
 			logger.Debug("Removed item",
-				"type", item.Name,
-				"x", item.Position.X,
-				"y", item.Position.Y,
+				"type", gameItem.Name,
+				"x", gameItem.Position.X,
+				"y", gameItem.Position.Y,
 			)
 			break
 		}
@@ -902,12 +902,12 @@ func (l *Level) RemoveItem(item *item.Item) {
 }
 
 // AddItem アイテムを指定位置に追加
-func (l *Level) AddItem(item *item.Item, x, y int) {
-	item.Position.X = x
-	item.Position.Y = y
-	l.Items = append(l.Items, item)
+func (l *Level) AddItem(gameItem *item.Item, x, y int) {
+	gameItem.Position.X = x
+	gameItem.Position.Y = y
+	l.Items = append(l.Items, gameItem)
 	logger.Debug("Item added to level",
-		"type", item.Name,
+		"type", gameItem.Name,
 		"x", x,
 		"y", y,
 	)
