@@ -439,8 +439,8 @@ func TestSaveManager_GetSaveInfo(t *testing.T) {
 	if err != nil {
 		t.Errorf("GetSaveInfo should not fail for non-existent file: %v", err)
 	}
-	if info != noSaveFileMessage {
-		t.Errorf("Expected '%s', got '%s'", noSaveFileMessage, info)
+	if info != "No save file" {
+		t.Errorf("Expected 'No save file', got '%s'", info)
 	}
 
 	// Create test save data
@@ -463,8 +463,8 @@ func TestSaveManager_GetSaveInfo(t *testing.T) {
 	}
 
 	// Verify info contains expected data
-	if info == noSaveFileMessage {
-		t.Errorf("GetSaveInfo should not return '%s' for existing file", noSaveFileMessage)
+	if info == "No save file" {
+		t.Error("GetSaveInfo should not return 'No save file' for existing file")
 	}
 	// Info should contain player name, level, and floor
 	// Note: Exact format depends on implementation
