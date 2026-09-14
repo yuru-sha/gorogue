@@ -13,8 +13,11 @@ import (
 
 const (
 	// SaveVersion represents the save file format version
-	SaveVersion   = "1.3.0"
-	UNKNOWN_VALUE = "unknown"
+	SaveVersion    = "1.3.0"
+	UNKNOWN_VALUE  = "unknown"
+	saveVersionKey = "version"
+	saveFloorKey   = "floor"
+	saveWeaponKey  = "weapon"
 )
 
 // SaveData represents the complete game state
@@ -525,7 +528,7 @@ func ConvertLevelToSave(level *dungeon.Level) *Floor {
 func ConvertItemTypeToString(itemType item.ItemType) string {
 	switch itemType {
 	case item.ItemWeapon:
-		return "weapon"
+		return saveWeaponKey
 	case item.ItemArmor:
 		return "armor"
 	case item.ItemRing:
@@ -553,7 +556,7 @@ func ConvertTileTypeToString(tileType dungeon.TileType) string {
 	case dungeon.TileWall:
 		return "wall"
 	case dungeon.TileFloor:
-		return "floor"
+		return saveFloorKey
 	case dungeon.TileDoor:
 		return "door"
 	case dungeon.TileSecretDoor:

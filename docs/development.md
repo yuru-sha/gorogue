@@ -21,7 +21,7 @@ cache_control: {"type": "ephemeral"}
 - Go 1.24.5以上（必要なバージョンは `go.mod` を正とする）
 - make（ビルドツール）
 - Git（バージョン管理）
-- golangci-lint v1.64.8（静的解析ツール。`make setup-dev`でバージョンを検査）
+- golangci-lint v2.8.0（静的解析ツール。`make setup-dev`でバージョンを検査）
 - staticcheck 2025.1.1（`make setup-dev`でバージョンを検査）
 
 ### セットアップ手順
@@ -41,7 +41,7 @@ go build ./cmd/gorogue
 make setup-dev
 ```
 
-`make setup-dev`および`make ci-checks`は、golangci-lint v1.64.8とstaticcheck 2025.1.1を使用します。GoのbinディレクトリがPATHに含まれていない場合も、セットアップとlintはインストール先の実行ファイルを直接使用します。PATH上に別のバージョンがある場合は、そのバージョンを検査してエラーで停止します。
+`make setup-dev`および`make ci-checks`は、golangci-lint v2.8.0とstaticcheck 2025.1.1を使用します。GoのbinディレクトリがPATHに含まれていない場合も、セットアップとlintはインストール先の実行ファイルを直接使用します。PATH上に別のバージョンがある場合は、そのバージョンを検査してエラーで停止します。
 
 クリーンセットアップからツールの導入とバージョン検査を検証する場合は、セットアップマーカーを削除してから次を実行します。
 
@@ -57,7 +57,7 @@ make check-setup-dev
 make ci-checks
 ```
 
-GitHub Actions は [`quality.yml`](../.github/workflows/quality.yml) で、Pull Request と `main` への push ごとに品質チェックを実行します。CI は `go.mod` の Go 1.24.5、golangci-lint v1.64.8、staticcheck 2025.1.1 を使用し、ローカルのセットアップマーカーには依存しません。SDL2 開発ライブラリは GUI のビルドに必要なため導入しますが、CI で GUI を起動せず、テストはヘッドレスで実行します。フォーマットは `gofmt -l` で検査するだけで、tracked file を変更しません。
+GitHub Actions は [`quality.yml`](../.github/workflows/quality.yml) で、Pull Request と `main` への push ごとに品質チェックを実行します。CI は `go.mod` の Go 1.24.5、golangci-lint v2.8.0、staticcheck 2025.1.1 を使用し、ローカルのセットアップマーカーには依存しません。SDL2 開発ライブラリは GUI のビルドに必要なため導入しますが、CI で GUI を起動せず、テストはヘッドレスで実行します。フォーマットは `gofmt -l` で検査するだけで、tracked file を変更しません。
 
 ツールのバージョン検査は、隔離した実行ファイルを指定して次の回帰チェックでも確認できます。
 
@@ -205,7 +205,7 @@ go test -bench=. ./...
 1. **命名規約**：
    - パッケージ名：小文字、短く、意味のある名前
    - 関数・変数：キャメルケース、exportする場合は大文字で開始
-   - 定数：大文字、アンダースコア区切り
+   - 定数：Go標準の命名規則に従い、非公開はキャメルケース、exportする場合は大文字で開始
 
 2. **コメント**：
    - 公開関数・型にはgodoc形式のコメントを必須

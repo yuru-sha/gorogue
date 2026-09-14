@@ -31,6 +31,13 @@ type Result struct {
 	Dungeon      *dungeon.DungeonManager
 }
 
+const (
+	equipmentSlotWeapon    = "weapon"
+	equipmentSlotArmor     = "armor"
+	equipmentSlotRingLeft  = "ring_left"
+	equipmentSlotRingRight = "ring_right"
+)
+
 // Execute runs a gameplay command for either the GUI or CLI entry point.
 //
 //nolint:gocyclo // This is the single command dispatch point shared by GUI and CLI.
@@ -265,16 +272,16 @@ func executeUnequip(ctx *Context, args []string) Result {
 
 	slot := strings.ToLower(args[0])
 	slotName := map[string]string{
-		"weapon":     "weapon",
-		"w":          "weapon",
-		"armor":      "armor",
-		"a":          "armor",
-		"ring-left":  "ring_left",
-		"left":       "ring_left",
-		"l":          "ring_left",
-		"ring-right": "ring_right",
-		"right":      "ring_right",
-		"r":          "ring_right",
+		"weapon":     equipmentSlotWeapon,
+		"w":          equipmentSlotWeapon,
+		"armor":      equipmentSlotArmor,
+		"a":          equipmentSlotArmor,
+		"ring-left":  equipmentSlotRingLeft,
+		"left":       equipmentSlotRingLeft,
+		"l":          equipmentSlotRingLeft,
+		"ring-right": equipmentSlotRingRight,
+		"right":      equipmentSlotRingRight,
+		"r":          equipmentSlotRingRight,
 	}[slot]
 	if slotName == "" {
 		return result(ctx, "Unknown slot. Use: weapon, armor, ring-left, ring-right")
@@ -579,13 +586,13 @@ func inventoryItemError(args []string) string {
 
 func equippedItem(player *actor.Player, slot string) *gameitem.Item {
 	switch slot {
-	case "weapon":
+	case equipmentSlotWeapon:
 		return player.Equipment.Weapon
-	case "armor":
+	case equipmentSlotArmor:
 		return player.Equipment.Armor
-	case "ring_left":
+	case equipmentSlotRingLeft:
 		return player.Equipment.RingLeft
-	case "ring_right":
+	case equipmentSlotRingRight:
 		return player.Equipment.RingRight
 	default:
 		return nil

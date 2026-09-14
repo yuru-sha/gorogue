@@ -10,6 +10,11 @@ import (
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
+const (
+	identificationSilver        = "silver"
+	identificationTeleportation = "teleportation"
+)
+
 // IdentificationManager manages item identification state
 type IdentificationManager struct {
 	// Global identification state for each item type
@@ -41,7 +46,7 @@ var PotionColors = []string{
 	"purple", "white", "clear", "grey", "dark", "light blue", "magenta",
 	"amber", "bubbly", "cloudy", "dark green", "dark blue", "emerald",
 	"fizzy", "glowing", "golden", "icy", "luminescent", "metallic",
-	"milky", "murky", "oily", "puce", "ruby", "silver", "smoky",
+	"milky", "murky", "oily", "puce", "ruby", identificationSilver, "smoky",
 	"swirling", "viscous", "ecru", "ochre",
 }
 
@@ -50,14 +55,14 @@ var RingMaterials = []string{
 	"wooden", "granite", "opal", "clay", "coral", "black onyx", "moonstone",
 	"tiger eye", "jade", "bronze", "agate", "topaz", "sapphire", "ruby",
 	"diamond", "pearl", "iron", "brass", "copper", "twisted", "steel",
-	"silver", "gold", "ivory", "emerald", "wire", "engagement", "shining",
+	identificationSilver, "gold", "ivory", "emerald", "wire", "engagement", "shining",
 	"fluorite", "obsidian", "agate", "plastic",
 }
 
 // WandMaterials are random materials for unidentified wands
 var WandMaterials = []string{
 	"glass", "balsa", "crystal", "maple", "pine", "oak", "ebony", "marble",
-	"silver", "runed", "long", "short", "bent", "curvy", "twisted", "forked",
+	identificationSilver, "runed", "long", "short", "bent", "curvy", "twisted", "forked",
 	"spiked", "jeweled", "black", "octagonal", "mahogany", "walnut",
 }
 
@@ -92,7 +97,7 @@ func NewIdentificationManagerWithRand(rng *rand.Rand) *IdentificationManager {
 func (im *IdentificationManager) initializeAppearances(rng *rand.Rand) {
 	// Assign random scroll titles
 	scrollNames := []string{
-		"identify", "teleportation", "sleep", "enchant armor", "enchant weapon",
+		"identify", identificationTeleportation, "sleep", "enchant armor", "enchant weapon",
 		"create monster", "remove curse", "aggravate monster", "magic mapping",
 		"hold monster", "confuse monster", "scare monster", "blank paper",
 		"genocide", "light", "food detection", "gold detection", "potion detection",
@@ -138,7 +143,7 @@ func (im *IdentificationManager) initializeAppearances(rng *rand.Rand) {
 	// Assign random ring materials
 	ringNames := []string{
 		"protection", "add strength", "sustain strength", "searching", "see invisible",
-		"adornment", "teleportation", "stealth", "regeneration", "slow digestion",
+		"adornment", identificationTeleportation, "stealth", "regeneration", "slow digestion",
 		"dexterity", "increase damage", "protection from magic", "hunger",
 		"aggravate monster", "maintain armor", "teleport control",
 	}
@@ -158,7 +163,7 @@ func (im *IdentificationManager) initializeAppearances(rng *rand.Rand) {
 	// Assign random wand materials
 	wandNames := []string{
 		"light", "lightning", "fire", "cold", "polymorph", "magic missile",
-		"haste monster", "slow monster", "invisibility", "teleportation", "sleep", "drain life",
+		"haste monster", "slow monster", "invisibility", identificationTeleportation, "sleep", "drain life",
 	}
 	shuffledWandMaterials := make([]string, len(WandMaterials))
 	copy(shuffledWandMaterials, WandMaterials)

@@ -443,7 +443,7 @@ func (gs *GameStats) GetScoreValue() int {
 // Export returns statistics in exportable format
 func (gs *GameStats) Export() map[string]interface{} {
 	return map[string]interface{}{
-		"version":      "1.0",
+		saveVersionKey: "1.0",
 		"timestamp":    time.Now().Unix(),
 		"play_time":    gs.GetPlayTime(),
 		"stats":        gs.stats,

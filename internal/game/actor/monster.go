@@ -487,7 +487,7 @@ func (m *Monster) hasLineOfSight(targetX, targetY int, level LevelCollisionCheck
 
 	for {
 		// Don't check the monster's own position
-		if !(x == x0 && y == y0) {
+		if x != x0 || y != y0 {
 			if !level.IsInBounds(x, y) || !level.IsWalkable(x, y) {
 				return false
 			}

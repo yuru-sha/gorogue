@@ -9,6 +9,8 @@ import (
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
+const autoSaveLastTurnKey = "last_save_turn"
+
 // AutoSaveManager manages automatic save functionality
 type AutoSaveManager struct {
 	saveManager   *SaveManager
@@ -302,14 +304,14 @@ func (asm *AutoSaveManager) GetAutoSaveProgress(currentTurn int) float64 {
 // GetSettings returns the current auto-save settings
 func (asm *AutoSaveManager) GetSettings() map[string]interface{} {
 	return map[string]interface{}{
-		"enabled":         asm.enabled,
-		"save_interval":   asm.saveInterval,
-		"save_on_floor":   asm.saveOnFloor,
-		"save_on_death":   asm.saveOnDeath,
-		"save_on_victory": asm.saveOnVictory,
-		"save_on_exit":    asm.saveOnExit,
-		"last_save_turn":  asm.lastSaveTurn,
-		"last_save_time":  asm.lastSaveTime,
+		"enabled":           asm.enabled,
+		"save_interval":     asm.saveInterval,
+		"save_on_floor":     asm.saveOnFloor,
+		"save_on_death":     asm.saveOnDeath,
+		"save_on_victory":   asm.saveOnVictory,
+		"save_on_exit":      asm.saveOnExit,
+		autoSaveLastTurnKey: asm.lastSaveTurn,
+		"last_save_time":    asm.lastSaveTime,
 	}
 }
 
@@ -348,7 +350,7 @@ func (asm *AutoSaveManager) GetStatus() map[string]interface{} {
 		"enabled":              asm.enabled,
 		"initialized":          asm.saveManager != nil,
 		"has_auto_save":        asm.HasAutoSave(),
-		"last_save_turn":       asm.lastSaveTurn,
+		autoSaveLastTurnKey:    asm.lastSaveTurn,
 		"last_save_time":       asm.lastSaveTime,
 		"time_since_last_save": asm.GetTimeSinceLastSave(),
 		"settings":             asm.GetSettings(),
@@ -434,7 +436,7 @@ func (asm *AutoSaveManager) GetStatistics() map[string]interface{} {
 
 	return map[string]interface{}{
 		"total_auto_saves":             asm.lastSaveTurn / asm.saveInterval, // Approximate
-		"last_save_turn":               asm.lastSaveTurn,
+		autoSaveLastTurnKey:            asm.lastSaveTurn,
 		"save_interval":                asm.saveInterval,
 		"time_since_last_save":         timeSinceLastSave,
 		"time_since_last_save_minutes": timeSinceLastSave.Minutes(),
@@ -446,11 +448,11 @@ func (asm *AutoSaveManager) GetStatistics() map[string]interface{} {
 // Export exports auto-save settings for backup
 func (asm *AutoSaveManager) Export() map[string]interface{} {
 	return map[string]interface{}{
-		"version":    "1.0",
-		"timestamp":  time.Now().Unix(),
-		"settings":   asm.GetSettings(),
-		"statistics": asm.GetStatistics(),
-		"status":     asm.GetStatus(),
+		saveVersionKey: "1.0",
+		"timestamp":    time.Now().Unix(),
+		"settings":     asm.GetSettings(),
+		"statistics":   asm.GetStatistics(),
+		"status":       asm.GetStatus(),
 	}
 }
 

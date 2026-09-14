@@ -164,9 +164,10 @@ func (s *StairsManager) GetStairPositions() (upStairs, downStairs []Position) {
 	for y := 0; y < s.level.Height; y++ {
 		for x := 0; x < s.level.Width; x++ {
 			tile := s.level.GetTile(x, y)
-			if tile.Type == TileStairsUp {
+			switch tile.Type {
+			case TileStairsUp:
 				upStairs = append(upStairs, Position{X: x, Y: y})
-			} else if tile.Type == TileStairsDown {
+			case TileStairsDown:
 				downStairs = append(downStairs, Position{X: x, Y: y})
 			}
 		}

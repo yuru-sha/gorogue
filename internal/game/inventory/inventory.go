@@ -211,31 +211,31 @@ func (eq *Equipment) UnequipItem(slot string) *item.Item {
 	switch slot {
 	case "weapon":
 		if eq.Weapon != nil && !eq.Weapon.IsCursed {
-			item := eq.Weapon
+			equippedItem := eq.Weapon
 			eq.Weapon = nil
-			logger.Debug("Unequipped weapon", "weapon", item.Name)
-			return item
+			logger.Debug("Unequipped weapon", "weapon", equippedItem.Name)
+			return equippedItem
 		}
 	case "armor":
 		if eq.Armor != nil && !eq.Armor.IsCursed {
-			item := eq.Armor
+			equippedItem := eq.Armor
 			eq.Armor = nil
-			logger.Debug("Unequipped armor", "armor", item.Name)
-			return item
+			logger.Debug("Unequipped armor", "armor", equippedItem.Name)
+			return equippedItem
 		}
 	case "ring_left":
 		if eq.RingLeft != nil && !eq.RingLeft.IsCursed {
-			item := eq.RingLeft
+			equippedItem := eq.RingLeft
 			eq.RingLeft = nil
-			logger.Debug("Unequipped left ring", "ring", item.Name)
-			return item
+			logger.Debug("Unequipped left ring", "ring", equippedItem.Name)
+			return equippedItem
 		}
 	case "ring_right":
 		if eq.RingRight != nil && !eq.RingRight.IsCursed {
-			item := eq.RingRight
+			equippedItem := eq.RingRight
 			eq.RingRight = nil
-			logger.Debug("Unequipped right ring", "ring", item.Name)
-			return item
+			logger.Debug("Unequipped right ring", "ring", equippedItem.Name)
+			return equippedItem
 		}
 	}
 	return nil
