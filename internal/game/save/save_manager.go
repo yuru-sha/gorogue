@@ -420,7 +420,18 @@ func (sm *SaveManager) verifySaveData(saveData *SaveData) error {
 		return fmt.Errorf("dungeon random draw cursor exceeds maximum: %d", saveData.DungeonData.RandomState.Draws)
 	}
 	for floor, saveFloor := range saveData.DungeonData.Floors {
-		if saveFloor != nil && saveFloor.RandomState.Draws > dungeon.MaxRandomDraws {
+		if saveFloor == nil {
+			continue
+		}
+		if err := validateSaveFloorDimensions(saveFloor.Width, saveFloor.Height); err != nil {
+			return fmt.Errorf("floor %d: %w", floor, err)
+		}
+		for monsterIndex := range saveFloor.Monsters {
+			if err := validateSaveMonsterType(saveFloor.Monsters[monsterIndex].Type); err != nil {
+				return fmt.Errorf("floor %d monster %d: %w", floor, monsterIndex, err)
+			}
+		}
+		if saveFloor.RandomState.Draws > dungeon.MaxRandomDraws {
 			return fmt.Errorf("floor %d random draw cursor exceeds maximum: %d", floor, saveFloor.RandomState.Draws)
 		}
 	}
