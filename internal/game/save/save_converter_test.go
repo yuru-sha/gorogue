@@ -860,6 +860,11 @@ func TestSaveConverter_ErrorHandling(t *testing.T) {
 		t.Error("convertSaveMonster should fail with invalid monster type")
 	}
 
+	saveMonster.Type = ""
+	if _, err := converter.convertSaveMonster(saveMonster); err == nil {
+		t.Error("convertSaveMonster should fail with an empty monster type")
+	}
+
 	// Test conversion with invalid item type
 	saveItem := InventoryItem{
 		Type: "invalid_type",
