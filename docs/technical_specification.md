@@ -13,7 +13,7 @@ cache_control: {"type": "ephemeral"}
 
 #### 実行環境
 ```yaml
-Go Version: ">=1.22"
+Go Version: ">=1.24.5"  # go.mod is authoritative
 Platform Support:
   - macOS: ">=10.15"
   - Windows: ">=10"
