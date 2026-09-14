@@ -427,7 +427,7 @@ func (sm *SaveManager) verifySaveData(saveData *SaveData) error {
 			return fmt.Errorf("floor %d: %w", floor, err)
 		}
 		for monsterIndex := range saveFloor.Monsters {
-			if err := validateSaveMonsterType(saveFloor.Monsters[monsterIndex].Type); err != nil {
+			if _, err := saveMonsterType(saveFloor.Monsters[monsterIndex].Type); err != nil {
 				return fmt.Errorf("floor %d monster %d: %w", floor, monsterIndex, err)
 			}
 		}
