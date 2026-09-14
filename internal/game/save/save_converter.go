@@ -323,10 +323,32 @@ func (sc *SaveConverter) convertSaveDungeon(saveDungeon Dungeon, player *actor.P
 	return dungeonManager, nil
 }
 
+func validateSaveFloorDimensions(width, height int) error {
+	if width < 1 || height < 1 {
+		return fmt.Errorf("invalid floor dimensions: %dx%d", width, height)
+	}
+	return nil
+}
+
+func saveMonsterType(monsterType string) (actor.MonsterType, error) {
+	if monsterType == "" {
+		return actor.MonsterType{}, fmt.Errorf("empty monster type")
+	}
+	resolved, exists := actor.MonsterTypes[rune(monsterType[0])]
+	if !exists {
+		return actor.MonsterType{}, fmt.Errorf("unknown monster type: %s", monsterType)
+	}
+	return resolved, nil
+}
+
 // convertSaveFloor converts save floor to level
 //
 //nolint:gocritic // Conversion accepts the decoded value and does not retain it.
 func (sc *SaveConverter) convertSaveFloor(saveFloor Floor) (*dungeon.Level, error) {
+	if err := validateSaveFloorDimensions(saveFloor.Width, saveFloor.Height); err != nil {
+		return nil, err
+	}
+
 	// Create level
 	level := &dungeon.Level{
 		Width:       saveFloor.Width,
@@ -445,10 +467,9 @@ func (sc *SaveConverter) convertStringToTileType(tileTypeStr string) (dungeon.Ti
 //
 //nolint:gocritic // Conversion accepts the decoded value and does not retain it.
 func (sc *SaveConverter) convertSaveMonster(saveMonster Monster) (*actor.Monster, error) {
-	// Get monster type
-	monsterType, exists := actor.MonsterTypes[rune(saveMonster.Type[0])]
-	if !exists {
-		return nil, fmt.Errorf("unknown monster type: %s", saveMonster.Type)
+	monsterType, err := saveMonsterType(saveMonster.Type)
+	if err != nil {
+		return nil, err
 	}
 
 	// Create monster

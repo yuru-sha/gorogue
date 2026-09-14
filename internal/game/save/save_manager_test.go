@@ -6,8 +6,11 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/yuru-sha/gorogue/internal/game/actor"
+	"github.com/yuru-sha/gorogue/internal/game/dungeon"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
@@ -228,6 +231,94 @@ func TestSaveManagerImportRejectsUnrestorableRandomCursor(t *testing.T) {
 			}
 			if sm.FileExists() {
 				t.Fatal("ImportSave should not create a main save for an unbounded random cursor")
+			}
+		})
+	}
+}
+
+func TestSaveGameIntegrationRejectsMalformedSaveWithoutReplacingState(t *testing.T) {
+	logger.Setup()
+
+	testCases := []struct {
+		name          string
+		mutate        func(*SaveData)
+		expectedError string
+	}{
+		{
+			name: "empty monster type",
+			mutate: func(saveData *SaveData) {
+				saveData.DungeonData.Floors = map[int]*Floor{
+					1: {
+						FloorNumber: 1,
+						Width:       1,
+						Height:      1,
+						Tiles:       [][]Tile{{{Type: "floor"}}},
+						Monsters:    []Monster{{Type: ""}},
+					},
+				}
+			},
+			expectedError: "empty monster type",
+		},
+		{
+			name: "invalid floor dimensions",
+			mutate: func(saveData *SaveData) {
+				saveData.DungeonData.Floors = map[int]*Floor{
+					1: {FloorNumber: 1, Width: -1, Height: 1},
+				}
+			},
+			expectedError: "invalid floor dimensions",
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			integration := NewSaveGameIntegration()
+			integration.saveManager.saveDir = t.TempDir()
+			if err := integration.Initialize(); err != nil {
+				t.Fatalf("Initialize() error = %v", err)
+			}
+
+			activePlayer := actor.NewPlayer(1, 1)
+			activeDungeon := dungeon.NewDungeonManagerWithSeed(activePlayer, 12345)
+			activeLevel := activeDungeon.GetCurrentLevel()
+			integration.SetGameState(activePlayer, activeDungeon)
+
+			saveData := createTestSaveData(t)
+			testCase.mutate(saveData)
+			encoded, err := json.Marshal(saveData)
+			if err != nil {
+				t.Fatalf("json.Marshal() error = %v", err)
+			}
+			if err := os.WriteFile(integration.saveManager.getSaveFilePath(), encoded, 0o600); err != nil {
+				t.Fatalf("WriteFile() error = %v", err)
+			}
+
+			var loadErr error
+			panicked := false
+			func() {
+				defer func() {
+					if recover() != nil {
+						panicked = true
+					}
+				}()
+				loadErr = integration.LoadGame()
+			}()
+			if panicked {
+				t.Fatal("LoadGame() panicked for malformed save")
+			}
+			if loadErr == nil || !strings.Contains(loadErr.Error(), testCase.expectedError) {
+				t.Fatalf("LoadGame() error = %v, want error containing %q", loadErr, testCase.expectedError)
+			}
+
+			gotPlayer, gotDungeon := integration.GetGameState()
+			if gotPlayer != activePlayer {
+				t.Fatal("failed load replaced the active player")
+			}
+			if gotDungeon != activeDungeon {
+				t.Fatal("failed load replaced the active dungeon")
+			}
+			if gotDungeon.GetCurrentLevel() != activeLevel {
+				t.Fatal("failed load replaced the active level")
 			}
 		})
 	}
