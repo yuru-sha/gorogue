@@ -231,6 +231,7 @@ func executeDrop(ctx *Context, args []string) Result {
 
 	ctx.Level.AddItem(item, ctx.Player.Position.X, ctx.Player.Position.Y)
 	ctx.Player.Inventory.RemoveItem(index)
+	advanceMonsters(ctx)
 	return turnResult(ctx, fmt.Sprintf("Dropped %s.", ctx.Player.IdentifyMgr.GetDisplayName(item)))
 }
 
@@ -250,6 +251,7 @@ func executeEquip(ctx *Context, args []string) Result {
 	}
 
 	ctx.Player.Inventory.RemoveItem(index)
+	advanceMonsters(ctx)
 	return turnResult(ctx, fmt.Sprintf("Equipped %s.", ctx.Player.IdentifyMgr.GetDisplayName(item)))
 }
 
@@ -289,6 +291,7 @@ func executeUnequip(ctx *Context, args []string) Result {
 		ctx.Player.Equipment.EquipItem(item)
 		return result(ctx, "Inventory is full! Cannot unequip.")
 	}
+	advanceMonsters(ctx)
 	return turnResult(ctx, fmt.Sprintf("Unequipped %s.", ctx.Player.IdentifyMgr.GetDisplayName(item)))
 }
 

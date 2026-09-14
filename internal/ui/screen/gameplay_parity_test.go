@@ -6,6 +6,7 @@ import (
 
 	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/cli"
+	"github.com/yuru-sha/gorogue/internal/core/command"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
 	"github.com/yuru-sha/gorogue/internal/game/item"
@@ -446,6 +447,166 @@ func TestCursedEquipmentCannotBeUnequippedThroughEitherEntryPoint(t *testing.T) 
 	}
 	if got := gui.messages[len(gui.messages)-1]; got != cliResult {
 		t.Fatalf("cursed equipment message mismatch: GUI=%q CLI=%q", got, cliResult)
+	}
+}
+
+func TestInventoryCommandsAdvanceMonstersThroughEitherEntryPoint(t *testing.T) {
+	if err := logger.Setup(); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name       string
+		guiKeys    []gruid.Key
+		cliCommand string
+		setup      func(*actor.Player)
+		check      func(*testing.T, *actor.Player, *dungeon.Level)
+	}{
+		{
+			name:       "drop",
+			guiKeys:    []gruid.Key{"d", "a"},
+			cliCommand: "drop a",
+			setup: func(player *actor.Player) {
+				player.Inventory.AddItem(item.NewItem(1, 1, item.ItemFood, "ration", 1))
+			},
+			check: func(t *testing.T, player *actor.Player, level *dungeon.Level) {
+				if player.Inventory.Size() != 0 || len(level.Items) != 1 {
+					t.Fatalf("drop state = inventory %d, level items %d", player.Inventory.Size(), len(level.Items))
+				}
+			},
+		},
+		{
+			name:       "equip",
+			guiKeys:    []gruid.Key{"w", "a"},
+			cliCommand: "equip a",
+			setup: func(player *actor.Player) {
+				player.Inventory.AddItem(item.NewItem(1, 1, item.ItemWeapon, "sword", 1))
+			},
+			check: func(t *testing.T, player *actor.Player, level *dungeon.Level) {
+				if player.Inventory.Size() != 0 || player.Equipment.Weapon == nil {
+					t.Fatalf("equip state = inventory %d, weapon %v", player.Inventory.Size(), player.Equipment.Weapon)
+				}
+			},
+		},
+		{
+			name:       "unequip",
+			guiKeys:    []gruid.Key{"t", "w"},
+			cliCommand: "unequip weapon",
+			setup: func(player *actor.Player) {
+				player.Equipment.EquipItem(item.NewItem(1, 1, item.ItemWeapon, "sword", 1))
+			},
+			check: func(t *testing.T, player *actor.Player, level *dungeon.Level) {
+				if player.Inventory.Size() != 1 || player.Equipment.Weapon != nil {
+					t.Fatalf("unequip state = inventory %d, weapon %v", player.Inventory.Size(), player.Equipment.Weapon)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			guiPlayer := actor.NewPlayerWithSeed(1, 1, 42)
+			tt.setup(guiPlayer)
+			guiLevel := newTestFloor(5, 5)
+			guiMonster := actor.NewMonster(3, 1, 'O')
+			guiMonster.Type.Speed = 2
+			guiLevel.Monsters = []*actor.Monster{guiMonster}
+			gui := NewGameScreen(80, 50, guiPlayer)
+			gui.SetLevel(guiLevel)
+			for _, key := range tt.guiKeys {
+				gui.HandleInput(gruid.MsgKeyDown{Key: key})
+			}
+
+			cliPlayer := actor.NewPlayerWithSeed(1, 1, 42)
+			tt.setup(cliPlayer)
+			cliLevel := newTestFloor(5, 5)
+			cliMonster := actor.NewMonster(3, 1, 'O')
+			cliMonster.Type.Speed = 2
+			cliLevel.Monsters = []*actor.Monster{cliMonster}
+			cliMode := cli.NewCLIMode(cliLevel, cliPlayer)
+			cliMode.IsActive = true
+			cliResult := cliMode.ExecuteCommand(tt.cliCommand)
+
+			if guiMonster.TurnCount != 1 || cliMonster.TurnCount != 1 {
+				t.Fatalf("successful %s turn count = GUI %d, CLI %d; want 1", tt.name, guiMonster.TurnCount, cliMonster.TurnCount)
+			}
+			tt.check(t, guiPlayer, guiLevel)
+			tt.check(t, cliPlayer, cliLevel)
+			if got := gui.messages[len(gui.messages)-1]; got != cliResult {
+				t.Fatalf("message mismatch: GUI=%q CLI=%q", got, cliResult)
+			}
+		})
+	}
+}
+
+func TestFailedInventoryCommandsDoNotAdvanceMonstersThroughEitherEntryPoint(t *testing.T) {
+	if err := logger.Setup(); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name        string
+		commandType command.Type
+		args        []string
+		cliCommand  string
+		setup       func(*actor.Player)
+	}{
+		{
+			name:        "drop missing item",
+			commandType: command.CmdDrop,
+			args:        []string{"a"},
+			cliCommand:  "drop a",
+		},
+		{
+			name:        "equip food",
+			commandType: command.CmdEquip,
+			args:        []string{"a"},
+			cliCommand:  "equip a",
+			setup: func(player *actor.Player) {
+				player.Inventory.AddItem(item.NewItem(1, 1, item.ItemFood, "ration", 1))
+			},
+		},
+		{
+			name:        "unequip empty slot",
+			commandType: command.CmdUnequip,
+			args:        []string{"weapon"},
+			cliCommand:  "unequip weapon",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			guiPlayer := actor.NewPlayerWithSeed(1, 1, 42)
+			if tt.setup != nil {
+				tt.setup(guiPlayer)
+			}
+			guiLevel := newTestFloor(5, 5)
+			guiMonster := actor.NewMonster(3, 1, 'O')
+			guiMonster.Type.Speed = 2
+			guiLevel.Monsters = []*actor.Monster{guiMonster}
+			gui := NewGameScreen(80, 50, guiPlayer)
+			gui.SetLevel(guiLevel)
+			guiResult := gui.executeCommand(command.Command{Type: tt.commandType}, tt.args...)
+
+			cliPlayer := actor.NewPlayerWithSeed(1, 1, 42)
+			if tt.setup != nil {
+				tt.setup(cliPlayer)
+			}
+			cliLevel := newTestFloor(5, 5)
+			cliMonster := actor.NewMonster(3, 1, 'O')
+			cliMonster.Type.Speed = 2
+			cliLevel.Monsters = []*actor.Monster{cliMonster}
+			cliMode := cli.NewCLIMode(cliLevel, cliPlayer)
+			cliMode.IsActive = true
+			cliResult := cliMode.ExecuteCommand(tt.cliCommand)
+
+			if guiMonster.TurnCount != 0 || cliMonster.TurnCount != 0 {
+				t.Fatalf("failed %s advanced monsters: GUI %d, CLI %d; want 0", tt.name, guiMonster.TurnCount, cliMonster.TurnCount)
+			}
+			if guiResult.Message != cliResult {
+				t.Fatalf("message mismatch: GUI=%q CLI=%q", guiResult.Message, cliResult)
+			}
+		})
 	}
 }
 
