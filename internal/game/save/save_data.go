@@ -13,8 +13,10 @@ import (
 
 const (
 	// SaveVersion represents the save file format version
-	SaveVersion   = "1.3.0"
-	UNKNOWN_VALUE = "unknown"
+	SaveVersion    = "1.3.0"
+	UNKNOWN_VALUE  = "unknown"
+	saveVersionKey = "version"
+	saveFloorKey   = "floor"
 )
 
 // SaveData represents the complete game state
@@ -553,7 +555,7 @@ func ConvertTileTypeToString(tileType dungeon.TileType) string {
 	case dungeon.TileWall:
 		return "wall"
 	case dungeon.TileFloor:
-		return "floor"
+		return saveFloorKey
 	case dungeon.TileDoor:
 		return "door"
 	case dungeon.TileSecretDoor:

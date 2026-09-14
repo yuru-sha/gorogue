@@ -22,6 +22,8 @@ var titleArt = []string{
 
 var version = "v0.3.0"
 
+const loadGameMenuItem = "Load Game"
+
 // Colors (SDL2対応の16進数カラー)
 var (
 	colorYellow   = gruid.Style{Fg: 0xFFFF00} // 黄色
@@ -51,7 +53,7 @@ func NewMenuScreen(width, height int) *MenuScreen {
 	// セーブデータの存在をチェック
 	menuItems := []string{"New Game"}
 	if saveManager.FileExists() {
-		menuItems = append(menuItems, "Load Game")
+		menuItems = append(menuItems, loadGameMenuItem)
 	}
 	menuItems = append(menuItems, "Help", "Quit")
 
@@ -89,7 +91,7 @@ func (s *MenuScreen) HandleInput(msg gruid.Msg) state.GameState {
 			case "l", "L":
 				// Load Gameがメニューにあるかチェック
 				for i, item := range s.menuItems {
-					if item == "Load Game" {
+					if item == loadGameMenuItem {
 						s.selected = i
 						return s.handleMenuSelection()
 					}
@@ -128,7 +130,7 @@ func (s *MenuScreen) handleMenuSelection() state.GameState {
 	case "New Game":
 		logger.Info("New Game selected from menu")
 		return state.StateGame
-	case "Load Game":
+	case loadGameMenuItem:
 		logger.Info("Load Game selected from menu")
 		return state.StateSaveLoad
 	case "Help":

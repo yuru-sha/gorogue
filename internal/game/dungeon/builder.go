@@ -103,8 +103,8 @@ func (b *DungeonBuilder) determineDungeonType() string {
 	floor := b.level.FloorNumber
 
 	// PyRogue風の階層別ダンジョンタイプ
-	switch {
-	case floor == 7 || floor == 13 || floor == 19:
+	switch floor {
+	case 7, 13, 19:
 		return DUNGEON_TYPE_MAZE
 	default:
 		return "bsp"

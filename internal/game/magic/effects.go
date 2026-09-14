@@ -9,6 +9,8 @@ import (
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
+const noEffectMessage = "Nothing happens."
+
 // EffectResult represents the result of using a magic item
 type EffectResult struct {
 	Message    string
@@ -51,7 +53,7 @@ func UseScroll(scrollName string, player *actor.Player, level *dungeon.Level) *E
 		}
 	default:
 		return &EffectResult{
-			Message:    "Nothing happens.",
+			Message:    noEffectMessage,
 			Success:    false,
 			Identified: true,
 		}
@@ -91,7 +93,7 @@ func UsePotion(potionName string, player *actor.Player) *EffectResult {
 		}
 	default:
 		return &EffectResult{
-			Message:    "Nothing happens.",
+			Message:    noEffectMessage,
 			Success:    false,
 			Identified: true,
 		}
@@ -323,7 +325,7 @@ func usePotionOfHealing(player *actor.Player, amount int) *EffectResult {
 	}
 
 	return &EffectResult{
-		Message:    "Nothing happens.",
+		Message:    noEffectMessage,
 		Success:    false,
 		Identified: true,
 	}

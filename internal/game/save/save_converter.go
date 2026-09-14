@@ -117,9 +117,9 @@ func (sc *SaveConverter) convertSavePlayer(savePlayer Player, seed int64) (*acto
 }
 
 // convertInventory converts save inventory to inventory object
-func (sc *SaveConverter) convertInventory(saveInventory []InventoryItem, inventory *inventory.Inventory) error {
+func (sc *SaveConverter) convertInventory(saveInventory []InventoryItem, targetInventory *inventory.Inventory) error {
 	// Clear existing inventory
-	inventory.Items = make([]*item.Item, 0, len(saveInventory))
+	targetInventory.Items = make([]*item.Item, 0, len(saveInventory))
 
 	for i := range saveInventory {
 		saveItem := saveInventory[i]
@@ -132,10 +132,10 @@ func (sc *SaveConverter) convertInventory(saveInventory []InventoryItem, invento
 			continue
 		}
 
-		if !inventory.AddItem(gameItem) {
+		if !targetInventory.AddItem(gameItem) {
 			logger.Warn("Failed to add item to inventory",
 				"item", saveItem.Name,
-				"inventory_full", inventory.IsFull(),
+				"inventory_full", targetInventory.IsFull(),
 			)
 		}
 	}
@@ -144,14 +144,14 @@ func (sc *SaveConverter) convertInventory(saveInventory []InventoryItem, invento
 }
 
 // convertEquipment converts save equipment to equipment object
-func (sc *SaveConverter) convertEquipment(saveEquipment Equipment, equipment *inventory.Equipment, inventory *inventory.Inventory) error {
+func (sc *SaveConverter) convertEquipment(saveEquipment Equipment, targetEquipment *inventory.Equipment, targetInventory *inventory.Inventory) error {
 	// Convert weapon
 	if saveEquipment.Weapon != nil {
 		weapon, err := sc.convertSaveItemToGameItem(*saveEquipment.Weapon)
 		if err != nil {
 			logger.Warn("Failed to convert weapon", "error", err)
 		} else {
-			equipment.Weapon = weapon
+			targetEquipment.Weapon = weapon
 		}
 	}
 
@@ -161,7 +161,7 @@ func (sc *SaveConverter) convertEquipment(saveEquipment Equipment, equipment *in
 		if err != nil {
 			logger.Warn("Failed to convert armor", "error", err)
 		} else {
-			equipment.Armor = armor
+			targetEquipment.Armor = armor
 		}
 	}
 
@@ -171,7 +171,7 @@ func (sc *SaveConverter) convertEquipment(saveEquipment Equipment, equipment *in
 		if err != nil {
 			logger.Warn("Failed to convert left ring", "error", err)
 		} else {
-			equipment.RingLeft = ring
+			targetEquipment.RingLeft = ring
 		}
 	}
 
@@ -181,7 +181,7 @@ func (sc *SaveConverter) convertEquipment(saveEquipment Equipment, equipment *in
 		if err != nil {
 			logger.Warn("Failed to convert right ring", "error", err)
 		} else {
-			equipment.RingRight = ring
+			targetEquipment.RingRight = ring
 		}
 	}
 
@@ -440,7 +440,7 @@ func (sc *SaveConverter) convertStringToTileType(tileTypeStr string) (dungeon.Ti
 	switch tileTypeStr {
 	case "wall":
 		return dungeon.TileWall, nil
-	case "floor":
+	case saveFloorKey:
 		return dungeon.TileFloor, nil
 	case "door":
 		return dungeon.TileDoor, nil
@@ -616,7 +616,7 @@ func (sc *SaveConverter) SetDetailedLogging(enabled bool) {
 // GetConversionStats returns statistics about the conversion process
 func (sc *SaveConverter) GetConversionStats(saveData *SaveData) map[string]interface{} {
 	stats := map[string]interface{}{
-		"version":        saveData.Version,
+		saveVersionKey:   saveData.Version,
 		"floors_loaded":  len(saveData.DungeonData.Floors),
 		"inventory_size": len(saveData.PlayerData.Inventory),
 		"total_monsters": 0,

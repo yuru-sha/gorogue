@@ -17,6 +17,8 @@ const (
 	equipmentWeapon = "weapon"
 	equipmentArmor  = "armor"
 	commandAll      = "all"
+	commandSave     = "save"
+	commandLoad     = "load"
 )
 
 // CLIMode provides command-line interface for debugging and AI control
@@ -137,15 +139,15 @@ func (c *CLIMode) registerCommands() {
 			Handler:     c.inventoryCommand,
 		},
 		{
-			Name:        "save",
+			Name:        commandSave,
 			Description: "Save game state",
-			Usage:       "save",
+			Usage:       commandSave,
 			Handler:     c.saveCommand,
 		},
 		{
-			Name:        "load",
+			Name:        commandLoad,
 			Description: "Load game state",
-			Usage:       "load",
+			Usage:       commandLoad,
 			Handler:     c.loadCommand,
 		},
 		{
