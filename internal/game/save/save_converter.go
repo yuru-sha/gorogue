@@ -255,7 +255,7 @@ func (sc *SaveConverter) convertFloorItemToGameItem(saveItem Item) (*item.Item, 
 // convertStringToItemType converts string to item type
 func (sc *SaveConverter) convertStringToItemType(itemTypeStr string) (item.ItemType, error) {
 	switch itemTypeStr {
-	case "weapon":
+	case saveWeaponKey:
 		return item.ItemWeapon, nil
 	case "armor":
 		return item.ItemArmor, nil

@@ -17,6 +17,7 @@ const (
 	UNKNOWN_VALUE  = "unknown"
 	saveVersionKey = "version"
 	saveFloorKey   = "floor"
+	saveWeaponKey  = "weapon"
 )
 
 // SaveData represents the complete game state
@@ -527,7 +528,7 @@ func ConvertLevelToSave(level *dungeon.Level) *Floor {
 func ConvertItemTypeToString(itemType item.ItemType) string {
 	switch itemType {
 	case item.ItemWeapon:
-		return "weapon"
+		return saveWeaponKey
 	case item.ItemArmor:
 		return "armor"
 	case item.ItemRing:

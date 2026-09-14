@@ -328,7 +328,7 @@ func (sm *ScoreManager) BackupScores() error {
 	}
 
 	// バックアップファイルに書き込み
-	if err := os.WriteFile(backupPath, data, 0o600); err != nil { //nolint:gosec // scoreFilePath is derived from the user's home and fixed file name.
+	if err := os.WriteFile(backupPath, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write backup file: %w", err)
 	}
 
@@ -347,7 +347,7 @@ func (sm *ScoreManager) RestoreScores() error {
 	}
 
 	// 元ファイルに書き込み
-	if err := os.WriteFile(sm.scoreFilePath, data, 0o600); err != nil { //nolint:gosec // scoreFilePath is derived from the user's home and fixed file name.
+	if err := os.WriteFile(sm.scoreFilePath, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write score file: %w", err)
 	}
 
