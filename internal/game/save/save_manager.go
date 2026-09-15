@@ -423,7 +423,7 @@ func (sm *SaveManager) verifySaveData(saveData *SaveData) error {
 	}
 	for floor, saveFloor := range saveData.DungeonData.Floors {
 		if saveFloor == nil {
-			continue
+			return fmt.Errorf("floor %d is missing", floor)
 		}
 		if err := validateSaveFloorDimensions(saveFloor.Width, saveFloor.Height); err != nil {
 			return fmt.Errorf("floor %d: %w", floor, err)
