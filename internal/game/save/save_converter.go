@@ -288,7 +288,7 @@ func (sc *SaveConverter) convertSaveDungeon(saveDungeon Dungeon, player *actor.P
 			return nil, fmt.Errorf("floor %d is missing", floorNum)
 		}
 
-		level, err := sc.convertSaveFloor(*saveFloor)
+		level, err := sc.convertSaveFloor(saveFloor)
 		if err != nil {
 			logger.Warn("Failed to convert floor",
 				"floor", floorNum,
@@ -331,7 +331,7 @@ func validateOptionalSavePosition(label string, x, y, width, height int) error {
 	return validateSavePosition(label, x, y, width, height)
 }
 
-func validateSaveFloorShape(saveFloor Floor) error {
+func validateSaveFloorShape(saveFloor *Floor) error {
 	if len(saveFloor.Tiles) != saveFloor.Height {
 		return fmt.Errorf("truncated tile data: got %d rows, want %d", len(saveFloor.Tiles), saveFloor.Height)
 	}
@@ -355,9 +355,7 @@ func saveMonsterType(monsterType string) (actor.MonsterType, error) {
 }
 
 // convertSaveFloor converts save floor to level
-//
-//nolint:gocritic // Conversion accepts the decoded value and does not retain it.
-func (sc *SaveConverter) convertSaveFloor(saveFloor Floor) (*dungeon.Level, error) {
+func (sc *SaveConverter) convertSaveFloor(saveFloor *Floor) (*dungeon.Level, error) {
 	if err := validateSaveFloorDimensions(saveFloor.Width, saveFloor.Height); err != nil {
 		return nil, err
 	}
@@ -410,29 +408,11 @@ func (sc *SaveConverter) convertSaveFloor(saveFloor Floor) (*dungeon.Level, erro
 		level.Rooms = append(level.Rooms, room)
 	}
 
-	// Convert monsters
-	for i := range saveFloor.Monsters {
-		saveMonster := saveFloor.Monsters[i]
-		if err := validateSavePosition("monster", saveMonster.X, saveMonster.Y, saveFloor.Width, saveFloor.Height); err != nil {
-			return nil, fmt.Errorf("monster %d: %w", i, err)
-		}
-		if err := validateOptionalSavePosition("last player", saveMonster.LastPlayerPosX, saveMonster.LastPlayerPosY, saveFloor.Width, saveFloor.Height); err != nil {
-			return nil, fmt.Errorf("monster %d: %w", i, err)
-		}
-		if err := validateSavePosition("original", saveMonster.OriginalPosX, saveMonster.OriginalPosY, saveFloor.Width, saveFloor.Height); err != nil {
-			return nil, fmt.Errorf("monster %d: %w", i, err)
-		}
-		for patrolIndex, position := range saveMonster.PatrolPath {
-			if err := validateSavePosition("patrol", position.X, position.Y, saveFloor.Width, saveFloor.Height); err != nil {
-				return nil, fmt.Errorf("monster %d patrol %d: %w", i, patrolIndex, err)
-			}
-		}
-		monster, err := sc.convertSaveMonster(saveMonster)
-		if err != nil {
-			return nil, fmt.Errorf("monster %d: %w", i, err)
-		}
-		level.Monsters = append(level.Monsters, monster)
+	monsters, err := sc.convertSaveMonsters(saveFloor.Monsters, saveFloor.Width, saveFloor.Height)
+	if err != nil {
+		return nil, err
 	}
+	level.Monsters = monsters
 
 	// Convert items
 	for i := range saveFloor.Items {
@@ -448,6 +428,33 @@ func (sc *SaveConverter) convertSaveFloor(saveFloor Floor) (*dungeon.Level, erro
 	}
 
 	return level, nil
+}
+
+func (sc *SaveConverter) convertSaveMonsters(saveMonsters []Monster, width, height int) ([]*actor.Monster, error) {
+	monsters := make([]*actor.Monster, 0, len(saveMonsters))
+	for i := range saveMonsters {
+		saveMonster := saveMonsters[i]
+		if err := validateSavePosition("monster", saveMonster.X, saveMonster.Y, width, height); err != nil {
+			return nil, fmt.Errorf("monster %d: %w", i, err)
+		}
+		if err := validateOptionalSavePosition("last player", saveMonster.LastPlayerPosX, saveMonster.LastPlayerPosY, width, height); err != nil {
+			return nil, fmt.Errorf("monster %d: %w", i, err)
+		}
+		if err := validateSavePosition("original", saveMonster.OriginalPosX, saveMonster.OriginalPosY, width, height); err != nil {
+			return nil, fmt.Errorf("monster %d: %w", i, err)
+		}
+		for patrolIndex, position := range saveMonster.PatrolPath {
+			if err := validateSavePosition("patrol", position.X, position.Y, width, height); err != nil {
+				return nil, fmt.Errorf("monster %d patrol %d: %w", i, patrolIndex, err)
+			}
+		}
+		monster, err := sc.convertSaveMonster(saveMonster)
+		if err != nil {
+			return nil, fmt.Errorf("monster %d: %w", i, err)
+		}
+		monsters = append(monsters, monster)
+	}
+	return monsters, nil
 }
 
 // convertStringToTileType converts string to tile type
