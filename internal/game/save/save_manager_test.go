@@ -268,6 +268,86 @@ func TestSaveGameIntegrationRejectsMalformedSaveWithoutReplacingState(t *testing
 			},
 			expectedError: "invalid floor dimensions",
 		},
+		{
+			name: "unknown tile type",
+			mutate: func(saveData *SaveData) {
+				saveData.DungeonData.Floors = map[int]*Floor{
+					1: {
+						FloorNumber: 1,
+						Width:       1,
+						Height:      1,
+						Tiles:       [][]Tile{{{Type: "unknown"}}},
+					},
+				}
+			},
+			expectedError: "floor 1: tile 0,0",
+		},
+		{
+			name: "invalid floor item type",
+			mutate: func(saveData *SaveData) {
+				saveData.DungeonData.Floors = map[int]*Floor{
+					1: {
+						FloorNumber: 1,
+						Width:       1,
+						Height:      1,
+						Tiles:       [][]Tile{{{Type: "floor"}}},
+						Items:       []Item{{Type: "invalid"}},
+					},
+				}
+			},
+			expectedError: "floor 1: item 0",
+		},
+		{
+			name: "invalid monster AI state",
+			mutate: func(saveData *SaveData) {
+				saveData.DungeonData.Floors = map[int]*Floor{
+					1: {
+						FloorNumber: 1,
+						Width:       1,
+						Height:      1,
+						Tiles:       [][]Tile{{{Type: "floor"}}},
+						Monsters:    []Monster{{Type: "A", AIState: "invalid"}},
+					},
+				}
+			},
+			expectedError: "floor 1: monster 0",
+		},
+		{
+			name: "truncated tile data",
+			mutate: func(saveData *SaveData) {
+				saveData.DungeonData.Floors = map[int]*Floor{
+					1: {
+						FloorNumber: 1,
+						Width:       1,
+						Height:      1,
+						Tiles:       [][]Tile{},
+					},
+				}
+			},
+			expectedError: "truncated tile data",
+		},
+		{
+			name: "missing current floor",
+			mutate: func(saveData *SaveData) {
+				saveData.DungeonData.Floors = map[int]*Floor{}
+			},
+			expectedError: "current floor 1 is missing",
+		},
+		{
+			name: "invalid monster original position",
+			mutate: func(saveData *SaveData) {
+				saveData.DungeonData.Floors = map[int]*Floor{
+					1: {
+						FloorNumber: 1,
+						Width:       1,
+						Height:      1,
+						Tiles:       [][]Tile{{{Type: "floor"}}},
+						Monsters:    []Monster{{Type: "A", AIState: "idle", OriginalPosX: 1}},
+					},
+				}
+			},
+			expectedError: "floor 1: monster 0: original position",
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -285,6 +365,8 @@ func TestSaveGameIntegrationRejectsMalformedSaveWithoutReplacingState(t *testing
 
 			saveData := createTestSaveData(t)
 			testCase.mutate(saveData)
+			saveData.PlayerData.X = 0
+			saveData.PlayerData.Y = 0
 			encoded, err := json.Marshal(saveData)
 			if err != nil {
 				t.Fatalf("json.Marshal() error = %v", err)
