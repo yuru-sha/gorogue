@@ -420,11 +420,11 @@ func (sc *SaveConverter) convertSaveFloor(saveFloor *Floor) (*dungeon.Level, err
 		if err := validateSavePosition("item", saveItem.X, saveItem.Y, saveFloor.Width, saveFloor.Height); err != nil {
 			return nil, fmt.Errorf("item %d: %w", i, err)
 		}
-		item, err := sc.convertFloorItemToGameItem(saveItem)
+		floorItem, err := sc.convertFloorItemToGameItem(saveItem)
 		if err != nil {
 			return nil, fmt.Errorf("item %d: %w", i, err)
 		}
-		level.Items = append(level.Items, item)
+		level.Items = append(level.Items, floorItem)
 	}
 
 	return level, nil
