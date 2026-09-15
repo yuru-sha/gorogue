@@ -6,9 +6,10 @@ sandbox=$(mktemp -d)
 fake_lint="$sandbox/golangci-lint"
 fake_staticcheck="$sandbox/staticcheck"
 fake_goimports="$sandbox/goimports"
+fake_go_dir="$sandbox/go-bin"
 real_go=$(command -v go)
 real_modcache=$(go env GOMODCACHE)
-fake_go="$sandbox/go"
+fake_go="$fake_go_dir/go"
 setup_marker="$sandbox/setup-check"
 setup_dev_marker="$sandbox/setup-dev-check"
 trap 'rm -rf "$sandbox"' EXIT
@@ -25,6 +26,7 @@ write_staticcheck_version() {
 	chmod +x "$fake_staticcheck"
 }
 
+mkdir -p "$fake_go_dir"
 printf '#!/bin/sh\ncase "$1 $2" in\n  "mod download"|"mod tidy"|"get "*) exit 0 ;;\nesac\nexec %s "$@"\n' "$real_go" >"$fake_go"
 printf '#!/bin/sh\nexit 0\n' >"$fake_staticcheck"
 cp "$fake_staticcheck" "$fake_goimports"
@@ -32,11 +34,11 @@ chmod +x "$fake_go" "$fake_staticcheck" "$fake_goimports"
 
 write_version 2.8.0
 write_staticcheck_version 2025.1.1
-GOPATH="$sandbox/gopath" GOMODCACHE="$real_modcache" PATH="$sandbox:$PATH" GOLANGCI_LINT="$fake_lint" make -C "$repo_dir" -s SETUP_MARKER="$setup_marker" SETUP_DEV_MARKER="$setup_dev_marker" BUILD_DIR="$sandbox/bin" LOG_DIR="$sandbox/logs" STATICCHECK="$fake_staticcheck" GOIMPORTS="$fake_goimports" setup-dev
+GOPATH="$sandbox/gopath" GOMODCACHE="$real_modcache" PATH="$fake_go_dir:$PATH" make -C "$repo_dir" -s GOLANGCI_LINT="$fake_lint" SETUP_MARKER="$setup_marker" SETUP_DEV_MARKER="$setup_dev_marker" BUILD_DIR="$sandbox/bin" LOG_DIR="$sandbox/logs" STATICCHECK="$fake_staticcheck" GOIMPORTS="$fake_goimports" setup-dev
 test -f "$setup_marker" && test -f "$setup_dev_marker"
 
 write_staticcheck_version 2024.1.1
-if output=$(GOPATH="$sandbox/gopath" GOMODCACHE="$real_modcache" PATH="$sandbox:$PATH" GOLANGCI_LINT="$fake_lint" make -C "$repo_dir" -s SETUP_MARKER="$setup_marker" SETUP_DEV_MARKER="$setup_dev_marker" BUILD_DIR="$sandbox/bin" LOG_DIR="$sandbox/logs" STATICCHECK="$fake_staticcheck" GOIMPORTS="$fake_goimports" setup-dev 2>&1); then
+if output=$(GOPATH="$sandbox/gopath" GOMODCACHE="$real_modcache" PATH="$fake_go_dir:$PATH" make -C "$repo_dir" -s GOLANGCI_LINT="$fake_lint" SETUP_MARKER="$setup_marker" SETUP_DEV_MARKER="$setup_dev_marker" BUILD_DIR="$sandbox/bin" LOG_DIR="$sandbox/logs" STATICCHECK="$fake_staticcheck" GOIMPORTS="$fake_goimports" setup-dev 2>&1); then
 	echo "incompatible staticcheck version was accepted" >&2
 	exit 1
 fi
@@ -46,12 +48,12 @@ write_staticcheck_version 2025.1.1
 
 write_version 1.64.8
 mv "$setup_dev_marker" "$sandbox/setup-dev-check.saved"
-if output=$(GOPATH="$sandbox/gopath" GOMODCACHE="$real_modcache" PATH="$sandbox:$PATH" GOLANGCI_LINT="$fake_lint" make -C "$repo_dir" -s SETUP_MARKER="$setup_marker" SETUP_DEV_MARKER="$setup_dev_marker" BUILD_DIR="$sandbox/bin" LOG_DIR="$sandbox/logs" STATICCHECK="$fake_staticcheck" GOIMPORTS="$fake_goimports" setup-dev 2>&1); then
+if output=$(GOPATH="$sandbox/gopath" GOMODCACHE="$real_modcache" PATH="$fake_go_dir:$PATH" make -C "$repo_dir" -s GOLANGCI_LINT="$fake_lint" SETUP_MARKER="$setup_marker" SETUP_DEV_MARKER="$setup_dev_marker" BUILD_DIR="$sandbox/bin" LOG_DIR="$sandbox/logs" STATICCHECK="$fake_staticcheck" GOIMPORTS="$fake_goimports" setup-dev 2>&1); then
 	echo "incompatible golangci-lint version was accepted" >&2
 	exit 1
 fi
 printf '%s\n' "$output" | grep -F 'Unsupported golangci-lint version: 1.64.8 (expected v2.8.0).' >/dev/null
 
 write_version 2.8.0
-GOPATH="$sandbox/gopath" GOMODCACHE="$real_modcache" PATH="$sandbox:$PATH" GOLANGCI_LINT="$fake_lint" make -C "$repo_dir" -s SETUP_MARKER="$setup_marker" SETUP_DEV_MARKER="$setup_dev_marker" BUILD_DIR="$sandbox/bin" LOG_DIR="$sandbox/logs" STATICCHECK="$fake_staticcheck" GOIMPORTS="$fake_goimports" setup-dev
-GOPATH="$sandbox/gopath" GOMODCACHE="$real_modcache" PATH="$sandbox:$PATH" GOLANGCI_LINT="$fake_lint" make -C "$repo_dir" -s SETUP_MARKER="$setup_marker" SETUP_DEV_MARKER="$setup_dev_marker" BUILD_DIR="$sandbox/bin" LOG_DIR="$sandbox/logs" STATICCHECK="$fake_staticcheck" GOIMPORTS="$fake_goimports" ci-checks >/dev/null
+GOPATH="$sandbox/gopath" GOMODCACHE="$real_modcache" PATH="$fake_go_dir:$PATH" make -C "$repo_dir" -s GOLANGCI_LINT="$fake_lint" SETUP_MARKER="$setup_marker" SETUP_DEV_MARKER="$setup_dev_marker" BUILD_DIR="$sandbox/bin" LOG_DIR="$sandbox/logs" STATICCHECK="$fake_staticcheck" GOIMPORTS="$fake_goimports" setup-dev
+GOPATH="$sandbox/gopath" GOMODCACHE="$real_modcache" PATH="$fake_go_dir:$PATH" make -C "$repo_dir" -s GOLANGCI_LINT="$fake_lint" SETUP_MARKER="$setup_marker" SETUP_DEV_MARKER="$setup_dev_marker" BUILD_DIR="$sandbox/bin" LOG_DIR="$sandbox/logs" STATICCHECK="$fake_staticcheck" GOIMPORTS="$fake_goimports" ci-checks >/dev/null
