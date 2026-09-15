@@ -52,13 +52,7 @@ func (sc *SaveConverter) FromSaveData(saveData *SaveData) (*actor.Player, *dunge
 
 		// Validate position
 		if !currentLevel.IsInBounds(player.Position.X, player.Position.Y) {
-			logger.Warn("Player position out of bounds, resetting to safe position",
-				"x", player.Position.X,
-				"y", player.Position.Y,
-				"level_width", currentLevel.Width,
-				"level_height", currentLevel.Height,
-			)
-			sc.resetPlayerToSafePosition(player, currentLevel)
+			return nil, nil, fmt.Errorf("player position out of bounds: (%d,%d)", player.Position.X, player.Position.Y)
 		}
 		currentLevel.UpdateVisibility(player.Position.X, player.Position.Y)
 	}
@@ -125,18 +119,11 @@ func (sc *SaveConverter) convertInventory(saveInventory []InventoryItem, targetI
 		saveItem := saveInventory[i]
 		gameItem, err := sc.convertSaveItemToGameItem(saveItem)
 		if err != nil {
-			logger.Warn("Failed to convert inventory item",
-				"item", saveItem.Name,
-				"error", err,
-			)
-			continue
+			return fmt.Errorf("inventory item %d: %w", i, err)
 		}
 
 		if !targetInventory.AddItem(gameItem) {
-			logger.Warn("Failed to add item to inventory",
-				"item", saveItem.Name,
-				"inventory_full", targetInventory.IsFull(),
-			)
+			return fmt.Errorf("inventory item %d: inventory is full", i)
 		}
 	}
 
@@ -149,40 +136,36 @@ func (sc *SaveConverter) convertEquipment(saveEquipment Equipment, targetEquipme
 	if saveEquipment.Weapon != nil {
 		weapon, err := sc.convertSaveItemToGameItem(*saveEquipment.Weapon)
 		if err != nil {
-			logger.Warn("Failed to convert weapon", "error", err)
-		} else {
-			targetEquipment.Weapon = weapon
+			return fmt.Errorf("weapon: %w", err)
 		}
+		targetEquipment.Weapon = weapon
 	}
 
 	// Convert armor
 	if saveEquipment.Armor != nil {
 		armor, err := sc.convertSaveItemToGameItem(*saveEquipment.Armor)
 		if err != nil {
-			logger.Warn("Failed to convert armor", "error", err)
-		} else {
-			targetEquipment.Armor = armor
+			return fmt.Errorf("armor: %w", err)
 		}
+		targetEquipment.Armor = armor
 	}
 
 	// Convert left ring
 	if saveEquipment.RingLeft != nil {
 		ring, err := sc.convertSaveItemToGameItem(*saveEquipment.RingLeft)
 		if err != nil {
-			logger.Warn("Failed to convert left ring", "error", err)
-		} else {
-			targetEquipment.RingLeft = ring
+			return fmt.Errorf("left ring: %w", err)
 		}
+		targetEquipment.RingLeft = ring
 	}
 
 	// Convert right ring
 	if saveEquipment.RingRight != nil {
 		ring, err := sc.convertSaveItemToGameItem(*saveEquipment.RingRight)
 		if err != nil {
-			logger.Warn("Failed to convert right ring", "error", err)
-		} else {
-			targetEquipment.RingRight = ring
+			return fmt.Errorf("right ring: %w", err)
 		}
+		targetEquipment.RingRight = ring
 	}
 
 	return nil
@@ -289,6 +272,10 @@ func (sc *SaveConverter) convertIdentifiedItems(identifiedItems map[string]bool,
 
 // convertSaveDungeon converts save dungeon to dungeon manager
 func (sc *SaveConverter) convertSaveDungeon(saveDungeon Dungeon, player *actor.Player) (*dungeon.DungeonManager, error) {
+	if saveFloor, exists := saveDungeon.Floors[saveDungeon.CurrentFloor]; !exists || saveFloor == nil {
+		return nil, fmt.Errorf("current floor %d is missing", saveDungeon.CurrentFloor)
+	}
+
 	// Create dungeon manager
 	dungeonManager := dungeon.NewDungeonManagerWithSeed(player, saveDungeon.Seed)
 	if !dungeonManager.MoveToFloor(saveDungeon.CurrentFloor) {
@@ -298,7 +285,7 @@ func (sc *SaveConverter) convertSaveDungeon(saveDungeon Dungeon, player *actor.P
 	// Convert each floor
 	for floorNum, saveFloor := range saveDungeon.Floors {
 		if saveFloor == nil {
-			continue
+			return nil, fmt.Errorf("floor %d is missing", floorNum)
 		}
 
 		level, err := sc.convertSaveFloor(*saveFloor)
@@ -330,6 +317,32 @@ func validateSaveFloorDimensions(width, height int) error {
 	return nil
 }
 
+func validateSavePosition(label string, x, y, width, height int) error {
+	if x < 0 || x >= width || y < 0 || y >= height {
+		return fmt.Errorf("%s position out of bounds: (%d,%d) for %dx%d floor", label, x, y, width, height)
+	}
+	return nil
+}
+
+func validateOptionalSavePosition(label string, x, y, width, height int) error {
+	if x == -1 && y == -1 {
+		return nil
+	}
+	return validateSavePosition(label, x, y, width, height)
+}
+
+func validateSaveFloorShape(saveFloor Floor) error {
+	if len(saveFloor.Tiles) != saveFloor.Height {
+		return fmt.Errorf("truncated tile data: got %d rows, want %d", len(saveFloor.Tiles), saveFloor.Height)
+	}
+	for y, row := range saveFloor.Tiles {
+		if len(row) != saveFloor.Width {
+			return fmt.Errorf("truncated tile data at row %d: got %d columns, want %d", y, len(row), saveFloor.Width)
+		}
+	}
+	return nil
+}
+
 func saveMonsterType(monsterType string) (actor.MonsterType, error) {
 	if monsterType == "" {
 		return actor.MonsterType{}, fmt.Errorf("empty monster type")
@@ -346,6 +359,9 @@ func saveMonsterType(monsterType string) (actor.MonsterType, error) {
 //nolint:gocritic // Conversion accepts the decoded value and does not retain it.
 func (sc *SaveConverter) convertSaveFloor(saveFloor Floor) (*dungeon.Level, error) {
 	if err := validateSaveFloorDimensions(saveFloor.Width, saveFloor.Height); err != nil {
+		return nil, err
+	}
+	if err := validateSaveFloorShape(saveFloor); err != nil {
 		return nil, err
 	}
 
@@ -368,25 +384,15 @@ func (sc *SaveConverter) convertSaveFloor(saveFloor Floor) (*dungeon.Level, erro
 	for y := 0; y < saveFloor.Height; y++ {
 		level.Tiles[y] = make([]*dungeon.Tile, saveFloor.Width)
 		for x := 0; x < saveFloor.Width; x++ {
-			if y < len(saveFloor.Tiles) && x < len(saveFloor.Tiles[y]) {
-				saveTile := saveFloor.Tiles[y][x]
-				tileType, err := sc.convertStringToTileType(saveTile.Type)
-				if err != nil {
-					logger.Warn("Failed to convert tile type",
-						"x", x,
-						"y", y,
-						"type", saveTile.Type,
-						"error", err,
-					)
-					tileType = dungeon.TileWall // Default to wall
-				}
-				tile := dungeon.NewTile(tileType)
-				tile.Explored = saveTile.Explored
-				tile.Visible = saveTile.Visible
-				level.Tiles[y][x] = tile
-			} else {
-				level.Tiles[y][x] = dungeon.NewTile(dungeon.TileWall)
+			saveTile := saveFloor.Tiles[y][x]
+			tileType, err := sc.convertStringToTileType(saveTile.Type)
+			if err != nil {
+				return nil, fmt.Errorf("tile %d,%d: %w", x, y, err)
 			}
+			tile := dungeon.NewTile(tileType)
+			tile.Explored = saveTile.Explored
+			tile.Visible = saveTile.Visible
+			level.Tiles[y][x] = tile
 		}
 	}
 
@@ -407,13 +413,23 @@ func (sc *SaveConverter) convertSaveFloor(saveFloor Floor) (*dungeon.Level, erro
 	// Convert monsters
 	for i := range saveFloor.Monsters {
 		saveMonster := saveFloor.Monsters[i]
+		if err := validateSavePosition("monster", saveMonster.X, saveMonster.Y, saveFloor.Width, saveFloor.Height); err != nil {
+			return nil, fmt.Errorf("monster %d: %w", i, err)
+		}
+		if err := validateOptionalSavePosition("last player", saveMonster.LastPlayerPosX, saveMonster.LastPlayerPosY, saveFloor.Width, saveFloor.Height); err != nil {
+			return nil, fmt.Errorf("monster %d: %w", i, err)
+		}
+		if err := validateSavePosition("original", saveMonster.OriginalPosX, saveMonster.OriginalPosY, saveFloor.Width, saveFloor.Height); err != nil {
+			return nil, fmt.Errorf("monster %d: %w", i, err)
+		}
+		for patrolIndex, position := range saveMonster.PatrolPath {
+			if err := validateSavePosition("patrol", position.X, position.Y, saveFloor.Width, saveFloor.Height); err != nil {
+				return nil, fmt.Errorf("monster %d patrol %d: %w", i, patrolIndex, err)
+			}
+		}
 		monster, err := sc.convertSaveMonster(saveMonster)
 		if err != nil {
-			logger.Warn("Failed to convert monster",
-				"monster", saveMonster.Name,
-				"error", err,
-			)
-			continue
+			return nil, fmt.Errorf("monster %d: %w", i, err)
 		}
 		level.Monsters = append(level.Monsters, monster)
 	}
@@ -421,13 +437,12 @@ func (sc *SaveConverter) convertSaveFloor(saveFloor Floor) (*dungeon.Level, erro
 	// Convert items
 	for i := range saveFloor.Items {
 		saveItem := saveFloor.Items[i]
+		if err := validateSavePosition("item", saveItem.X, saveItem.Y, saveFloor.Width, saveFloor.Height); err != nil {
+			return nil, fmt.Errorf("item %d: %w", i, err)
+		}
 		item, err := sc.convertFloorItemToGameItem(saveItem)
 		if err != nil {
-			logger.Warn("Failed to convert item",
-				"item", saveItem.Name,
-				"error", err,
-			)
-			continue
+			return nil, fmt.Errorf("item %d: %w", i, err)
 		}
 		level.Items = append(level.Items, item)
 	}
@@ -492,11 +507,7 @@ func (sc *SaveConverter) convertSaveMonster(saveMonster Monster) (*actor.Monster
 	// Convert AI state
 	aiState, err := sc.convertStringToAIState(saveMonster.AIState)
 	if err != nil {
-		logger.Warn("Failed to convert AI state",
-			"state", saveMonster.AIState,
-			"error", err,
-		)
-		aiState = actor.StateIdle
+		return nil, fmt.Errorf("invalid AI state: %w", err)
 	}
 	monster.AIState = aiState
 
@@ -560,45 +571,6 @@ func (sc *SaveConverter) validatePlayer(player *actor.Player) error {
 	}
 
 	return nil
-}
-
-// resetPlayerToSafePosition resets player to a safe position in the level
-func (sc *SaveConverter) resetPlayerToSafePosition(player *actor.Player, level *dungeon.Level) {
-	// Try to find a safe position
-	for _, room := range level.Rooms {
-		centerX := room.X + room.Width/2
-		centerY := room.Y + room.Height/2
-
-		if level.IsInBounds(centerX, centerY) && level.IsWalkable(centerX, centerY) {
-			player.Position.X = centerX
-			player.Position.Y = centerY
-			logger.Info("Reset player to safe position",
-				"x", centerX,
-				"y", centerY,
-			)
-			return
-		}
-	}
-
-	// Fallback: find any walkable position
-	for y := 1; y < level.Height-1; y++ {
-		for x := 1; x < level.Width-1; x++ {
-			if level.IsWalkable(x, y) {
-				player.Position.X = x
-				player.Position.Y = y
-				logger.Info("Reset player to fallback position",
-					"x", x,
-					"y", y,
-				)
-				return
-			}
-		}
-	}
-
-	// Last resort: position at (1,1)
-	player.Position.X = 1
-	player.Position.Y = 1
-	logger.Warn("Reset player to last resort position (1,1)")
 }
 
 // Additional helper methods

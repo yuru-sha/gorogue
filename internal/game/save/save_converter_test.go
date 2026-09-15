@@ -209,6 +209,8 @@ func TestSaveGameIntegrationPreservesExploredState(t *testing.T) {
 	manager := dungeon.NewDungeonManagerWithSeed(player, 12345)
 	level := saveVisibilityTestLevel()
 	manager.SetLevel(1, level)
+	player.Position.X = 1
+	player.Position.Y = 2
 	farTile := level.GetTile(4, 2)
 	farTile.Explored = true
 	farTile.Visible = false
@@ -913,7 +915,7 @@ func createTestSaveData(t *testing.T) *SaveData {
 		},
 		DungeonData: Dungeon{
 			CurrentFloor: 1,
-			Floors:       make(map[int]*Floor),
+			Floors:       map[int]*Floor{1: newTestSaveFloor(1, 20, 20)},
 		},
 		GameStats: Stats{
 			MonstersKilled: 10,
@@ -925,6 +927,17 @@ func createTestSaveData(t *testing.T) *SaveData {
 			AutoSave: true,
 		},
 	}
+}
+
+func newTestSaveFloor(floorNumber, width, height int) *Floor {
+	tiles := make([][]Tile, height)
+	for y := range tiles {
+		tiles[y] = make([]Tile, width)
+		for x := range tiles[y] {
+			tiles[y][x].Type = saveFloorKey
+		}
+	}
+	return &Floor{FloorNumber: floorNumber, Width: width, Height: height, Tiles: tiles}
 }
 
 // createBenchmarkTestSaveData creates a benchmark test save data structure
@@ -950,7 +963,7 @@ func createBenchmarkTestSaveData() *SaveData {
 		},
 		DungeonData: Dungeon{
 			CurrentFloor: 5,
-			Floors:       make(map[int]*Floor),
+			Floors:       map[int]*Floor{5: newTestSaveFloor(5, 40, 40)},
 		},
 		GameStats: Stats{
 			MonstersKilled: 100,
