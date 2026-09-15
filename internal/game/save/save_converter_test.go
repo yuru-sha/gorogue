@@ -147,7 +147,7 @@ func TestSaveConverterPreservesTileVisibilityState(t *testing.T) {
 		t.Fatal("tile visibility state was not saved")
 	}
 
-	restored, err := NewSaveConverter().convertSaveFloor(*saved)
+	restored, err := NewSaveConverter().convertSaveFloor(saved)
 	if err != nil {
 		t.Fatalf("convertSaveFloor() error = %v", err)
 	}
