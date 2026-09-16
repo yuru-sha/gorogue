@@ -303,6 +303,7 @@ func executeUnequip(ctx *Context, args []string) Result {
 	return turnResult(ctx, fmt.Sprintf("Unequipped %s.", ctx.Player.IdentifyMgr.GetDisplayName(item)))
 }
 
+//nolint:gocyclo // Item command validation stays in the shared dispatch path.
 func executeItem(ctx *Context, commandType Type, args []string) Result {
 	if unavailable(ctx) {
 		return result(ctx, "Game state is unavailable.")
