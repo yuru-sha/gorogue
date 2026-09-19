@@ -31,22 +31,12 @@ func (d *DoorPlacer) placeDoorForRoom(roomIndex int, room *Room) {
 	doorPositions := d.findDoorPositions(room)
 
 	for _, pos := range doorPositions {
-		// 15%の確率で秘密のドアを作成
-		if d.level.random().Float64() < 0.15 {
-			d.level.SetTile(pos.X, pos.Y, TileSecretDoor)
-			logger.Debug("Placed secret door",
-				"room", roomIndex,
-				"x", pos.X,
-				"y", pos.Y,
-			)
-		} else {
-			d.level.SetTile(pos.X, pos.Y, TileDoor)
-			logger.Debug("Placed door",
-				"room", roomIndex,
-				"x", pos.X,
-				"y", pos.Y,
-			)
-		}
+		d.level.SetTile(pos.X, pos.Y, TileDoor)
+		logger.Debug("Placed door",
+			"room", roomIndex,
+			"x", pos.X,
+			"y", pos.Y,
+		)
 	}
 }
 
@@ -118,36 +108,6 @@ func (d *DoorPlacer) isInsideRoom(x, y int, room *Room) bool {
 		y >= room.Y && y < room.Y+room.Height
 }
 
-// PlaceSecretDoor places a secret door for a special room
-func (d *DoorPlacer) PlaceSecretDoor(room *Room) {
-	// 部屋の4辺のいずれかにランダムに秘密のドアを配置
-	side := d.level.random().Intn(4)
-	var x, y int
-
-	switch side {
-	case 0: // 上辺
-		x = room.X + d.level.random().Intn(room.Width)
-		y = room.Y - 1
-	case 1: // 右辺
-		x = room.X + room.Width
-		y = room.Y + d.level.random().Intn(room.Height)
-	case 2: // 下辺
-		x = room.X + d.level.random().Intn(room.Width)
-		y = room.Y + room.Height
-	case 3: // 左辺
-		x = room.X - 1
-		y = room.Y + d.level.random().Intn(room.Height)
-	}
-
-	if d.level.IsInBounds(x, y) {
-		d.level.SetTile(x, y, TileSecretDoor)
-		logger.Debug("Placed secret door for special room",
-			"x", x,
-			"y", y,
-		)
-	}
-}
-
 // OpenDoor opens a door at the given position
 func (d *DoorPlacer) OpenDoor(x, y int) bool {
 	if !d.level.IsInBounds(x, y) {
@@ -174,22 +134,6 @@ func (d *DoorPlacer) CloseDoor(x, y int) bool {
 	if tile.Type == TileOpenDoor {
 		d.level.SetTile(x, y, TileDoor)
 		logger.Debug("Closed door", "x", x, "y", y)
-		return true
-	}
-
-	return false
-}
-
-// RevealSecretDoor reveals a secret door
-func (d *DoorPlacer) RevealSecretDoor(x, y int) bool {
-	if !d.level.IsInBounds(x, y) {
-		return false
-	}
-
-	tile := d.level.GetTile(x, y)
-	if tile.Type == TileSecretDoor {
-		d.level.SetTile(x, y, TileDoor)
-		logger.Info("Revealed secret door", "x", x, "y", y)
 		return true
 	}
 
