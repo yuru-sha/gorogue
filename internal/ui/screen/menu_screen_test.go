@@ -71,8 +71,8 @@ func TestMenuScreen_HandleInput(t *testing.T) {
 	// Test quit key
 	msg = gruid.MsgKeyDown{Key: "q"}
 	result = screen.HandleInput(msg)
-	if result != state.StateGameOver {
-		t.Errorf("Expected StateGameOver, got %v", result)
+	if result != state.StateQuit {
+		t.Errorf("Expected StateQuit, got %v", result)
 	}
 }
 
@@ -115,7 +115,7 @@ func TestMenuScreen_MenuSelection(t *testing.T) {
 		"New Game":  state.StateGame,
 		"Load Game": state.StateSaveLoad,
 		"Help":      state.StateHelp,
-		"Quit":      state.StateGameOver,
+		"Quit":      state.StateQuit,
 	}
 	for i, menuItem := range screen.menuItems {
 		screen.selected = i
