@@ -77,7 +77,7 @@ func (s *VictoryScreen) handleMenuSelection() state.GameState {
 		return state.StateMenu
 	case 2: // Quit
 		logger.Info("Quit selected from victory")
-		return state.StateGameOver
+		return state.StateQuit
 	}
 	return state.StateVictory
 }

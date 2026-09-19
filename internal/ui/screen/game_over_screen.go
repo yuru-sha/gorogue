@@ -83,7 +83,7 @@ func (s *GameOverScreen) handleMenuSelection() state.GameState {
 		return state.StateMenu
 	case 2: // Quit
 		logger.Info("Quit selected from game over")
-		return state.StateGameOver
+		return state.StateQuit
 	}
 	return state.StateGameOver
 }
