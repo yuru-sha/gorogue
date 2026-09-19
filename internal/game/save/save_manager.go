@@ -279,6 +279,9 @@ func (sm *SaveManager) ImportSave(importPath string) error {
 	if err := sm.validateSaveData(saveData); err != nil {
 		return fmt.Errorf("import file validation failed: %w", err)
 	}
+	if _, _, err := NewSaveConverter().FromSaveData(saveData); err != nil {
+		return fmt.Errorf("import file is not loadable: %w", err)
+	}
 
 	// Save to main save file
 	if err := sm.SaveGame(saveData); err != nil {
