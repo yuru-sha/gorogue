@@ -5,6 +5,7 @@ package save
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/yuru-sha/gorogue/internal/game/actor"
@@ -868,6 +869,24 @@ func TestSaveConverter_ErrorHandling(t *testing.T) {
 	saveMonster.Type = ""
 	if _, err := converter.convertSaveMonster(saveMonster); err == nil {
 		t.Error("convertSaveMonster should fail with an empty monster type")
+	}
+	saveMonster.AIState = ConvertAIStateToString(actor.StateIdle)
+
+	for _, testCase := range []struct {
+		name          string
+		monsterType   string
+		expectedError string
+	}{
+		{name: "multi-character", monsterType: "BLAH", expectedError: "exactly one rune"},
+		{name: "malformed UTF-8", monsterType: string([]byte{0xff}), expectedError: "invalid UTF-8"},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			saveMonster.Type = testCase.monsterType
+			_, err := converter.convertSaveMonster(saveMonster)
+			if err == nil || !strings.Contains(err.Error(), testCase.expectedError) {
+				t.Fatalf("convertSaveMonster() error = %v, want error containing %q", err, testCase.expectedError)
+			}
+		})
 	}
 
 	// Test conversion with invalid item type

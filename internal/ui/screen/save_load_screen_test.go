@@ -9,9 +9,15 @@ import (
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
+func newTestSaveManager(t *testing.T) *save.SaveManager {
+	t.Helper()
+	t.Setenv("HOME", t.TempDir())
+	return save.NewSaveManager()
+}
+
 func TestSaveLoadScreen_NewSaveLoadScreen(t *testing.T) {
 	logger.Setup()
-	saveManager := save.NewSaveManager()
+	saveManager := newTestSaveManager(t)
 	screen := NewSaveLoadScreen(80, 50, saveManager)
 
 	if screen.width != 80 {
@@ -33,7 +39,7 @@ func TestSaveLoadScreen_NewSaveLoadScreen(t *testing.T) {
 
 func TestSaveLoadScreen_HandleInput(t *testing.T) {
 	logger.Setup()
-	saveManager := save.NewSaveManager()
+	saveManager := newTestSaveManager(t)
 	screen := NewSaveLoadScreen(80, 50, saveManager)
 
 	// Test Up key
@@ -80,7 +86,7 @@ func TestSaveLoadScreen_HandleInput(t *testing.T) {
 
 func TestSaveLoadScreen_MenuSelection(t *testing.T) {
 	logger.Setup()
-	saveManager := save.NewSaveManager()
+	saveManager := newTestSaveManager(t)
 	screen := NewSaveLoadScreen(80, 50, saveManager)
 
 	// Test Save Game
@@ -107,7 +113,7 @@ func TestSaveLoadScreen_MenuSelection(t *testing.T) {
 
 func TestSaveLoadScreen_Draw(t *testing.T) {
 	logger.Setup()
-	saveManager := save.NewSaveManager()
+	saveManager := newTestSaveManager(t)
 	screen := NewSaveLoadScreen(80, 50, saveManager)
 	grid := gruid.NewGrid(80, 50)
 
@@ -139,7 +145,7 @@ func TestSaveLoadScreen_Draw(t *testing.T) {
 
 func TestSaveLoadScreen_Validation(t *testing.T) {
 	logger.Setup()
-	saveManager := save.NewSaveManager()
+	saveManager := newTestSaveManager(t)
 	screen := NewSaveLoadScreen(80, 50, saveManager)
 
 	// Test valid state
@@ -166,7 +172,7 @@ func TestSaveLoadScreen_Validation(t *testing.T) {
 
 func TestSaveLoadScreen_ActionDescription(t *testing.T) {
 	logger.Setup()
-	saveManager := save.NewSaveManager()
+	saveManager := newTestSaveManager(t)
 	screen := NewSaveLoadScreen(80, 50, saveManager)
 
 	// Test Save Game
@@ -193,7 +199,7 @@ func TestSaveLoadScreen_ActionDescription(t *testing.T) {
 
 func TestSaveLoadScreen_CanPerformAction(t *testing.T) {
 	logger.Setup()
-	saveManager := save.NewSaveManager()
+	saveManager := newTestSaveManager(t)
 	screen := NewSaveLoadScreen(80, 50, saveManager)
 
 	// Test Save Game (always possible)
@@ -217,7 +223,7 @@ func TestSaveLoadScreen_CanPerformAction(t *testing.T) {
 
 func TestSaveLoadScreen_GetStatus(t *testing.T) {
 	logger.Setup()
-	saveManager := save.NewSaveManager()
+	saveManager := newTestSaveManager(t)
 	screen := NewSaveLoadScreen(80, 50, saveManager)
 
 	status := screen.GetStatus()
@@ -238,7 +244,7 @@ func TestSaveLoadScreen_GetStatus(t *testing.T) {
 
 func TestSaveLoadScreen_GetAvailableActions(t *testing.T) {
 	logger.Setup()
-	saveManager := save.NewSaveManager()
+	saveManager := newTestSaveManager(t)
 	screen := NewSaveLoadScreen(80, 50, saveManager)
 
 	actions := screen.GetAvailableActions()

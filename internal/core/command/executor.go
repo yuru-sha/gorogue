@@ -25,6 +25,7 @@ type Result struct {
 	Message      string
 	Error        bool
 	TurnConsumed bool
+	PlayerDied   bool
 	Victory      bool
 	Player       *actor.Player
 	Level        *dungeon.Level
@@ -302,6 +303,7 @@ func executeUnequip(ctx *Context, args []string) Result {
 	return turnResult(ctx, fmt.Sprintf("Unequipped %s.", ctx.Player.IdentifyMgr.GetDisplayName(item)))
 }
 
+//nolint:gocyclo // Item command validation stays in the shared dispatch path.
 func executeItem(ctx *Context, commandType Type, args []string) Result {
 	if unavailable(ctx) {
 		return result(ctx, "Game state is unavailable.")
@@ -358,9 +360,10 @@ func executeItem(ctx *Context, commandType Type, args []string) Result {
 	if turnConsumed {
 		advanceMonsters(ctx)
 	}
-	commandResult := result(ctx, message)
-	commandResult.TurnConsumed = turnConsumed
-	return commandResult
+	if turnConsumed {
+		return turnResult(ctx, message)
+	}
+	return result(ctx, message)
 }
 
 func executeLook(ctx *Context, args []string) Result {
@@ -644,6 +647,13 @@ func result(ctx *Context, message string) Result {
 func turnResult(ctx *Context, message string) Result {
 	result := result(ctx, message)
 	result.TurnConsumed = true
+	if ctx != nil && ctx.Player != nil && !ctx.Player.IsAlive() {
+		result.PlayerDied = true
+		result.Message += "\nYou died."
+		if ctx.Save != nil {
+			ctx.Save.OnPlayerDeath("Player died during a turn.")
+		}
+	}
 	return result
 }
 

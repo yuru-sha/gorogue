@@ -7,6 +7,7 @@ import (
 	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/cli"
 	"github.com/yuru-sha/gorogue/internal/core/command"
+	"github.com/yuru-sha/gorogue/internal/core/state"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
 	"github.com/yuru-sha/gorogue/internal/game/item"
@@ -608,6 +609,85 @@ func TestFailedInventoryCommandsDoNotAdvanceMonstersThroughEitherEntryPoint(t *t
 			}
 		})
 	}
+}
+
+func TestFatalInventoryCommandsEnterGameOverAndReportLoss(t *testing.T) {
+	if err := logger.Setup(); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name       string
+		guiKeys    []gruid.Key
+		cliCommand string
+		setup      func(*actor.Player)
+	}{
+		{
+			name:       "drop",
+			guiKeys:    []gruid.Key{"d", "a"},
+			cliCommand: "drop a",
+			setup: func(player *actor.Player) {
+				player.Inventory.AddItem(item.NewItem(1, 1, item.ItemFood, "ration", 1))
+			},
+		},
+		{
+			name:       "equip",
+			guiKeys:    []gruid.Key{"w", "a"},
+			cliCommand: "equip a",
+			setup: func(player *actor.Player) {
+				player.Inventory.AddItem(item.NewItem(1, 1, item.ItemWeapon, "sword", 1))
+			},
+		},
+		{
+			name:       "unequip",
+			guiKeys:    []gruid.Key{"t", "w"},
+			cliCommand: "unequip weapon",
+			setup: func(player *actor.Player) {
+				player.Equipment.EquipItem(item.NewItem(1, 1, item.ItemWeapon, "sword", 1))
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			guiPlayer := actor.NewPlayerWithSeed(1, 1, 42)
+			guiPlayer.HP = 1
+			tt.setup(guiPlayer)
+			gui := NewGameScreen(80, 50, guiPlayer)
+			gui.SetLevel(fatalInventoryLevel())
+			guiState := state.StateGame
+			for _, key := range tt.guiKeys {
+				guiState = gui.HandleInput(gruid.MsgKeyDown{Key: key})
+			}
+
+			cliPlayer := actor.NewPlayerWithSeed(1, 1, 42)
+			cliPlayer.HP = 1
+			tt.setup(cliPlayer)
+			cliLevel := fatalInventoryLevel()
+			cliMode := cli.NewCLIMode(cliLevel, cliPlayer)
+			cliMode.IsActive = true
+			cliResult := cliMode.ExecuteCommand(tt.cliCommand)
+
+			if guiState != state.StateGameOver {
+				t.Fatalf("GUI state = %v, want StateGameOver", guiState)
+			}
+			if !strings.Contains(strings.Join(gui.messages, "\n"), "You died.") {
+				t.Fatal("GUI death summary is missing")
+			}
+			if cliPlayer.IsAlive() || !strings.Contains(cliResult, "You died.") {
+				t.Fatalf("CLI loss result = %q, alive=%t", cliResult, cliPlayer.IsAlive())
+			}
+		})
+	}
+}
+
+func fatalInventoryLevel() *dungeon.Level {
+	level := newTestFloor(5, 5)
+	monster := actor.NewMonster(2, 1, 'E')
+	monster.Type.Speed = 1
+	monster.Attack = 100
+	level.Monsters = []*actor.Monster{monster}
+	return level
 }
 
 func TestSaveLoadCommandsHaveGUICLIParity(t *testing.T) {
