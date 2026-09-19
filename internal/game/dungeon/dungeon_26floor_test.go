@@ -201,7 +201,7 @@ func TestAmuletOfYendor(t *testing.T) {
 
 func TestVictoryCondition(t *testing.T) {
 	player := actor.NewPlayer(10, 10)
-	dm := NewDungeonManager(player)
+	dm := NewDungeonManagerWithSeed(player, 42)
 
 	t.Run("NoVictoryWithoutAmulet", func(t *testing.T) {
 		dm.MoveToFloor(1)
