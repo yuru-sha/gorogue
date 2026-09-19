@@ -391,16 +391,10 @@ func (g *BSPGenerator) createVerticalCorridor(y1, y2, x int) []Position {
 
 // selectDoorType selects door type based on PyRogue probabilities
 func (g *BSPGenerator) selectDoorType() TileType {
-	rand_val := g.level.random().Float64()
-
-	switch {
-	case rand_val < 0.1:
-		return TileSecretDoor // 10% secret doors
-	case rand_val < 0.4:
-		return TileOpenDoor // 30% open doors
-	default:
-		return TileDoor // 60% normal doors
+	if g.level.random().Float64() < 0.3333333333 {
+		return TileOpenDoor
 	}
+	return TileDoor
 }
 
 // isRoomBoundaryWall checks if a wall position is on the boundary of any room (PyRogue style)

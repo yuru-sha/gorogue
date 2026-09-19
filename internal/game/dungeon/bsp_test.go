@@ -236,7 +236,6 @@ func TestBSPDoorPlacement(t *testing.T) {
 	// Count different types of doors
 	doorCount := 0
 	openDoorCount := 0
-	secretDoorCount := 0
 
 	for y := 0; y < level.Height; y++ {
 		for x := 0; x < level.Width; x++ {
@@ -247,12 +246,12 @@ func TestBSPDoorPlacement(t *testing.T) {
 			case TileOpenDoor:
 				openDoorCount++
 			case TileSecretDoor:
-				secretDoorCount++
+				t.Errorf("BSP generated an excluded secret door at (%d,%d)", x, y)
 			}
 		}
 	}
 
-	totalDoors := doorCount + openDoorCount + secretDoorCount
+	totalDoors := doorCount + openDoorCount
 	if totalDoors == 0 {
 		t.Error("No doors were placed")
 	}
@@ -265,6 +264,6 @@ func TestBSPDoorPlacement(t *testing.T) {
 		}
 	}
 
-	t.Logf("Door distribution: %d regular, %d open, %d secret (total: %d)",
-		doorCount, openDoorCount, secretDoorCount, totalDoors)
+	t.Logf("Door distribution: %d regular, %d open (total: %d)",
+		doorCount, openDoorCount, totalDoors)
 }

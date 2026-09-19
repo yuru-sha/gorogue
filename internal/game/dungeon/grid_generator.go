@@ -8,7 +8,6 @@ type GridCell struct {
 	Room        *Room // The room in this cell (nil if no room)
 	Connected   bool  // Whether this cell is connected to the dungeon
 	HasRoom     bool  // Whether this cell has an actual room
-	IsGone      bool  // Whether this is a "gone room" (corridor only)
 	Connections []int // Connected grid cell indices
 }
 
@@ -50,7 +49,6 @@ func NewGridGenerator(level *Level) *GridGenerator {
 			Y:           y,
 			Connected:   false,
 			HasRoom:     false,
-			IsGone:      false,
 			Connections: make([]int, 0),
 		}
 	}
@@ -86,30 +84,19 @@ func (g *GridGenerator) decideRoomPlacements() {
 	for i, cell := range g.grid {
 		// Original Rogue: 70-80% chance of having a room in each cell
 		if g.level.random().Float64() < 0.75 {
-			// 15% chance of being a "gone room" (corridor only)
-			if g.level.random().Float64() < 0.15 {
-				cell.IsGone = true
-				cell.HasRoom = false
-				logger.Debug("Marked cell as gone room",
-					"grid_x", cell.X,
-					"grid_y", cell.Y,
-					"index", i,
-				)
-			} else {
-				cell.HasRoom = true
-				logger.Debug("Marked cell for room placement",
-					"grid_x", cell.X,
-					"grid_y", cell.Y,
-					"index", i,
-				)
-			}
+			cell.HasRoom = true
+			logger.Debug("Marked cell for room placement",
+				"grid_x", cell.X,
+				"grid_y", cell.Y,
+				"index", i,
+			)
 		}
 	}
 }
 
 // createRooms creates the actual rooms in the designated cells
 func (g *GridGenerator) createRooms() {
-	for i, cell := range g.grid {
+	for _, cell := range g.grid {
 		if cell.HasRoom {
 			room := g.createRoomInCell(cell)
 			if room != nil {
@@ -124,14 +111,6 @@ func (g *GridGenerator) createRooms() {
 					"height", room.Height,
 				)
 			}
-		} else if cell.IsGone {
-			// Create gone room (corridor space)
-			g.createGoneRoomInCell(cell)
-			logger.Debug("Created gone room in grid cell",
-				"grid_x", cell.X,
-				"grid_y", cell.Y,
-				"index", i,
-			)
 		}
 	}
 }
@@ -185,32 +164,9 @@ func (g *GridGenerator) createRoomInCell(cell *GridCell) *Room {
 	return room
 }
 
-// createGoneRoomInCell creates a gone room (corridor space) in the specified cell
-func (g *GridGenerator) createGoneRoomInCell(cell *GridCell) {
-	// Calculate the boundaries of this grid cell
-	cellStartX := cell.X * g.cellWidth
-	cellStartY := cell.Y * g.cellHeight
-
-	// Create a smaller corridor space in the center of the cell
-	corridorWidth := 3 + g.level.random().Intn(4)  // 3-6 tiles wide
-	corridorHeight := 3 + g.level.random().Intn(4) // 3-6 tiles high
-
-	startX := cellStartX + (g.cellWidth-corridorWidth)/2
-	startY := cellStartY + (g.cellHeight-corridorHeight)/2
-
-	// Fill with floor tiles
-	for dy := 0; dy < corridorHeight; dy++ {
-		for dx := 0; dx < corridorWidth; dx++ {
-			if g.level.IsInBounds(startX+dx, startY+dy) {
-				g.level.SetTile(startX+dx, startY+dy, TileFloor)
-			}
-		}
-	}
-}
-
 // connectRooms implements the original Rogue room connection algorithm
 func (g *GridGenerator) connectRooms() {
-	// Step 1: Choose a random starting cell that has a room or is a gone room
+	// Step 1: Choose a random starting cell that has a room
 	startCell := g.chooseRandomActiveCell()
 	if startCell == -1 {
 		logger.Warn("No active cells found for connection")
@@ -277,11 +233,11 @@ func (g *GridGenerator) generateCorridors() {
 
 // Helper functions
 
-// chooseRandomActiveCell chooses a random cell that has a room or is a gone room
+// chooseRandomActiveCell chooses a random cell that has a room
 func (g *GridGenerator) chooseRandomActiveCell() int {
 	activeCells := make([]int, 0)
 	for i, cell := range g.grid {
-		if cell.HasRoom || cell.IsGone {
+		if cell.HasRoom {
 			activeCells = append(activeCells, i)
 		}
 	}
@@ -291,13 +247,13 @@ func (g *GridGenerator) chooseRandomActiveCell() int {
 	return activeCells[g.level.random().Intn(len(activeCells))]
 }
 
-// isActiveCell checks if a cell has a room or is a gone room
+// isActiveCell checks if a cell has a room
 func (g *GridGenerator) isActiveCell(index int) bool {
 	if index < 0 || index >= len(g.grid) {
 		return false
 	}
 	cell := g.grid[index]
-	return cell.HasRoom || cell.IsGone
+	return cell.HasRoom
 }
 
 // getAdjacentCells returns indices of adjacent cells (up, down, left, right)
