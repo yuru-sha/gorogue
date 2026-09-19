@@ -4,6 +4,7 @@ package save
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
 
 	"github.com/yuru-sha/gorogue/internal/game/actor"
@@ -259,6 +260,7 @@ func TestSaveConverterPreservesRuntimeRandomState(t *testing.T) {
 
 	expectedManagerValue := player.RandomSource().Int63()
 	level.GenerateRoom()
+	expectedLevelRooms := append([]*dungeon.Room(nil), level.Rooms...)
 	expectedLevelDraws := level.RandomDraws()
 
 	restoredPlayer, restoredDungeonManager, err := NewSaveConverter().FromSaveData(&persisted)
@@ -275,6 +277,9 @@ func TestSaveConverterPreservesRuntimeRandomState(t *testing.T) {
 
 	restoredLevel := restoredDungeonManager.GetCurrentLevel()
 	restoredLevel.GenerateRoom()
+	if !reflect.DeepEqual(restoredLevel.Rooms, expectedLevelRooms) {
+		t.Errorf("generated room layout differs after restoring random state")
+	}
 	if got := restoredLevel.RandomDraws(); got != expectedLevelDraws {
 		t.Errorf("level random draws = %d, want %d", got, expectedLevelDraws)
 	}
