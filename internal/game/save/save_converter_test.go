@@ -867,7 +867,7 @@ func TestSaveConverter_ErrorHandling(t *testing.T) {
 	if _, err := converter.convertSaveMonster(saveMonster); err == nil {
 		t.Error("convertSaveMonster should fail with an empty monster type")
 	}
-	saveMonster.AIState = "idle"
+	saveMonster.AIState = ConvertAIStateToString(actor.StateIdle)
 
 	for _, testCase := range []struct {
 		name          string

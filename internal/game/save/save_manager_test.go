@@ -321,7 +321,7 @@ func TestSaveGameIntegrationRejectsMalformedSaveWithoutReplacingState(t *testing
 						Width:       1,
 						Height:      1,
 						Tiles:       [][]Tile{{{Type: "floor"}}},
-						Monsters:    []Monster{{Type: "BLAH", AIState: "idle"}},
+						Monsters:    []Monster{{Type: "BLAH", AIState: ConvertAIStateToString(actor.StateIdle)}},
 					},
 				}
 			},
