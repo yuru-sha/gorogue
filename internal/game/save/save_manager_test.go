@@ -236,6 +236,118 @@ func TestSaveManagerImportRejectsUnrestorableRandomCursor(t *testing.T) {
 	}
 }
 
+func TestSaveManagerImportRejectsUnrestorableSaveWithoutReplacingMainSave(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*SaveData)
+	}{
+		{
+			name: "unknown tile",
+			mutate: func(saveData *SaveData) {
+				saveData.DungeonData.Floors[1].Tiles[0][0].Type = "unknown"
+			},
+		},
+		{
+			name: "invalid floor item",
+			mutate: func(saveData *SaveData) {
+				saveData.DungeonData.Floors[1].Items = []Item{{Type: "invalid"}}
+			},
+		},
+		{
+			name: "invalid monster AI state",
+			mutate: func(saveData *SaveData) {
+				saveData.DungeonData.Floors[1].Monsters = []Monster{{Type: "A", AIState: "invalid"}}
+			},
+		},
+		{
+			name: "out of bounds player position",
+			mutate: func(saveData *SaveData) {
+				saveData.PlayerData.X = saveData.DungeonData.Floors[1].Width
+			},
+		},
+		{
+			name: "truncated tiles",
+			mutate: func(saveData *SaveData) {
+				saveData.DungeonData.Floors[1].Tiles = nil
+			},
+		},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Setenv("HOME", t.TempDir())
+			integration := NewSaveGameIntegration()
+			integration.saveManager.saveDir = t.TempDir()
+			if err := integration.Initialize(); err != nil {
+				t.Fatalf("Initialize() error = %v", err)
+			}
+			activePlayer := actor.NewPlayer(1, 1)
+			activeDungeon := dungeon.NewDungeonManagerWithSeed(activePlayer, 12345)
+			integration.SetGameState(activePlayer, activeDungeon)
+
+			validSave := createTestSaveData(t)
+			if err := integration.saveManager.SaveGame(validSave); err != nil {
+				t.Fatalf("SaveGame() error = %v", err)
+			}
+			before, err := os.ReadFile(integration.saveManager.getSaveFilePath())
+			if err != nil {
+				t.Fatalf("ReadFile() error = %v", err)
+			}
+
+			importSave := createTestSaveData(t)
+			testCase.mutate(importSave)
+			importPath := filepath.Join(t.TempDir(), "import.sav")
+			encoded, err := json.Marshal(importSave)
+			if err != nil {
+				t.Fatalf("Marshal() error = %v", err)
+			}
+			if err := os.WriteFile(importPath, encoded, 0o600); err != nil {
+				t.Fatalf("WriteFile() error = %v", err)
+			}
+
+			if err := integration.ImportSave(importPath); err == nil {
+				t.Fatal("ImportSave() accepted an unrestorable save")
+			}
+			after, err := os.ReadFile(integration.saveManager.getSaveFilePath())
+			if err != nil {
+				t.Fatalf("ReadFile() error = %v", err)
+			}
+			if string(after) != string(before) {
+				t.Fatal("failed import replaced the main save")
+			}
+			gotPlayer, gotDungeon := integration.GetGameState()
+			if gotPlayer != activePlayer || gotDungeon != activeDungeon {
+				t.Fatal("failed import replaced the active game state")
+			}
+		})
+	}
+}
+
+func TestSaveManagerImportAcceptsSaveThatLoads(t *testing.T) {
+	integration := NewSaveGameIntegration()
+	integration.saveManager.saveDir = t.TempDir()
+	if err := integration.Initialize(); err != nil {
+		t.Fatalf("Initialize() error = %v", err)
+	}
+
+	validSave := createTestSaveData(t)
+	importPath := filepath.Join(t.TempDir(), "import.sav")
+	encoded, err := json.Marshal(validSave)
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+	if err := os.WriteFile(importPath, encoded, 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	if err := integration.ImportSave(importPath); err != nil {
+		t.Fatalf("ImportSave() error = %v", err)
+	}
+	if err := integration.LoadGame(); err != nil {
+		t.Fatalf("LoadGame() error after import = %v", err)
+	}
+}
+
 func TestSaveGameIntegrationRejectsMalformedSaveWithoutReplacingState(t *testing.T) {
 	logger.Setup()
 
@@ -618,12 +730,9 @@ func TestSaveManager_ExportImport(t *testing.T) {
 	}
 
 	// Create test save data
-	saveData := &SaveData{
-		Version:     SaveVersion,
-		GameInfo:    GameInfo{CharName: "TestPlayer", PlayTime: 100, TurnCount: 10},
-		PlayerData:  Player{Level: 5, HP: 50, MaxHP: 100, Gold: 100, Inventory: []InventoryItem{}},
-		DungeonData: Dungeon{CurrentFloor: 2},
-	}
+	saveData := createTestSaveData(t)
+	saveData.GameInfo.PlayTime = 100
+	saveData.GameInfo.TurnCount = 10
 
 	// Save file
 	if err := sm.SaveGame(saveData); err != nil {
