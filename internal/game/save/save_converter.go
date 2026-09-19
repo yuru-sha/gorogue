@@ -4,6 +4,7 @@ package save
 
 import (
 	"fmt"
+	"unicode/utf8"
 
 	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/entity"
@@ -347,7 +348,14 @@ func saveMonsterType(monsterType string) (actor.MonsterType, error) {
 	if monsterType == "" {
 		return actor.MonsterType{}, fmt.Errorf("empty monster type")
 	}
-	resolved, exists := actor.MonsterTypes[rune(monsterType[0])]
+	if !utf8.ValidString(monsterType) {
+		return actor.MonsterType{}, fmt.Errorf("invalid UTF-8 monster type")
+	}
+	runes := []rune(monsterType)
+	if len(runes) != 1 {
+		return actor.MonsterType{}, fmt.Errorf("monster type must contain exactly one rune: %q", monsterType)
+	}
+	resolved, exists := actor.MonsterTypes[runes[0]]
 	if !exists {
 		return actor.MonsterType{}, fmt.Errorf("unknown monster type: %s", monsterType)
 	}

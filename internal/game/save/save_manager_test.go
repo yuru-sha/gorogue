@@ -313,6 +313,21 @@ func TestSaveGameIntegrationRejectsMalformedSaveWithoutReplacingState(t *testing
 			expectedError: "floor 1: monster 0",
 		},
 		{
+			name: "multi-character monster type",
+			mutate: func(saveData *SaveData) {
+				saveData.DungeonData.Floors = map[int]*Floor{
+					1: {
+						FloorNumber: 1,
+						Width:       1,
+						Height:      1,
+						Tiles:       [][]Tile{{{Type: "floor"}}},
+						Monsters:    []Monster{{Type: "BLAH", AIState: "idle"}},
+					},
+				}
+			},
+			expectedError: "exactly one rune",
+		},
+		{
 			name: "truncated tile data",
 			mutate: func(saveData *SaveData) {
 				saveData.DungeonData.Floors = map[int]*Floor{
