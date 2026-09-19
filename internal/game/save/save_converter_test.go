@@ -4,6 +4,7 @@ package save
 
 import (
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -243,7 +244,7 @@ func TestSaveConverterPreservesRuntimeRandomState(t *testing.T) {
 
 	player.RandomSource().Int63()
 	level := dungeonManager.GetCurrentLevel()
-	level.ShouldGenerateSpecialRoom()
+	level.GenerateRoom()
 	if dungeonManager.RandomDraws() == 0 || level.RandomDraws() == 0 {
 		t.Fatal("test setup did not advance both runtime random sources")
 	}
@@ -259,7 +260,8 @@ func TestSaveConverterPreservesRuntimeRandomState(t *testing.T) {
 	}
 
 	expectedManagerValue := player.RandomSource().Int63()
-	expectedLevelResult := level.ShouldGenerateSpecialRoom()
+	level.GenerateRoom()
+	expectedLevelRooms := append([]*dungeon.Room(nil), level.Rooms...)
 	expectedLevelDraws := level.RandomDraws()
 
 	restoredPlayer, restoredDungeonManager, err := NewSaveConverter().FromSaveData(&persisted)
@@ -275,8 +277,9 @@ func TestSaveConverterPreservesRuntimeRandomState(t *testing.T) {
 	}
 
 	restoredLevel := restoredDungeonManager.GetCurrentLevel()
-	if got := restoredLevel.ShouldGenerateSpecialRoom(); got != expectedLevelResult {
-		t.Errorf("next level random result = %t, want %t", got, expectedLevelResult)
+	restoredLevel.GenerateRoom()
+	if !reflect.DeepEqual(restoredLevel.Rooms, expectedLevelRooms) {
+		t.Errorf("generated room layout differs after restoring random state")
 	}
 	if got := restoredLevel.RandomDraws(); got != expectedLevelDraws {
 		t.Errorf("level random draws = %d, want %d", got, expectedLevelDraws)
