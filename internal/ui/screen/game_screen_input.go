@@ -14,28 +14,33 @@ func (s *GameScreen) HandleInput(msg gruid.Msg) state.GameState {
 	keyMsg, ok := msg.(gruid.MsgKeyDown)
 	if ok {
 		// モード別の処理
+		var nextState state.GameState
 		switch s.inputMode {
 		case ModeEquip:
-			return s.handleEquipInput(keyMsg.Key)
+			nextState = s.handleEquipInput(keyMsg.Key)
 		case ModeUnequip:
-			return s.handleUnequipInput(keyMsg.Key)
+			nextState = s.handleUnequipInput(keyMsg.Key)
 		case ModeDrop:
-			return s.handleDropInput(keyMsg.Key)
+			nextState = s.handleDropInput(keyMsg.Key)
 		case ModeUse:
-			return s.handleUseInput(keyMsg.Key)
+			nextState = s.handleUseInput(keyMsg.Key)
 		case ModeQuaff:
-			return s.handleQuaffInput(keyMsg.Key)
+			nextState = s.handleQuaffInput(keyMsg.Key)
 		case ModeRead:
-			return s.handleReadInput(keyMsg.Key)
+			nextState = s.handleReadInput(keyMsg.Key)
 		case ModeEat:
-			return s.handleEatInput(keyMsg.Key)
+			nextState = s.handleEatInput(keyMsg.Key)
 		case ModeCLI:
-			return s.handleCLIInput(keyMsg.Key)
+			nextState = s.handleCLIInput(keyMsg.Key)
 		case ModeDirection:
-			return s.handleDirectionInput(keyMsg.Key)
+			nextState = s.handleDirectionInput(keyMsg.Key)
 		default: // ModeNormal
-			return s.handleNormalInput(keyMsg.Key)
+			nextState = s.handleNormalInput(keyMsg.Key)
 		}
+		if s.player != nil && !s.player.IsAlive() {
+			return state.StateGameOver
+		}
+		return nextState
 	}
 	return state.StateGame
 }

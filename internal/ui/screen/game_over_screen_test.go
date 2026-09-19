@@ -111,8 +111,8 @@ func TestGameOverScreen_MenuSelection(t *testing.T) {
 	// Test Quit
 	screen.selected = 2
 	result = screen.handleMenuSelection()
-	if result != state.StateGameOver {
-		t.Errorf("Expected StateGameOver, got %v", result)
+	if result != state.StateQuit {
+		t.Errorf("Expected StateQuit, got %v", result)
 	}
 }
 
