@@ -1,7 +1,6 @@
 package dungeon
 
 import (
-	"math/rand"
 	"strconv"
 	"testing"
 
@@ -91,97 +90,93 @@ func TestDungeonBuilderBuild(t *testing.T) {
 	}
 }
 
-func TestBuildExcludesDarkRoomGeneration(t *testing.T) {
-	darkFloors := []int{6, 10, 14, 17, 20, 23, 24}
-
-	for _, floor := range darkFloors {
+func TestBuildExcludesNonRogueSpecialGeneration(t *testing.T) {
+	for floor := 1; floor <= MaxFloors; floor++ {
 		t.Run("Floor"+strconv.Itoa(floor), func(t *testing.T) {
-			builder := NewDungeonBuilderWithRand(80, 41, floor, rand.New(rand.NewSource(42)))
-			level := builder.Build()
+			level := NewLevelWithSeed(80, 41, floor, 42)
+			if len(level.Rooms) == 0 {
+				t.Fatalf("floor %d generated no rooms", floor)
+			}
 
-			specialRooms := 0
 			for _, room := range level.Rooms {
-				if !room.IsSpecial {
-					continue
+				if room.IsSpecial {
+					t.Errorf("floor %d generated an excluded special room", floor)
 				}
-				specialRooms++
-				if room.Width != 5 || room.Height != 5 {
-					t.Errorf("special room on floor %d has size %dx%d; dark-room generation must not mark ordinary rooms as special", floor, room.Width, room.Height)
+				if !room.Connected {
+					t.Errorf("floor %d generated a disconnected room", floor)
 				}
 			}
 
-			if floor%5 != 0 {
-				if specialRooms != 0 {
-					t.Errorf("floor %d has %d special rooms from excluded dark-room generation", floor, specialRooms)
-				}
-				if len(level.Items) > len(level.Rooms) {
-					t.Errorf("floor %d has %d items for %d rooms; excluded dark-room generation must not add guaranteed items", floor, len(level.Items), len(level.Rooms))
+			upStairs, downStairs := 0, 0
+			for y := 0; y < level.Height; y++ {
+				for x := 0; x < level.Width; x++ {
+					switch level.GetTile(x, y).Type {
+					case TileStairsUp:
+						upStairs++
+					case TileStairsDown:
+						downStairs++
+					case TileSecretDoor:
+						t.Errorf("floor %d generated an excluded secret door at (%d,%d)", floor, x, y)
+					}
 				}
 			}
+			if floor > 1 && upStairs != 1 {
+				t.Errorf("floor %d has %d up stairs, want 1", floor, upStairs)
+			}
+			if floor < MaxFloors && downStairs != 1 {
+				t.Errorf("floor %d has %d down stairs, want 1", floor, downStairs)
+			}
+			assertWalkableTilesReachable(t, level)
 		})
 	}
 }
 
-func TestDungeonBuilderRoomGeneration(t *testing.T) {
-	builder := NewDungeonBuilder(80, 41, 1)
-	builder.generateRooms()
-
-	if len(builder.level.Rooms) == 0 {
-		t.Error("No rooms were generated")
+func assertWalkableTilesReachable(t *testing.T, level *Level) {
+	t.Helper()
+	passable := func(tileType TileType) bool {
+		switch tileType {
+		case TileFloor, TileDoor, TileDoorClosed, TileDoorOpen, TileOpenDoor, TileStairsUp, TileStairsDown:
+			return true
+		default:
+			return false
+		}
 	}
 
-	for i, room := range builder.level.Rooms {
-		// 部屋のサイズチェック
-		if room.Width < MinRoomSize || room.Width > MaxRoomSize {
-			t.Errorf("Room %d width %d is out of range [%d, %d]", i, room.Width, MinRoomSize, MaxRoomSize)
-		}
-
-		if room.Height < MinRoomSize || room.Height > MaxRoomSize {
-			t.Errorf("Room %d height %d is out of range [%d, %d]", i, room.Height, MinRoomSize, MaxRoomSize)
-		}
-
-		// 部屋の位置チェック
-		if room.X < 1 || room.X+room.Width >= builder.level.Width-1 {
-			t.Errorf("Room %d X position %d is out of bounds", i, room.X)
-		}
-
-		if room.Y < 1 || room.Y+room.Height >= builder.level.Height-1 {
-			t.Errorf("Room %d Y position %d is out of bounds", i, room.Y)
-		}
-
-		// 部屋内が床タイルかチェック
-		for y := room.Y; y < room.Y+room.Height; y++ {
-			for x := room.X; x < room.X+room.Width; x++ {
-				if builder.level.GetTile(x, y).Type != TileFloor {
-					t.Errorf("Room %d contains non-floor tile at (%d, %d)", i, x, y)
+	var start Position
+	passableCount := 0
+	for y := 0; y < level.Height; y++ {
+		for x := 0; x < level.Width; x++ {
+			if passable(level.GetTile(x, y).Type) {
+				if passableCount == 0 {
+					start = Position{X: x, Y: y}
 				}
+				passableCount++
 			}
 		}
 	}
-}
 
-func TestDungeonBuilderSpecialRoomGeneration(t *testing.T) {
-	// 特別な部屋が生成される条件をテスト（5階）
-	builder := NewDungeonBuilder(80, 41, 5)
-
-	// 特別な部屋を強制的に生成
-	builder.generateRooms()
-	builder.generateSpecialRoom()
-
-	// 特別な部屋が生成されているかチェック
-	for _, room := range builder.level.Rooms {
-		if room.IsSpecial {
-			// 特別な部屋のサイズチェック（5x5）
-			if room.Width != 5 || room.Height != 5 {
-				t.Errorf("Special room size is %dx%d, expected 5x5", room.Width, room.Height)
+	visited := map[Position]bool{start: true}
+	queue := []Position{start}
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+		for _, next := range []Position{
+			{X: current.X - 1, Y: current.Y},
+			{X: current.X + 1, Y: current.Y},
+			{X: current.X, Y: current.Y - 1},
+			{X: current.X, Y: current.Y + 1},
+		} {
+			if !level.IsInBounds(next.X, next.Y) || visited[next] || !passable(level.GetTile(next.X, next.Y).Type) {
+				continue
 			}
-
-			break
+			visited[next] = true
+			queue = append(queue, next)
 		}
 	}
 
-	// 5階では特別な部屋が生成される可能性があるが、ランダムなので必ずしも生成されるとは限らない
-	// このテストは特別な部屋の生成機能が動作することを確認するためのものです
+	if len(visited) != passableCount {
+		t.Errorf("level has %d unreachable walkable tiles", passableCount-len(visited))
+	}
 }
 
 func TestDungeonBuilderStairPlacement(t *testing.T) {

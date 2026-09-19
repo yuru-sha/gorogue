@@ -138,7 +138,7 @@ func (s *MenuScreen) handleMenuSelection() state.GameState {
 		return state.StateHelp
 	case "Quit":
 		logger.Info("Quit selected from menu")
-		return state.StateGameOver
+		return state.StateQuit
 	}
 	return state.StateMenu
 }

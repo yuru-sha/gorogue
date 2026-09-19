@@ -121,9 +121,6 @@ func (l *Level) Generate() {
 	// 部屋の接続
 	l.ConnectRooms()
 
-	// 特別な部屋の生成
-	l.GenerateSpecialRoom()
-
 	// 階段の配置
 	l.PlaceStairs()
 
@@ -342,22 +339,6 @@ func (l *Level) AddRoom(room *Room) {
 	)
 }
 
-// IsSpecialFloor returns whether this floor should have a special room
-func (l *Level) IsSpecialFloor() bool {
-	return l.FloorNumber%5 == 0
-}
-
-// ShouldGenerateSpecialRoom returns whether a special room should be generated
-func (l *Level) ShouldGenerateSpecialRoom() bool {
-	shouldGenerate := l.IsSpecialFloor() && l.random().Float64() < 0.10 // 10% chance
-	if shouldGenerate {
-		logger.Info("Special room generation triggered",
-			"floor", l.FloorNumber,
-		)
-	}
-	return shouldGenerate
-}
-
 // Helper functions
 func minInt(a, b int) int {
 	if a < b {
@@ -560,118 +541,6 @@ func (l *Level) RemoveDeadMonsters() {
 		}
 	}
 	l.Monsters = aliveMonsters
-}
-
-// GenerateSpecialRoom generates a special room
-func (l *Level) GenerateSpecialRoom() {
-	// 1階では特別な部屋を生成しない
-	if l.FloorNumber <= 1 {
-		return
-	}
-
-	// 5階ごとに1つの特別な部屋を生成
-	if l.FloorNumber%5 != 0 {
-		return
-	}
-
-	// 10%の確率で特別な部屋を生成
-	if l.random().Float64() > 0.1 {
-		return
-	}
-
-	// 既に特別な部屋が存在する場合は生成しない
-	for _, room := range l.Rooms {
-		if room.IsSpecial {
-			return
-		}
-	}
-
-	// 5x5の特別な部屋を生成
-	for attempts := 0; attempts < 100; attempts++ {
-		x := 1 + l.random().Intn(l.Width-7)  // 5x5の部屋 + 周囲1マス
-		y := 1 + l.random().Intn(l.Height-7) // 5x5の部屋 + 周囲1マス
-
-		if l.CanPlaceRoom(x, y, 5, 5) {
-			room := &Room{
-				X:         x,
-				Y:         y,
-				Width:     5,
-				Height:    5,
-				IsSpecial: true,
-			}
-			l.AddRoom(room)
-
-			// 隠し扉を配置
-			l.PlaceSecretDoor(room)
-
-			// 部屋の内容を生成
-			l.PopulateSpecialRoom(room)
-
-			logger.Info("Generated special room",
-				"floor", l.FloorNumber,
-				"x", x,
-				"y", y,
-			)
-			return
-		}
-	}
-}
-
-// PlaceSecretDoor places a secret door for a special room
-func (l *Level) PlaceSecretDoor(room *Room) {
-	// 部屋の4辺のいずれかにランダムに隠し扉を配置
-	side := l.random().Intn(4)
-	var x, y int
-
-	switch side {
-	case 0: // 上辺
-		x = room.X + l.random().Intn(room.Width)
-		y = room.Y - 1
-	case 1: // 右辺
-		x = room.X + room.Width
-		y = room.Y + l.random().Intn(room.Height)
-	case 2: // 下辺
-		x = room.X + l.random().Intn(room.Width)
-		y = room.Y + room.Height
-	case 3: // 左辺
-		x = room.X - 1
-		y = room.Y + l.random().Intn(room.Height)
-	}
-
-	if l.IsInBounds(x, y) {
-		l.SetTile(x, y, TileSecretDoor)
-		logger.Debug("Placed secret door",
-			"x", x,
-			"y", y,
-		)
-	}
-}
-
-// PopulateSpecialRoom populates a special room with content
-func (l *Level) PopulateSpecialRoom(room *Room) {
-	// 部屋の種類をランダムに決定
-	roomType := l.random().Intn(6)
-
-	switch roomType {
-	case 0: // 宝物庫
-		logger.Info("Generating treasure vault")
-		// TODO: 宝物を配置
-	case 1: // 武器庫
-		logger.Info("Generating armory")
-		// TODO: 武器を配置
-	case 2: // 食料庫
-		logger.Info("Generating food storage")
-		// TODO: 食料を配置
-	case 3: // 魔物のねぐら
-		logger.Info("Generating monster lair")
-		// TODO: モンスターを配置
-	case 4: // 実験室
-		logger.Info("Generating laboratory")
-		// TODO: 薬を配置
-	case 5: // 図書室
-		logger.Info("Generating library")
-		// TODO: 巻物を配置
-	}
 }
 
 // SpawnItems spawns items in the level

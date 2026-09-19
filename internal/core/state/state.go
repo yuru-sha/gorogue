@@ -14,6 +14,7 @@ const (
 	StateSaveLoad
 	StateVictory
 	StateSymbol
+	StateQuit
 )
 
 // State represents a game state interface
@@ -55,7 +56,7 @@ func (sm *StateManager) SetState(state GameState) {
 func (sm *StateManager) HandleInput(msg gruid.Msg) gruid.Effect {
 	if handler, exists := sm.states[sm.currentState]; exists {
 		sm.currentState = handler.HandleInput(msg)
-		if sm.currentState == StateGameOver {
+		if sm.currentState == StateQuit {
 			return gruid.End()
 		}
 	}

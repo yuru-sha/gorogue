@@ -226,6 +226,11 @@ func TestVictoryCondition(t *testing.T) {
 		if len(upStairs) != 1 || len(downStairs) != 1 {
 			t.Fatalf("expected one up and down stair, got %d and %d", len(upStairs), len(downStairs))
 		}
+		expectedUp := Position{X: 7, Y: 11}
+		expectedDown := Position{X: 75, Y: 9}
+		if upStairs[0] != expectedUp || downStairs[0] != expectedDown {
+			t.Fatalf("expected surface stairs at up=%+v and down=%+v, got up=%+v and down=%+v", expectedUp, expectedDown, upStairs[0], downStairs[0])
+		}
 
 		player.Position.X = downStairs[0].X
 		player.Position.Y = downStairs[0].Y
