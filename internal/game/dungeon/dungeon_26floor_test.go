@@ -201,7 +201,7 @@ func TestAmuletOfYendor(t *testing.T) {
 
 func TestVictoryCondition(t *testing.T) {
 	player := actor.NewPlayer(10, 10)
-	dm := NewDungeonManagerWithSeed(player, 42)
+	dm := NewDungeonManagerWithSeed(player, 28)
 
 	t.Run("NoVictoryWithoutAmulet", func(t *testing.T) {
 		dm.MoveToFloor(1)
@@ -218,7 +218,28 @@ func TestVictoryCondition(t *testing.T) {
 		amulet := item.NewAmulet(0, 0)
 		player.Inventory.AddItem(amulet)
 
-		dm.MoveToFloor(1)
+		if !dm.MoveToFloor(2) || !dm.GoUpstairs() {
+			t.Fatal("failed to return to floor 1")
+		}
+		level := dm.GetCurrentLevel()
+		upStairs, downStairs := NewStairsManager(level).GetStairPositions()
+		if len(upStairs) != 1 || len(downStairs) != 1 {
+			t.Fatalf("expected one up and down stair, got %d and %d", len(upStairs), len(downStairs))
+		}
+		expectedUp := Position{X: 7, Y: 11}
+		expectedDown := Position{X: 75, Y: 9}
+		if upStairs[0] != expectedUp || downStairs[0] != expectedDown {
+			t.Fatalf("expected surface stairs at up=%+v and down=%+v, got up=%+v and down=%+v", expectedUp, expectedDown, upStairs[0], downStairs[0])
+		}
+
+		player.Position.X = downStairs[0].X
+		player.Position.Y = downStairs[0].Y
+		if dm.CheckVictoryCondition() {
+			t.Error("player should not win away from the surface exit")
+		}
+
+		player.Position.X = upStairs[0].X
+		player.Position.Y = upStairs[0].Y
 		if !dm.CanEscapeWithAmulet() {
 			t.Error("Player should be able to escape with amulet on floor 1")
 		}
