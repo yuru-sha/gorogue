@@ -58,6 +58,7 @@ func NewEngineWithSeed(seed int64) *Engine {
 		logger.Warn("Failed to initialize save integration", "error", err)
 	}
 	saveIntegration.SetGameState(player, dungeonManager)
+	saveIntegration.SetGameInfo(save.GameInfo{Seed: seed})
 
 	// プレイヤーを最初の部屋の中央に配置
 	level := dungeonManager.GetCurrentLevel()
@@ -142,13 +143,59 @@ func (e *Engine) Update(msg gruid.Msg) gruid.Effect {
 		return nil
 	case gruid.MsgKeyDown:
 		// キー入力の処理
-		return e.stateManager.HandleInput(msg)
+		previousState := e.stateManager.GetCurrentState()
+		effect := e.stateManager.HandleInput(msg)
+		switch {
+		case previousState == state.StateGame && e.stateManager.GetCurrentState() == state.StateGameOver:
+			e.showGameOver()
+		case previousState == state.StateGameOver && e.stateManager.GetCurrentState() == state.StateGame:
+			e.restartGame()
+		case previousState == state.StateMenu && e.stateManager.GetCurrentState() == state.StateGame:
+			e.restartGame()
+		}
+		return effect
 	case gruid.MsgQuit:
 		// 終了処理
 		return gruid.End()
 	}
 
 	return nil
+}
+
+func (e *Engine) showGameOver() {
+	if e.saveIntegration == nil || e.player == nil {
+		e.ShowGameOver(nil)
+		return
+	}
+
+	statsManager := e.saveIntegration.GetGameStats()
+	stats := statsManager.GetStats()
+	gameInfo := e.saveIntegration.GetGameInfo()
+	gameInfo.PlayTime = statsManager.GetPlayTime()
+	scoreEntry := score.NewScoreCalculator().CreateScoreEntry(
+		gameInfo.CharName,
+		e.player,
+		&stats,
+		&gameInfo,
+		false,
+		stats.LastDeathReason,
+	)
+	e.ShowGameOver(&scoreEntry)
+}
+
+func (e *Engine) restartGame() {
+	if err := e.saveIntegration.CreateNewGame("", e.saveIntegration.GetGameInfo().Seed); err != nil {
+		logger.Error("Failed to restart game", "error", err)
+		e.stateManager.SetState(state.StateGameOver)
+		return
+	}
+
+	e.player, e.dungeonManager = e.saveIntegration.GetGameState()
+	e.gameScreen = uiscreen.NewGameScreen(screenWidth, screenHeight, e.player)
+	e.gameScreen.SetLevel(e.dungeonManager.GetCurrentLevel())
+	e.gameScreen.SetDungeonManager(e.dungeonManager)
+	e.gameScreen.SetSaveIntegration(e.saveIntegration)
+	e.stateManager.RegisterState(state.StateGame, e.gameScreen)
 }
 
 // Draw implements gruid.Model.Draw
