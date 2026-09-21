@@ -47,7 +47,7 @@ func NewDungeonManagerWithSeed(player *actor.Player, seed int64) *DungeonManager
 
 	// 最初のレベルを生成
 	dm.generateLevel(1)
-	dm.setPlayerPositionOnFloorChange(1)
+	dm.setPlayerPositionOnFloorChange(1, TileStairsUp)
 	dm.GetCurrentLevel().UpdateVisibility(player.Position.X, player.Position.Y)
 
 	logger.Info("Created dungeon manager",
@@ -159,10 +159,14 @@ func (dm *DungeonManager) MoveToFloor(targetFloor int) bool {
 		dm.generateLevel(targetFloor)
 	}
 
+	arrivalStairs := TileStairsUp
+	if targetFloor < dm.currentFloor {
+		arrivalStairs = TileStairsDown
+	}
 	dm.currentFloor = targetFloor
 
 	// プレイヤーの位置を適切な階段に設定
-	dm.setPlayerPositionOnFloorChange(targetFloor)
+	dm.setPlayerPositionOnFloorChange(targetFloor, arrivalStairs)
 	dm.GetCurrentLevel().UpdateVisibility(dm.player.Position.X, dm.player.Position.Y)
 
 	logger.Info("Moved to floor",
@@ -175,7 +179,7 @@ func (dm *DungeonManager) MoveToFloor(targetFloor int) bool {
 }
 
 // setPlayerPositionOnFloorChange sets the player position when changing floors
-func (dm *DungeonManager) setPlayerPositionOnFloorChange(floor int) {
+func (dm *DungeonManager) setPlayerPositionOnFloorChange(floor int, stairType TileType) {
 	level := dm.levels[floor]
 	if len(level.Rooms) == 0 {
 		return
@@ -186,7 +190,7 @@ func (dm *DungeonManager) setPlayerPositionOnFloorChange(floor int) {
 	for y := 0; y < level.Height; y++ {
 		for x := 0; x < level.Width; x++ {
 			tile := level.GetTile(x, y)
-			if tile != nil && (tile.Type == TileStairsUp || tile.Type == TileStairsDown) {
+			if tile != nil && tile.Type == stairType {
 				stairPos = &Position{X: x, Y: y}
 				break
 			}
