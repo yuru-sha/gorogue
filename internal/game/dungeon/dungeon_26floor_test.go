@@ -213,7 +213,7 @@ func TestVictoryCondition(t *testing.T) {
 		}
 	})
 
-	t.Run("VictoryWithAmulet", func(t *testing.T) {
+	t.Run("NoVictoryUntilSurfaceExit", func(t *testing.T) {
 		// プレイヤーのインベントリにAmulet of Yendorを追加
 		amulet := item.NewAmulet(0, 0)
 		player.Inventory.AddItem(amulet)
@@ -226,28 +226,17 @@ func TestVictoryCondition(t *testing.T) {
 		if len(upStairs) != 1 || len(downStairs) != 1 {
 			t.Fatalf("expected one up and down stair, got %d and %d", len(upStairs), len(downStairs))
 		}
-		expectedUp := Position{X: 7, Y: 11}
-		expectedDown := Position{X: 75, Y: 9}
-		if upStairs[0] != expectedUp || downStairs[0] != expectedDown {
-			t.Fatalf("expected surface stairs at up=%+v and down=%+v, got up=%+v and down=%+v", expectedUp, expectedDown, upStairs[0], downStairs[0])
+		if player.Position.X != downStairs[0].X || player.Position.Y != downStairs[0].Y {
+			t.Fatalf("expected ascent to land on down stairs at %+v, got (%d, %d)", downStairs[0], player.Position.X, player.Position.Y)
 		}
-
-		player.Position.X = downStairs[0].X
-		player.Position.Y = downStairs[0].Y
-		if dm.CheckVictoryCondition() {
-			t.Error("player should not win away from the surface exit")
-		}
-
-		player.Position.X = upStairs[0].X
-		player.Position.Y = upStairs[0].Y
 		if !dm.CanEscapeWithAmulet() {
 			t.Error("Player should be able to escape with amulet on floor 1")
 		}
 		if !dm.PlayerHasAmulet() {
 			t.Error("Player should have amulet in inventory")
 		}
-		if !dm.CheckVictoryCondition() {
-			t.Error("Player should win from the surface exit with the amulet")
+		if dm.CheckVictoryCondition() {
+			t.Error("player should not win before reaching the surface exit")
 		}
 	})
 }
