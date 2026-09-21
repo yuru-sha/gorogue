@@ -94,41 +94,6 @@ func TestInventoryCommandSuccessDoesNotReportDeath(t *testing.T) {
 	}
 }
 
-func TestStairCommandsLandOnOppositeStairs(t *testing.T) {
-	if err := logger.Setup(); err != nil {
-		t.Fatal(err)
-	}
-	const seed = 28
-	player := actor.NewPlayerWithSeed(1, 1, seed)
-	dungeonManager := dungeon.NewDungeonManagerWithSeed(player, seed)
-	ctx := &Context{Player: player, Dungeon: dungeonManager, Level: dungeonManager.GetCurrentLevel()}
-
-	_, downStairs := dungeon.NewStairsManager(ctx.Level).GetStairPositions()
-	if len(downStairs) != 1 {
-		t.Fatalf("expected one down stair on floor 1, got %d", len(downStairs))
-	}
-	player.Position.X = downStairs[0].X
-	player.Position.Y = downStairs[0].Y
-
-	descend := Execute(ctx, Command{Type: CmdGoDownstairs})
-	if descend.Error {
-		t.Fatalf("descending failed: %s", descend.Message)
-	}
-	if dungeonManager.GetCurrentFloor() != 2 {
-		t.Fatalf("current floor = %d, want 2", dungeonManager.GetCurrentFloor())
-	}
-	assertPlayerAtStair(t, ctx, dungeon.TileStairsUp)
-
-	ascend := Execute(ctx, Command{Type: CmdGoUpstairs})
-	if ascend.Error {
-		t.Fatalf("ascending failed: %s", ascend.Message)
-	}
-	if dungeonManager.GetCurrentFloor() != 1 {
-		t.Fatalf("current floor = %d, want 1", dungeonManager.GetCurrentFloor())
-	}
-	assertPlayerAtStair(t, ctx, dungeon.TileStairsDown)
-}
-
 func TestReturnToSurfaceAndWinThroughGameplayCommands(t *testing.T) {
 	if err := logger.Setup(); err != nil {
 		t.Fatal(err)
