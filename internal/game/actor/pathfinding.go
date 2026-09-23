@@ -25,14 +25,14 @@ func (h NodeHeap) Swap(i, j int) {
 	h[j].Index = j
 }
 
-func (h *NodeHeap) Push(x interface{}) {
+func (h *NodeHeap) Push(x any) {
 	n := len(*h)
 	node := x.(*Node)
 	node.Index = n
 	*h = append(*h, node)
 }
 
-func (h *NodeHeap) Pop() interface{} {
+func (h *NodeHeap) Pop() any {
 	old := *h
 	n := len(old)
 	node := old[n-1]

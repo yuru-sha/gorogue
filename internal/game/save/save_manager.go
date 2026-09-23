@@ -559,7 +559,7 @@ func (sm *SaveManager) GetSaveDirectory() string {
 }
 
 // GetDetailedSaveInfo returns detailed information about the save file
-func (sm *SaveManager) GetDetailedSaveInfo() (map[string]interface{}, error) {
+func (sm *SaveManager) GetDetailedSaveInfo() (map[string]any, error) {
 	if !sm.FileExists() {
 		return nil, fmt.Errorf("save file does not exist")
 	}
@@ -580,7 +580,7 @@ func (sm *SaveManager) GetDetailedSaveInfo() (map[string]interface{}, error) {
 		checksum = "unknown"
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"char_name":    metadata.CharName,
 		"level":        metadata.Level,
 		saveFloorKey:   metadata.Floor,

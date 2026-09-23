@@ -19,11 +19,11 @@ linters:
     - gocritic
     - gocyclo
     - gomoddirectives
-    - gomodguard
     - goprintffuncname
     - gosec
     - importas
     - misspell
+    - modernize
     - noctx
     - nolintlint
     - revive

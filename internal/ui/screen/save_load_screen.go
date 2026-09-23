@@ -323,10 +323,7 @@ func (s *SaveLoadScreen) drawText(grid *gruid.Grid, x, y int, text string, color
 
 // drawCenteredText draws centered text
 func (s *SaveLoadScreen) drawCenteredText(grid *gruid.Grid, y int, text string, color gruid.Color) {
-	x := (s.width - len(text)) / 2
-	if x < 0 {
-		x = 0
-	}
+	x := max((s.width-len(text))/2, 0)
 	s.drawText(grid, x, y, text, color)
 }
 
@@ -373,8 +370,8 @@ func (s *SaveLoadScreen) IsConfirmingDelete() bool {
 }
 
 // GetStatus returns the current screen status
-func (s *SaveLoadScreen) GetStatus() map[string]interface{} {
-	return map[string]interface{}{
+func (s *SaveLoadScreen) GetStatus() map[string]any {
+	return map[string]any{
 		"mode":            s.mode,
 		"selected_option": s.selected,
 		"message":         s.message,

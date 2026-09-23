@@ -39,10 +39,10 @@ type GameScreen struct {
 	level             *dungeon.Level
 	dungeonManager    *dungeon.DungeonManager
 	messages          []string
-	lastStats         map[string]interface{} // 前回のステータス情報
-	grid              gruid.Grid             // 画面全体のグリッド
-	wizardMode        *wizard.WizardMode     // ウィザードモード
-	cliMode           *cli.CLIMode           // CLIデバッグモード
+	lastStats         map[string]any     // 前回のステータス情報
+	grid              gruid.Grid         // 画面全体のグリッド
+	wizardMode        *wizard.WizardMode // ウィザードモード
+	cliMode           *cli.CLIMode       // CLIデバッグモード
 	saveIntegration   *save.SaveGameIntegration
 	inputMode         InputMode        // 現在の入力モード
 	equippableItems   []*gameitem.Item // 装備可能アイテムリスト
@@ -59,7 +59,7 @@ func NewGameScreen(width, height int, player *actor.Player) *GameScreen {
 		height:          height,
 		player:          player,
 		messages:        make([]string, 0, 7), // 7行分のメッセージを保持
-		lastStats:       make(map[string]interface{}),
+		lastStats:       make(map[string]any),
 		grid:            gruid.NewGrid(width, height),
 		inputMode:       ModeNormal,
 		equippableItems: make([]*gameitem.Item, 0),
@@ -169,7 +169,7 @@ func (s *GameScreen) addCommandResult(result command.Result) {
 
 // AddMessage adds a message to the message log
 func (s *GameScreen) AddMessage(msg string) {
-	for _, line := range strings.Split(msg, "\n") {
+	for line := range strings.SplitSeq(msg, "\n") {
 		s.messages = append(s.messages, line)
 		if len(s.messages) > 7 {
 			s.messages = s.messages[len(s.messages)-7:]

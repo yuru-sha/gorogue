@@ -66,9 +66,6 @@ func (a *Actor) Heal(amount int) {
 
 // CalculateDamage calculates damage dealt to a target based on this actor's attack and target's defense
 func (a *Actor) CalculateDamage(targetDefense int) int {
-	damage := a.Attack - targetDefense
-	if damage < 1 {
-		damage = 1 // Minimum 1 damage
-	}
-	return damage
+	// Minimum 1 damage.
+	return max(a.Attack-targetDefense, 1)
 }

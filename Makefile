@@ -4,12 +4,12 @@
 .PHONY: setup setup-dev build run clean test lint deps dev help check-setup check-setup-dev check-golangci-lint-version check-staticcheck-version ci-checks qa-all
 
 # 設定変数
-GO_VERSION := 1.24.5
+GO_VERSION := $(shell sed -n 's/^go //p' go.mod)
 BINARY_NAME := gorogue
 BUILD_DIR := bin
 LOG_DIR := logs
-GOLANGCI_LINT_VERSION := v2.8.0
-STATICCHECK_VERSION := 2025.1.1
+GOLANGCI_LINT_VERSION := v2.13.2
+STATICCHECK_VERSION := 2026.2.1
 GO_BIN_DIR := $(shell go env GOPATH)/bin
 GOLANGCI_LINT ?= $(shell command -v golangci-lint 2>/dev/null || printf '%s\n' "$(GO_BIN_DIR)/golangci-lint")
 STATICCHECK := $(shell command -v staticcheck 2>/dev/null || printf '%s\n' "$(GO_BIN_DIR)/staticcheck")

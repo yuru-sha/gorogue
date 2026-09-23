@@ -1,6 +1,10 @@
 package dungeon
 
-import "github.com/yuru-sha/gorogue/internal/utils/logger"
+import (
+	"slices"
+
+	"github.com/yuru-sha/gorogue/internal/utils/logger"
+)
 
 // StairsManager handles stair placement in the dungeon
 type StairsManager struct {
@@ -63,9 +67,9 @@ func (s *StairsManager) placeUpStairs() {
 func (s *StairsManager) placeDownStairs() {
 	// 下り階段は最後の接続済み部屋に配置
 	var lastConnectedRoom *Room
-	for i := len(s.level.Rooms) - 1; i >= 0; i-- {
-		if s.level.Rooms[i].Connected {
-			lastConnectedRoom = s.level.Rooms[i]
+	for _, v := range slices.Backward(s.level.Rooms) {
+		if v.Connected {
+			lastConnectedRoom = v
 			break
 		}
 	}
@@ -96,7 +100,7 @@ func (s *StairsManager) placeDownStairs() {
 func (s *StairsManager) placeStairsInRoom(room *Room, stairType TileType) {
 	maxAttempts := 20
 
-	for attempts := 0; attempts < maxAttempts; attempts++ {
+	for attempts := range maxAttempts {
 		// 部屋の境界から1マス内側の範囲でランダムな位置を選択
 		x := room.X + 1 + s.level.random().Intn(room.Width-2)
 		y := room.Y + 1 + s.level.random().Intn(room.Height-2)

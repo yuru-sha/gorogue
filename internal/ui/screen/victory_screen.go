@@ -118,20 +118,14 @@ func (s *VictoryScreen) Draw(grid *gruid.Grid) {
 	titleY := 1
 	for i, line := range victoryArt {
 		if line != "" {
-			titleX := (s.width - len(line)) / 2
-			if titleX < 0 {
-				titleX = 0
-			}
+			titleX := max((s.width-len(line))/2, 0)
 			s.drawText(grid, titleX, titleY+i, line, gruid.Style{Fg: 2}) // 緑色
 		}
 	}
 
 	// 勝利メッセージ
 	victoryMsg := "Congratulations! You have retrieved the Amulet of Yendor!"
-	msgX := (s.width - len(victoryMsg)) / 2
-	if msgX < 0 {
-		msgX = 0
-	}
+	msgX := max((s.width-len(victoryMsg))/2, 0)
 	msgY := titleY + len(victoryArt) + 1
 	s.drawText(grid, msgX, msgY, victoryMsg, gruid.Style{Fg: 11}) // 明るい黄色
 
@@ -145,10 +139,7 @@ func (s *VictoryScreen) Draw(grid *gruid.Grid) {
 		}
 
 		for i, line := range scoreLines {
-			scoreX := (s.width - len(line)) / 2
-			if scoreX < 0 {
-				scoreX = 0
-			}
+			scoreX := max((s.width-len(line))/2, 0)
 			s.drawText(grid, scoreX, scoreY+i, line, colorWhite)
 		}
 
@@ -173,10 +164,7 @@ func (s *VictoryScreen) Draw(grid *gruid.Grid) {
 
 			statsLines = append(statsLines, bonusLines...)
 			for i, line := range statsLines {
-				statsX := (s.width - len(line)) / 2
-				if statsX < 0 {
-					statsX = 0
-				}
+				statsX := max((s.width-len(line))/2, 0)
 				s.drawText(grid, statsX, statsY+i, line, colorGray)
 			}
 		}
@@ -201,10 +189,7 @@ func (s *VictoryScreen) Draw(grid *gruid.Grid) {
 
 	// 操作説明の描画
 	controlsText := "↑↓:Select  Enter:Decide  Space:Stats"
-	controlsX := (s.width - len(controlsText)) / 2
-	if controlsX < 0 {
-		controlsX = 0
-	}
+	controlsX := max((s.width-len(controlsText))/2, 0)
 	controlsY := menuY + len(s.menuItems) + 2
 	s.drawText(grid, controlsX, controlsY, controlsText, colorGray)
 
@@ -241,10 +226,7 @@ func (s *VictoryScreen) calculateSpeedBonus() int {
 	maxBonus := 10000
 	penaltyPerHour := 1000
 	hours := s.scoreEntry.PlayTime / 3600
-	bonus := maxBonus - int(hours)*penaltyPerHour
-	if bonus < 0 {
-		bonus = 0
-	}
+	bonus := max(maxBonus-int(hours)*penaltyPerHour, 0)
 	return bonus
 }
 

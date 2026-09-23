@@ -13,7 +13,7 @@ cache_control: {"type": "ephemeral"}
 
 #### 実行環境
 ```yaml
-Go Version: ">=1.24.5"  # go.mod is authoritative
+Go Version: ">=1.27.0"  # go.mod is authoritative
 Platform Support:
   - macOS: ">=10.15"
   - Windows: ">=10"
@@ -30,7 +30,8 @@ Core Dependencies:
   
 
 Development Dependencies:
-  golangci-lint: "v2.8.0"
+  golangci-lint: "v2.13.2"
+  staticcheck: "2026.2.1"
   go test: "標準ライブラリ"
   go vet: "標準ライブラリ"
   gofmt: "標準ライブラリ"

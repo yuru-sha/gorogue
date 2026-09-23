@@ -199,10 +199,10 @@ func (gs *GameStats) OnLevelUp(newLevel int) {
 }
 
 // GetSummary returns a formatted summary of statistics
-func (gs *GameStats) GetSummary() map[string]interface{} {
+func (gs *GameStats) GetSummary() map[string]any {
 	playTime := gs.GetPlayTime()
 
-	return map[string]interface{}{
+	return map[string]any{
 		"play_time_seconds":   playTime,
 		"play_time_formatted": formatPlayTime(playTime),
 		"turns_taken":         gs.stats.TurnCount,
@@ -368,8 +368,8 @@ func formatPlayTime(seconds int64) string {
 }
 
 // GetDetailedReport returns a detailed statistics report
-func (gs *GameStats) GetDetailedReport() map[string]interface{} {
-	return map[string]interface{}{
+func (gs *GameStats) GetDetailedReport() map[string]any {
+	return map[string]any{
 		"summary":      gs.GetSummary(),
 		"efficiency":   gs.GetEfficiencyMetrics(),
 		"progress":     gs.GetProgressMetrics(),
@@ -441,8 +441,8 @@ func (gs *GameStats) GetScoreValue() int {
 }
 
 // Export returns statistics in exportable format
-func (gs *GameStats) Export() map[string]interface{} {
-	return map[string]interface{}{
+func (gs *GameStats) Export() map[string]any {
+	return map[string]any{
 		saveVersionKey: "1.0",
 		"timestamp":    time.Now().Unix(),
 		"play_time":    gs.GetPlayTime(),

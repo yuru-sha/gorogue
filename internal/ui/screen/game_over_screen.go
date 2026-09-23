@@ -124,10 +124,7 @@ func (s *GameOverScreen) Draw(grid *gruid.Grid) {
 	titleY := 2
 	for i, line := range gameOverArt {
 		if line != "" {
-			titleX := (s.width - len(line)) / 2
-			if titleX < 0 {
-				titleX = 0
-			}
+			titleX := max((s.width-len(line))/2, 0)
 			s.drawText(grid, titleX, titleY+i, line, gruid.Style{Fg: 1}) // 赤色
 		}
 	}
@@ -147,10 +144,7 @@ func (s *GameOverScreen) Draw(grid *gruid.Grid) {
 		}
 
 		for i, line := range scoreLines {
-			scoreX := (s.width - len(line)) / 2
-			if scoreX < 0 {
-				scoreX = 0
-			}
+			scoreX := max((s.width-len(line))/2, 0)
 			s.drawText(grid, scoreX, scoreY+i, line, colorWhite)
 		}
 
@@ -165,10 +159,7 @@ func (s *GameOverScreen) Draw(grid *gruid.Grid) {
 			}
 
 			for i, line := range statsLines {
-				statsX := (s.width - len(line)) / 2
-				if statsX < 0 {
-					statsX = 0
-				}
+				statsX := max((s.width-len(line))/2, 0)
 				s.drawText(grid, statsX, statsY+i, line, colorGray)
 			}
 		}
@@ -193,10 +184,7 @@ func (s *GameOverScreen) Draw(grid *gruid.Grid) {
 
 	// 操作説明の描画
 	controlsText := "↑↓:Select  Enter:Decide  Space:Stats"
-	controlsX := (s.width - len(controlsText)) / 2
-	if controlsX < 0 {
-		controlsX = 0
-	}
+	controlsX := max((s.width-len(controlsText))/2, 0)
 	controlsY := menuY + len(s.menuItems) + 2
 	s.drawText(grid, controlsX, controlsY, controlsText, colorGray)
 

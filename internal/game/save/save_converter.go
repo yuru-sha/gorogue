@@ -601,8 +601,8 @@ func (sc *SaveConverter) SetDetailedLogging(enabled bool) {
 }
 
 // GetConversionStats returns statistics about the conversion process
-func (sc *SaveConverter) GetConversionStats(saveData *SaveData) map[string]interface{} {
-	stats := map[string]interface{}{
+func (sc *SaveConverter) GetConversionStats(saveData *SaveData) map[string]any {
+	stats := map[string]any{
 		saveVersionKey:   saveData.Version,
 		"floors_loaded":  len(saveData.DungeonData.Floors),
 		"inventory_size": len(saveData.PlayerData.Inventory),
@@ -680,7 +680,7 @@ func (sc *SaveConverter) repairPlayerData(playerData *Player) error {
 	for i := range playerData.Inventory {
 		if playerData.Inventory[i].Slot < 0 || playerData.Inventory[i].Slot >= 26 || usedSlots[playerData.Inventory[i].Slot] {
 			// Find next available slot
-			for slot := 0; slot < 26; slot++ {
+			for slot := range 26 {
 				if !usedSlots[slot] {
 					playerData.Inventory[i].Slot = slot
 					usedSlots[slot] = true

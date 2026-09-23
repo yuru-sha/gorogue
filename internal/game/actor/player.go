@@ -124,10 +124,7 @@ func (p *Player) GainExp(amount int) {
 func (p *Player) CalculateDamage(targetDefense int) int {
 	// Base attack + equipment bonus - enemy defense
 	totalAttack := p.Attack + p.Equipment.GetAttackBonus()
-	damage := totalAttack - targetDefense
-	if damage < 1 {
-		damage = 1
-	}
+	damage := max(totalAttack-targetDefense, 1)
 	return damage
 }
 

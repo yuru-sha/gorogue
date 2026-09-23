@@ -152,10 +152,7 @@ func (s *MenuScreen) Draw(grid *gruid.Grid) {
 	titleY := 2
 	for i, line := range titleArt {
 		if line != "" { // 空行以外のみ描画
-			titleX := (s.width - len(line)) / 2
-			if titleX < 0 {
-				titleX = 0
-			}
+			titleX := max((s.width-len(line))/2, 0)
 			s.drawText(grid, titleX, titleY+i, line, colorYellow)
 		}
 	}
@@ -185,10 +182,7 @@ func (s *MenuScreen) Draw(grid *gruid.Grid) {
 
 	// PyRogue風の操作説明（下部）
 	controlsText := "Use UP/DOWN arrows to navigate, ENTER to select, ESC to quit"
-	controlsX := (s.width - len(controlsText)) / 2
-	if controlsX < 0 {
-		controlsX = 0
-	}
+	controlsX := max((s.width-len(controlsText))/2, 0)
 	controlsY := s.height - 2
 	s.drawText(grid, controlsX, controlsY, controlsText, colorGray)
 

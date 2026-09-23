@@ -247,12 +247,13 @@ func (c *CLIMode) helpCommand(args []string) string {
 	}
 
 	// Show all commands
-	result := "Available commands:\n"
+	var result strings.Builder
+	result.WriteString("Available commands:\n")
 	for name, cmd := range c.Commands {
-		result += fmt.Sprintf("  %-12s - %s\n", name, cmd.Description)
+		fmt.Fprintf(&result, "  %-12s - %s\n", name, cmd.Description)
 	}
-	result += "\nType 'help <command>' for detailed usage."
-	return result
+	result.WriteString("\nType 'help <command>' for detailed usage.")
+	return result.String()
 }
 
 // statusCommand shows player status

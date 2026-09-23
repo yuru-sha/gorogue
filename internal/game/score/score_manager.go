@@ -328,6 +328,7 @@ func (sm *ScoreManager) BackupScores() error {
 	}
 
 	// バックアップファイルに書き込み
+	//nolint:gosec // G703 treats file contents as a path; backupPath comes from the fixed score file location.
 	if err := os.WriteFile(backupPath, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write backup file: %w", err)
 	}
@@ -347,6 +348,7 @@ func (sm *ScoreManager) RestoreScores() error {
 	}
 
 	// 元ファイルに書き込み
+	//nolint:gosec // G703 treats file contents as a path; scoreFilePath comes from the fixed application location.
 	if err := os.WriteFile(sm.scoreFilePath, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write score file: %w", err)
 	}
