@@ -60,6 +60,11 @@ rtk make ci-checks  # when the development tools are installed
 
 `make ci-checks` runs `make lint` and `make test`. Run `make setup` or `make setup-dev` only when necessary, because they change dependencies, development tools, or the SDL2 environment.
 
+## Commit Messages
+
+- Follow the commit-message policy in `CONTRIBUTING.md`.
+- Do not create commits unless the user explicitly requests it.
+
 ## Git
 
 Do not reorganize, delete, or stash staged, unstaged, or untracked user changes. Add permanent fixes for review comments or verification failures to the smallest appropriate place among the tests, verification commands, and documentation.
