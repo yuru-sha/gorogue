@@ -1,8 +1,8 @@
 # GoRogue
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/yuru-sha/gorogue)
+[English](README.md) | [日本語](README.ja.md)
 
-[日本語版 README](README.ja.md)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/yuru-sha/gorogue)
 
 GoRogue is a Go implementation of the classic Rogue-style dungeon crawler. It is inspired by [PyRogue](https://github.com/yuru-sha/pyrogue) and uses [gruid](https://github.com/anaseto/gruid) with SDL2 for the graphical frontend.
 
@@ -109,3 +109,7 @@ docs/                  Architecture and development notes
 ## License
 
 MIT
+
+## GitHub Release
+
+See [docs/agents/release.md](docs/agents/release.md) for the release note format and creation procedure. The shared body template is [.github/release-notes-template.md](.github/release-notes-template.md), and the generated-note categories are managed in [.github/release.yml](.github/release.yml).

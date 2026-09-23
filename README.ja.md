@@ -1,4 +1,7 @@
 # GoRogue
+
+[English](README.md) | [日本語](README.ja.md)
+
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/yuru-sha/gorogue)
 
 Go言語とGruidライブラリを使用して実装された本格的なローグライクゲームです。[PyRogue](https://github.com/yuru-sha/pyrogue)を参考にしたオリジナルのRogue実装です。
@@ -129,3 +132,7 @@ MITライセンス
 ---
 
 [PyRogue](https://github.com/yuru-sha/pyrogue)を参考にしたGo言語によるローグライクゲーム実装プロジェクトです。
+
+## GitHub Release
+
+See [docs/agents/release.md](docs/agents/release.md) for the release note format and creation procedure. The shared body template is [.github/release-notes-template.md](.github/release-notes-template.md), and the generated-note categories are managed in [.github/release.yml](.github/release.yml).
