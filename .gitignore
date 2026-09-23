@@ -11,6 +11,7 @@
 # Project binaries in root directory
 gorogue
 gorogue-cli
+/main
 
 # Test binary, built with `go test -c`
 *.test
