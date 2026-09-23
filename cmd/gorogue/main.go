@@ -75,9 +75,9 @@ func (tm *ASCIITileManager) GetImage(cell gruid.Cell) image.Image {
 
 // gruidColorToRGBA converts gruid.Color to color.RGBA with consistent alpha
 func (tm *ASCIITileManager) gruidColorToRGBA(c gruid.Color) color.RGBA {
-	r := uint8((c >> 16) & 0xFF) //nolint:gosec // the mask limits the value to uint8 range
-	g := uint8((c >> 8) & 0xFF)  //nolint:gosec // the mask limits the value to uint8 range
-	b := uint8(c & 0xFF)         //nolint:gosec // the mask limits the value to uint8 range
+	r := uint8((c >> 16) & 0xFF)
+	g := uint8((c >> 8) & 0xFF)
+	b := uint8(c & 0xFF)
 	// Force alpha to 255 for consistent display
 	return color.RGBA{r, g, b, 255}
 }

@@ -158,7 +158,7 @@ func (mb *MazeBuilder) addComplexity() {
 	// 複雑さに応じて追加の通路を生成
 	numExtraPassages := int(float64(mb.width*mb.height) * mb.complexity * 0.01)
 
-	for i := 0; i < numExtraPassages; i++ {
+	for range numExtraPassages {
 		// ランダムな壁を選択
 		x := 1 + mb.rng.Intn(mb.width-2)
 		y := 1 + mb.rng.Intn(mb.height-2)

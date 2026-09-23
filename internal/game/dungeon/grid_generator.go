@@ -1,6 +1,10 @@
 package dungeon
 
-import "github.com/yuru-sha/gorogue/internal/utils/logger"
+import (
+	"slices"
+
+	"github.com/yuru-sha/gorogue/internal/utils/logger"
+)
 
 // GridCell represents a single cell in the 3x3 grid
 type GridCell struct {
@@ -153,8 +157,8 @@ func (g *GridGenerator) createRoomInCell(cell *GridCell) *Room {
 	}
 
 	// Fill the room with floor tiles
-	for dy := 0; dy < height; dy++ {
-		for dx := 0; dx < width; dx++ {
+	for dy := range height {
+		for dx := range width {
 			if g.level.IsInBounds(x+dx, y+dy) {
 				g.level.SetTile(x+dx, y+dy, TileFloor)
 			}
@@ -215,7 +219,7 @@ func (g *GridGenerator) connectRooms() {
 
 	// Step 4: Add some extra connections for variety (0-2 additional connections)
 	extraConnections := g.level.random().Intn(3)
-	for i := 0; i < extraConnections; i++ {
+	for range extraConnections {
 		g.addRandomConnection()
 	}
 }
@@ -326,13 +330,7 @@ func (g *GridGenerator) addRandomConnection() {
 
 	if from != to {
 		// Check if they're not already connected
-		alreadyConnected := false
-		for _, connection := range g.grid[from].Connections {
-			if connection == to {
-				alreadyConnected = true
-				break
-			}
-		}
+		alreadyConnected := slices.Contains(g.grid[from].Connections, to)
 		if !alreadyConnected {
 			g.connectCells(from, to)
 		}

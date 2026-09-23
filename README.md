@@ -22,7 +22,7 @@ Some legacy design documents describe features that are not part of the current 
 
 ## Requirements
 
-- Go 1.24.5 or later
+- Go 1.27.0 or later
 - `make`
 - `pkg-config`
 - SDL2 development libraries

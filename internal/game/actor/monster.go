@@ -3,7 +3,7 @@ package actor
 import (
 	"math"
 	"math/rand"
-	"sort"
+	"slices"
 
 	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/entity"
@@ -131,9 +131,7 @@ func GetValidMonsterTypesForFloor(floor int) []rune {
 			validTypes = append(validTypes, symbol)
 		}
 	}
-	sort.Slice(validTypes, func(i, j int) bool {
-		return validTypes[i] < validTypes[j]
-	})
+	slices.Sort(validTypes)
 	return validTypes
 }
 

@@ -45,8 +45,8 @@ func (s *GameScreen) Draw(grid *gruid.Grid) {
 }
 
 // collectCurrentStats collects current player stats for change detection
-func (s *GameScreen) collectCurrentStats() map[string]interface{} {
-	return map[string]interface{}{
+func (s *GameScreen) collectCurrentStats() map[string]any {
+	return map[string]any{
 		"level":   s.player.Level,
 		"hp":      s.player.HP,
 		"max_hp":  s.player.MaxHP,
@@ -75,7 +75,7 @@ func (s *GameScreen) logStatsChange() {
 // drawStatusLines draws the status information at the top
 func (s *GameScreen) drawStatusLines(grid *gruid.Grid) {
 	currentFloor := 1
-	floorInfo := map[string]interface{}{}
+	floorInfo := map[string]any{}
 
 	if s.dungeonManager != nil {
 		currentFloor = s.dungeonManager.GetCurrentFloor()
@@ -105,7 +105,7 @@ func (s *GameScreen) drawStatusLines(grid *gruid.Grid) {
 }
 
 // formatFloorDisplay formats the floor display with additional information
-func (s *GameScreen) formatFloorDisplay(currentFloor int, floorInfo map[string]interface{}) string {
+func (s *GameScreen) formatFloorDisplay(currentFloor int, floorInfo map[string]any) string {
 	baseDisplay := fmt.Sprintf("B%dF/26", currentFloor)
 
 	// 特別な階層の場合はマーカーを追加

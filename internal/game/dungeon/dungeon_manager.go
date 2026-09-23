@@ -1,6 +1,7 @@
 package dungeon
 
 import (
+	"maps"
 	"math/rand"
 	"time"
 
@@ -86,9 +87,7 @@ func (dm *DungeonManager) Seed() int64 {
 // FloorSeeds returns the seeds used for generated floors.
 func (dm *DungeonManager) FloorSeeds() map[int]int64 {
 	seeds := make(map[int]int64, len(dm.floorSeeds))
-	for floor, seed := range dm.floorSeeds {
-		seeds[floor] = seed
-	}
+	maps.Copy(seeds, dm.floorSeeds)
 	return seeds
 }
 
@@ -365,7 +364,7 @@ func (dm *DungeonManager) placeAmuletOn(level *Level) {
 	y := largestRoom.Y + largestRoom.Height/2
 
 	// 既にアイテムがある場合は別の位置を探す
-	for attempts := 0; attempts < 20; attempts++ {
+	for range 20 {
 		if level.GetItemAt(x, y) == nil && level.GetTile(x, y).Walkable() {
 			break
 		}
@@ -425,8 +424,8 @@ func (dm *DungeonManager) CheckVictoryCondition() bool {
 }
 
 // GetFloorInfo returns comprehensive information about the current floor
-func (dm *DungeonManager) GetFloorInfo() map[string]interface{} {
-	info := map[string]interface{}{
+func (dm *DungeonManager) GetFloorInfo() map[string]any {
+	info := map[string]any{
 		"current_floor":     dm.currentFloor,
 		"max_floors":        MaxFloors,
 		"difficulty":        dm.GetFloorDifficulty(dm.currentFloor),
@@ -449,10 +448,10 @@ func (dm *DungeonManager) GetFloorInfo() map[string]interface{} {
 }
 
 // GetProgressInfo returns progress information for the 26-floor journey
-func (dm *DungeonManager) GetProgressInfo() map[string]interface{} {
+func (dm *DungeonManager) GetProgressInfo() map[string]any {
 	progress := float64(dm.currentFloor*100) / float64(MaxFloors)
 
-	return map[string]interface{}{
+	return map[string]any{
 		"current_floor":    dm.currentFloor,
 		"max_floors":       MaxFloors,
 		"progress_percent": progress,

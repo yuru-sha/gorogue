@@ -113,7 +113,7 @@ func useScrollOfIdentify(player *actor.Player) *EffectResult {
 // useScrollOfTeleportation teleports the player to a random location
 func useScrollOfTeleportation(player *actor.Player, level *dungeon.Level) *EffectResult {
 	// Find a random walkable tile
-	for attempts := 0; attempts < 100; attempts++ {
+	for range 100 {
 		x := player.RandomSource().Intn(level.Width)
 		y := player.RandomSource().Intn(level.Height)
 

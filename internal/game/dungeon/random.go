@@ -24,7 +24,7 @@ func newTrackedRandomSourceAt(seed int64, draws uint64) (*trackedRandomSource, e
 
 	source := newTrackedRandomSource(seed)
 	// ponytail: restore by replaying the cursor; serialize the source when save-time latency matters.
-	for i := uint64(0); i < draws; i++ {
+	for range draws {
 		source.source.Uint64()
 	}
 	source.draws = draws

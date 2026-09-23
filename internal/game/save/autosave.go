@@ -302,8 +302,8 @@ func (asm *AutoSaveManager) GetAutoSaveProgress(currentTurn int) float64 {
 }
 
 // GetSettings returns the current auto-save settings
-func (asm *AutoSaveManager) GetSettings() map[string]interface{} {
-	return map[string]interface{}{
+func (asm *AutoSaveManager) GetSettings() map[string]any {
+	return map[string]any{
 		"enabled":           asm.enabled,
 		"save_interval":     asm.saveInterval,
 		"save_on_floor":     asm.saveOnFloor,
@@ -316,7 +316,7 @@ func (asm *AutoSaveManager) GetSettings() map[string]interface{} {
 }
 
 // SetSettings applies auto-save settings
-func (asm *AutoSaveManager) SetSettings(settings map[string]interface{}) {
+func (asm *AutoSaveManager) SetSettings(settings map[string]any) {
 	if enabled, ok := settings["enabled"].(bool); ok {
 		asm.enabled = enabled
 	}
@@ -345,8 +345,8 @@ func (asm *AutoSaveManager) SetSettings(settings map[string]interface{}) {
 }
 
 // GetStatus returns the current auto-save status
-func (asm *AutoSaveManager) GetStatus() map[string]interface{} {
-	status := map[string]interface{}{
+func (asm *AutoSaveManager) GetStatus() map[string]any {
+	status := map[string]any{
 		"enabled":              asm.enabled,
 		"initialized":          asm.saveManager != nil,
 		"has_auto_save":        asm.HasAutoSave(),
@@ -431,10 +431,10 @@ func (asm *AutoSaveManager) GetRecommendedInterval(playerLevel, currentFloor int
 }
 
 // GetStatistics returns auto-save statistics
-func (asm *AutoSaveManager) GetStatistics() map[string]interface{} {
+func (asm *AutoSaveManager) GetStatistics() map[string]any {
 	timeSinceLastSave := asm.GetTimeSinceLastSave()
 
-	return map[string]interface{}{
+	return map[string]any{
 		"total_auto_saves":             asm.lastSaveTurn / asm.saveInterval, // Approximate
 		autoSaveLastTurnKey:            asm.lastSaveTurn,
 		"save_interval":                asm.saveInterval,
@@ -446,8 +446,8 @@ func (asm *AutoSaveManager) GetStatistics() map[string]interface{} {
 }
 
 // Export exports auto-save settings for backup
-func (asm *AutoSaveManager) Export() map[string]interface{} {
-	return map[string]interface{}{
+func (asm *AutoSaveManager) Export() map[string]any {
+	return map[string]any{
 		saveVersionKey: "1.0",
 		"timestamp":    time.Now().Unix(),
 		"settings":     asm.GetSettings(),
@@ -457,8 +457,8 @@ func (asm *AutoSaveManager) Export() map[string]interface{} {
 }
 
 // Import imports auto-save settings from backup
-func (asm *AutoSaveManager) Import(data map[string]interface{}) error {
-	if settings, ok := data["settings"].(map[string]interface{}); ok {
+func (asm *AutoSaveManager) Import(data map[string]any) error {
+	if settings, ok := data["settings"].(map[string]any); ok {
 		asm.SetSettings(settings)
 	}
 

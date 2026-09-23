@@ -206,13 +206,9 @@ func (sc *ScoreCalculator) CalculateScoreWithBreakdown(player *actor.Player, sta
 	}
 
 	// 総合スコア計算
-	totalScore := breakdown.BaseScore + breakdown.VictoryBonus + breakdown.FloorBonus +
-		breakdown.MonsterKillBonus + breakdown.GoldBonus + breakdown.LevelBonus +
-		breakdown.SurvivalBonus + breakdown.EfficiencyBonus - breakdown.TimePenalty
-
-	if totalScore < 0 {
-		totalScore = 0
-	}
+	totalScore := max(breakdown.BaseScore+breakdown.VictoryBonus+breakdown.FloorBonus+
+		breakdown.MonsterKillBonus+breakdown.GoldBonus+breakdown.LevelBonus+
+		breakdown.SurvivalBonus+breakdown.EfficiencyBonus-breakdown.TimePenalty, 0)
 
 	breakdown.TotalScore = totalScore
 

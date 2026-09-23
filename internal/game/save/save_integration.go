@@ -379,8 +379,8 @@ func (sgi *SaveGameIntegration) Validate() error {
 }
 
 // GetStatus returns the current save system status
-func (sgi *SaveGameIntegration) GetStatus() map[string]interface{} {
-	status := map[string]interface{}{
+func (sgi *SaveGameIntegration) GetStatus() map[string]any {
+	status := map[string]any{
 		"initialized":       sgi.Validate() == nil,
 		"has_game_state":    sgi.player != nil && sgi.dungeonManager != nil,
 		"auto_save_enabled": sgi.settings.AutoSave,

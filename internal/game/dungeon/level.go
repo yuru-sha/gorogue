@@ -114,7 +114,7 @@ func (l *Level) SetRandomDraws(draws uint64) error {
 func (l *Level) Generate() {
 	// 部屋の生成
 	numRooms := MinRooms + l.random().Intn(MaxRooms-MinRooms+1)
-	for i := 0; i < numRooms; i++ {
+	for range numRooms {
 		l.GenerateRoom()
 	}
 
@@ -140,7 +140,7 @@ func (l *Level) Generate() {
 
 // GenerateRoom generates a single room
 func (l *Level) GenerateRoom() {
-	for attempts := 0; attempts < 100; attempts++ {
+	for range 100 {
 		width := MinRoomSize + l.random().Intn(MaxRoomSize-MinRoomSize+1)
 		height := MinRoomSize + l.random().Intn(MaxRoomSize-MinRoomSize+1)
 		x := 1 + l.random().Intn(l.Width-width-2)
@@ -364,12 +364,12 @@ func (l *Level) SpawnMonsters() {
 	numMonsters := l.getMonsterSpawnCount()
 
 	// 各部屋にモンスターを配置
-	for i := 0; i < numMonsters; i++ {
+	for range numMonsters {
 		maxAttempts := 50
 		placed := false
 		var x, y int
 
-		for attempts := 0; attempts < maxAttempts; attempts++ {
+		for range maxAttempts {
 			// ランダムな部屋を選択
 			room := l.Rooms[l.random().Intn(len(l.Rooms))]
 
@@ -572,7 +572,7 @@ func (l *Level) SpawnItems() {
 // spawnItemInRoom spawns an item in a specific room
 func (l *Level) spawnItemInRoom(room *Room) {
 	maxAttempts := 20
-	for attempts := 0; attempts < maxAttempts; attempts++ {
+	for range maxAttempts {
 		// 部屋内のランダムな位置を選択
 		x := room.X + l.random().Intn(room.Width)
 		y := room.Y + l.random().Intn(room.Height)

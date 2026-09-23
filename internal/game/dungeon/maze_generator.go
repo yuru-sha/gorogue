@@ -111,7 +111,7 @@ func (g *MazeGenerator) canCarveDirection(fromX, fromY, toX, toY int) bool {
 func (g *MazeGenerator) addRandomConnections() {
 	connectionCount := (g.level.Width * g.level.Height) / 200 // About 0.5% of total tiles
 
-	for i := 0; i < connectionCount; i++ {
+	for range connectionCount {
 		// Pick a random wall
 		x := 1 + g.level.random().Intn(g.level.Width-2)
 		y := 1 + g.level.random().Intn(g.level.Height-2)
