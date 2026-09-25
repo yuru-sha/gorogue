@@ -12,7 +12,7 @@ GoRogue is a Go and gruid implementation of the Rogue 5.4.4 text roguelike. [`SP
 - Rogue movement, combat, progression, hunger, monsters, equipment, items, effects, and identification.
 - Shared command execution for the GUI and CLI.
 - Victory requires returning the Amulet of Yendor to the surface; death is permanent.
-- JSON save format `1.4.0` stores the state required to resume a game. Older save formats are not automatically migrated.
+- JSON save format `1.5.0` stores the state required to resume a game, including per-floor hallucination stair knowledge. Older save formats are not automatically migrated.
 
 ## Controls
 

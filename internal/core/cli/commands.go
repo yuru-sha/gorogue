@@ -356,7 +356,7 @@ func (c *CLIMode) teleportCommand(args []string) string {
 	oldX, oldY := c.Player.Position.X, c.Player.Position.Y
 	c.Player.Position.X = x
 	c.Player.Position.Y = y
-	c.Level.UpdateVisibility(x, y)
+	c.Level.UpdateVisibilityForPlayer(x, y, c.Player.HallucinationTurns > 0)
 
 	return fmt.Sprintf("Teleported from (%d, %d) to (%d, %d)", oldX, oldY, x, y)
 }
@@ -491,6 +491,7 @@ func (c *CLIMode) mapCommand(args []string) string {
 				}
 			}
 		}
+		c.Level.RememberKnownStairs(c.Player.HallucinationTurns > 0)
 		return "Map revealed"
 	}
 

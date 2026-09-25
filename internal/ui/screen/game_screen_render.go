@@ -170,11 +170,31 @@ func (s *GameScreen) drawDisplayCells(grid *gruid.Grid) {
 		case displayEntityPlayer:
 			glyph, color = '@', 0xFFFFFF
 		}
+		if cell.Hallucinated {
+			glyph = hallucinationGlyph(cell.X, cell.Y, s.player.HallucinationTurns, cell.Entity == displayEntityMonster, s.level.FloorNumber)
+		}
 		grid.Set(gruid.Point{X: cell.X, Y: cell.Y + 2}, gruid.Cell{
 			Rune:  glyph,
 			Style: gruid.Style{Fg: color, Bg: 0x000000},
 		})
 	}
+}
+
+func hallucinationGlyph(x, y, turns int, monster bool, floorNumber int) rune {
+	value := int64(x+1)*6364136223846793005 ^ int64(y+1)*1442695040888963407 ^ int64(turns)*3202034522624059733
+	value ^= value >> 29
+	value *= 3037000493
+	value ^= value >> 31
+	value &= 0x7fffffffffffffff
+	if monster {
+		return rune('A' + int(value%26))
+	}
+	const objectGlyphs = "!?=/:)]%*,"
+	choices := len(objectGlyphs)
+	if floorNumber < 26 {
+		choices--
+	}
+	return rune(objectGlyphs[int(value%int64(choices))])
 }
 
 func terrainAppearance(tileType dungeon.TileType) (rune, gruid.Color) {

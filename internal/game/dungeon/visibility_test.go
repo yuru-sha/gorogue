@@ -106,3 +106,19 @@ func darkVisibilityTestLevel() (*Level, *Room) {
 	level.SetTile(0, 5, TilePassage)
 	return level, room
 }
+
+func TestUpdateVisibilityForPlayerTracksKnownStairsWithoutRendering(t *testing.T) {
+	level := visibilityTestLevel()
+	level.SetTile(2, 2, TileStairsDown)
+
+	level.UpdateVisibilityForPlayer(1, 2, true)
+	stairs := level.GetTile(2, 2)
+	if !stairs.Visible || stairs.HallucinationKnown {
+		t.Fatalf("hallucinating visibility = visible:%t known:%t, want true/false", stairs.Visible, stairs.HallucinationKnown)
+	}
+
+	level.UpdateVisibilityForPlayer(1, 2, false)
+	if !stairs.HallucinationKnown {
+		t.Fatal("sober visibility did not remember the explored stairs")
+	}
+}

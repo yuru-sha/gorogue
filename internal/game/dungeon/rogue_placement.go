@@ -212,6 +212,7 @@ func (l *Level) SearchSecrets(x, y int, blind, hallucinating bool) int {
 	}
 	if found > 0 {
 		l.UpdateVisibility(x, y)
+		l.RememberKnownStairs(hallucinating)
 	}
 	return found
 }

@@ -146,7 +146,7 @@ func executeMove(ctx *Context, direction Direction) Result {
 	oldPosition := *ctx.Player.Position
 	ctx.Player.Position.X = newX
 	ctx.Player.Position.Y = newY
-	ctx.Level.UpdateVisibility(newX, newY)
+	ctx.Level.UpdateVisibilityForPlayer(newX, newY, ctx.Player.HallucinationTurns > 0)
 	return finishPlayerMove(ctx, direction, oldPosition)
 }
 
@@ -271,7 +271,7 @@ func teleportPlayer(ctx *Context) bool {
 			continue
 		}
 		player.Position.X, player.Position.Y = x, y
-		level.UpdateVisibility(x, y)
+		level.UpdateVisibilityForPlayer(x, y, player.HallucinationTurns > 0)
 		return true
 	}
 	return false
@@ -865,7 +865,7 @@ func executeDoor(ctx *Context, cmd Command, args []string) Result {
 		switch tile.Type {
 		case dungeon.TileDoor, dungeon.TileDoorClosed:
 			ctx.Level.SetTile(targetX, targetY, dungeon.TileOpenDoor)
-			ctx.Level.UpdateVisibility(ctx.Player.Position.X, ctx.Player.Position.Y)
+			ctx.Level.UpdateVisibilityForPlayer(ctx.Player.Position.X, ctx.Player.Position.Y, ctx.Player.HallucinationTurns > 0)
 			advanceMonsters(ctx)
 			return turnResult(ctx, "You open the door.")
 		case dungeon.TileDoorOpen, dungeon.TileOpenDoor:
@@ -886,7 +886,7 @@ func executeDoor(ctx *Context, cmd Command, args []string) Result {
 			}
 		}
 		ctx.Level.SetTile(targetX, targetY, dungeon.TileDoor)
-		ctx.Level.UpdateVisibility(ctx.Player.Position.X, ctx.Player.Position.Y)
+		ctx.Level.UpdateVisibilityForPlayer(ctx.Player.Position.X, ctx.Player.Position.Y, ctx.Player.HallucinationTurns > 0)
 		advanceMonsters(ctx)
 		return turnResult(ctx, "You close the door.")
 	case dungeon.TileDoor, dungeon.TileDoorClosed:
@@ -1028,7 +1028,11 @@ func advanceMonsters(ctx *Context) {
 	} else {
 		ctx.Player.HasteSkipMonsterTurn = false
 	}
+	wasHallucinating := ctx.Player.HallucinationTurns > 0
 	ctx.Player.AdvanceStatuses()
+	if wasHallucinating && ctx.Player.HallucinationTurns == 0 && ctx.Player.Position != nil {
+		ctx.Level.UpdateVisibilityForPlayer(ctx.Player.Position.X, ctx.Player.Position.Y, false)
+	}
 	ctx.Player.UpdateHunger()
 	if ctx.Player.IsAlive() && !skipMonsterTurn {
 		ctx.Level.UpdateMonsters(ctx.Player)

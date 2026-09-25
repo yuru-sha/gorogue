@@ -65,7 +65,7 @@ func useScrollEffect(name string, player *actor.Player, level *dungeon.Level) (*
 	case "remove curse":
 		return useScrollOfRemoveCurse(player), true
 	case "magic mapping":
-		return useScrollOfMagicMapping(level), true
+		return useScrollOfMagicMapping(level, player.HallucinationTurns > 0), true
 	case "hold monster":
 		return useScrollOfHoldMonster(player, level), true
 	case "scare monster":
@@ -106,7 +106,11 @@ func UsePotion(potionName string, player *actor.Player) *EffectResult {
 // and monsters for detection potions.
 func UsePotionOnLevel(potionName string, player *actor.Player, level *dungeon.Level) *EffectResult {
 	name := strings.ToLower(strings.TrimSpace(potionName))
+	wasHallucinating := player.HallucinationTurns > 0
 	if outcome, handled := useBasicPotion(name, player); handled {
+		if wasHallucinating && player.HallucinationTurns == 0 && level != nil && player.Position != nil {
+			level.UpdateVisibilityForPlayer(player.Position.X, player.Position.Y, false)
+		}
 		return outcome
 	}
 	switch name {
@@ -209,7 +213,7 @@ func useScrollOfTeleportation(player *actor.Player, level *dungeon.Level) *Effec
 	previousRoom := roomAt(level, player.Position.X, player.Position.Y)
 	player.Held = false
 	player.Position.X, player.Position.Y = x, y
-	level.UpdateVisibility(x, y)
+	level.UpdateVisibilityForPlayer(x, y, player.HallucinationTurns > 0)
 	logger.Debug("Player teleported", "x", x, "y", y)
 	return result("You suddenly find yourself somewhere else.", true, roomAt(level, x, y) != previousRoom)
 }
@@ -251,7 +255,7 @@ func useScrollOfRemoveCurse(player *actor.Player) *EffectResult {
 	return result("You feel as if somebody is watching over you.", true, false)
 }
 
-func useScrollOfMagicMapping(level *dungeon.Level) *EffectResult {
+func useScrollOfMagicMapping(level *dungeon.Level, hallucinating bool) *EffectResult {
 	if level == nil {
 		return result("The map fades before your eyes.", false, true)
 	}
@@ -263,6 +267,7 @@ func useScrollOfMagicMapping(level *dungeon.Level) *EffectResult {
 			}
 		}
 	}
+	level.RememberKnownStairs(hallucinating)
 	return result("You see the layout of the dungeon flash before your eyes.", true, true)
 }
 
@@ -490,6 +495,7 @@ func useLightWand(name string, player *actor.Player, level *dungeon.Level) *Effe
 	}
 	if level.LightRoomAt(player.Position.X, player.Position.Y) {
 		revealCurrentRoom(level, player)
+		level.RememberKnownStairs(player.HallucinationTurns > 0)
 		return result("The room is lit by a shimmering blue light.", true, true)
 	}
 	return result("The corridor glows and then fades.", true, true)

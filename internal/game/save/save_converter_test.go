@@ -27,6 +27,7 @@ func TestSaveConverter_ConvertPlayerToSave(t *testing.T) {
 	player.Gold = 250
 	player.Exp = 800
 	player.Hunger = 75
+	player.HallucinationTurns = 10
 
 	// Add some items to inventory
 	testItem := item.NewItem(0, 0, item.ItemWeapon, "Test Sword", 100)
@@ -63,6 +64,9 @@ func TestSaveConverter_ConvertPlayerToSave(t *testing.T) {
 	if savePlayer.Hunger != 75 {
 		t.Errorf("Hunger mismatch: expected 75, got %d", savePlayer.Hunger)
 	}
+	if savePlayer.Hallucinated != 10 {
+		t.Fatalf("hallucination save state = %d, want 10", savePlayer.Hallucinated)
+	}
 
 	// Verify inventory conversion
 	if len(savePlayer.Inventory) != 1 {
@@ -80,6 +84,13 @@ func TestSaveConverter_ConvertPlayerToSave(t *testing.T) {
 		if saveItem.Value != 100 {
 			t.Errorf("Item value mismatch: expected 100, got %d", saveItem.Value)
 		}
+	}
+	restored, err := NewSaveConverter().convertSavePlayer(savePlayer, 0)
+	if err != nil {
+		t.Fatalf("convert player save: %v", err)
+	}
+	if restored.HallucinationTurns != player.HallucinationTurns {
+		t.Fatalf("restored hallucination turns = %d, want %d", restored.HallucinationTurns, player.HallucinationTurns)
 	}
 }
 
@@ -139,22 +150,26 @@ func TestSaveConverterPreservesTileVisibilityState(t *testing.T) {
 		Width:       1,
 		Height:      1,
 		FloorNumber: 1,
-		Tiles:       [][]*dungeon.Tile{{dungeon.NewTile(dungeon.TileFloor)}},
+		Tiles: [][]*dungeon.Tile{{
+			dungeon.NewTile(dungeon.TileStairsDown),
+		}},
 	}
 	level.Tiles[0][0].Explored = true
 	level.Tiles[0][0].Visible = false
+	level.Tiles[0][0].HallucinationKnown = true
 
 	saved := ConvertLevelToSave(level)
-	if !saved.Tiles[0][0].Explored || saved.Tiles[0][0].Visible {
-		t.Fatal("tile visibility state was not saved")
+	if !saved.Tiles[0][0].Explored || saved.Tiles[0][0].Visible || !saved.Tiles[0][0].HallucinationKnown {
+		t.Fatal("stair knowledge or visibility state was not saved")
 	}
 
 	restored, err := NewSaveConverter().convertSaveFloor(saved)
 	if err != nil {
 		t.Fatalf("convertSaveFloor() error = %v", err)
 	}
-	if !restored.Tiles[0][0].Explored || restored.Tiles[0][0].Visible {
-		t.Fatal("tile visibility state was not restored")
+	tile := restored.GetTile(0, 0)
+	if !tile.Explored || tile.Visible || !tile.HallucinationKnown {
+		t.Fatal("stair knowledge or visibility state was not restored")
 	}
 }
 

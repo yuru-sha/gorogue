@@ -54,7 +54,7 @@ func (sc *SaveConverter) FromSaveData(saveData *SaveData) (*actor.Player, *dunge
 		if !currentLevel.IsInBounds(player.Position.X, player.Position.Y) {
 			return nil, nil, fmt.Errorf("player position out of bounds: (%d,%d)", player.Position.X, player.Position.Y)
 		}
-		currentLevel.UpdateVisibility(player.Position.X, player.Position.Y)
+		currentLevel.UpdateVisibilityForPlayer(player.Position.X, player.Position.Y, player.HallucinationTurns > 0)
 	}
 
 	logger.Info("Successfully converted save data to game objects",
@@ -412,6 +412,7 @@ func (sc *SaveConverter) convertSaveFloor(saveFloor *Floor) (*dungeon.Level, err
 			tile := dungeon.NewTile(tileType)
 			tile.Explored = saveTile.Explored
 			tile.Visible = saveTile.Visible
+			tile.HallucinationKnown = saveTile.HallucinationKnown
 			level.Tiles[y][x] = tile
 		}
 	}
