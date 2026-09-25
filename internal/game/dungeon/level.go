@@ -1,6 +1,7 @@
 package dungeon
 
 import (
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -231,6 +232,47 @@ func (l *Level) GetMonsterAt(x, y int) *actor.Monster {
 		}
 	}
 	return nil
+}
+
+// SpawnMonsters places a monster group starting at the requested walkable tile.
+// Additional monsters use the next available walkable tiles in row-major order.
+func (l *Level) SpawnMonsters(monsterType rune, origin Position, count int, occupied Position) ([]*actor.Monster, error) {
+	x, y := origin.X, origin.Y
+	if _, ok := actor.MonsterTypes[monsterType]; !ok {
+		return nil, fmt.Errorf("unknown monster type: %c", monsterType)
+	}
+	if count <= 0 || count > l.Width*l.Height {
+		return nil, fmt.Errorf("invalid monster count")
+	}
+	if !l.IsInBounds(x, y) || !l.IsWalkable(x, y) {
+		return nil, fmt.Errorf("invalid coordinates")
+	}
+	if l.GetMonsterAt(x, y) != nil {
+		return nil, fmt.Errorf("invalid coordinates")
+	}
+
+	positions := make([]Position, 0, count)
+	for offset := 0; offset < l.Width*l.Height && len(positions) < count; offset++ {
+		index := (y*l.Width + x + offset) % (l.Width * l.Height)
+		candidateX, candidateY := index%l.Width, index/l.Width
+		if !l.IsWalkable(candidateX, candidateY) ||
+			l.GetMonsterAt(candidateX, candidateY) != nil ||
+			(candidateX == occupied.X && candidateY == occupied.Y) {
+			continue
+		}
+		positions = append(positions, Position{X: candidateX, Y: candidateY})
+	}
+	if len(positions) != count {
+		return nil, fmt.Errorf("not enough valid coordinates for %d monsters", count)
+	}
+
+	monsters := make([]*actor.Monster, 0, count)
+	for _, position := range positions {
+		monster := actor.NewMonsterWithRandAndFloor(position.X, position.Y, monsterType, l.FloorNumber, l.random())
+		monsters = append(monsters, monster)
+	}
+	l.Monsters = append(l.Monsters, monsters...)
+	return monsters, nil
 }
 
 // RemoveMonster removes a monster from the level
