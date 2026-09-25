@@ -166,7 +166,7 @@ func (w *WizardMode) teleport() string {
 
 	w.Player.Position.X = newX
 	w.Player.Position.Y = newY
-	w.Level.UpdateVisibility(newX, newY)
+	w.Level.UpdateVisibilityForPlayer(newX, newY, w.Player.HallucinationTurns > 0)
 
 	logger.Info("Wizard: Player teleported", "x", newX, "y", newY)
 	return "テレポートしました"

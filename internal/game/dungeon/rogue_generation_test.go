@@ -78,6 +78,8 @@ func TestSearchSecretsRevealsAdjacentRoguePassagesAndDoors(t *testing.T) {
 	level := emptySearchTestLevel(rand.New(testRandomSource(0)))
 	level.SetTile(1, 2, TileSecretDoor)
 	level.SetTile(3, 2, TileSecretPassage)
+	level.GetTile(2, 3).Type = TileStairsDown
+	level.GetTile(2, 3).IsWalkable = true
 
 	found := level.SearchSecrets(2, 2, false, false)
 	if found != 2 {
@@ -88,6 +90,9 @@ func TestSearchSecretsRevealsAdjacentRoguePassagesAndDoors(t *testing.T) {
 	}
 	if got := level.GetTile(3, 2).Type; got != TilePassage {
 		t.Errorf("found secret passage became %v, want ordinary passage", got)
+	}
+	if !level.GetTile(2, 3).HallucinationKnown {
+		t.Fatal("searching while sober did not remember newly visible stairs")
 	}
 }
 

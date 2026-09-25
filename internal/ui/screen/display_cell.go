@@ -20,14 +20,15 @@ const (
 
 // displayCell carries game-facing display facts without terminal glyphs or colors.
 type displayCell struct {
-	X, Y        int
-	Terrain     dungeon.TileType
-	Visible     bool
-	Explored    bool
-	Entity      displayEntityKind
-	Priority    uint8
-	ItemType    gameitem.ItemType
-	MonsterCode rune
+	X, Y         int
+	Terrain      dungeon.TileType
+	Visible      bool
+	Explored     bool
+	Entity       displayEntityKind
+	Priority     uint8
+	ItemType     gameitem.ItemType
+	MonsterCode  rune
+	Hallucinated bool
 }
 
 func convertDisplayCells(cells []displayCell, level *dungeon.Level, player *actor.Player) []displayCell {
@@ -55,7 +56,25 @@ func convertDisplayCells(cells []displayCell, level *dungeon.Level, player *acto
 	if player != nil && player.Position != nil {
 		overlayDisplayEntity(cells, level.Width, level.Height, player.Position.X, player.Position.Y, displayEntityPlayer, 4)
 	}
+	if player != nil && player.HallucinationTurns > 0 {
+		applyHallucination(cells, level)
+	}
 	return cells
+}
+
+func applyHallucination(cells []displayCell, level *dungeon.Level) {
+	for i := range cells {
+		cell := &cells[i]
+		switch cell.Entity {
+		case displayEntityItem, displayEntityMonster:
+			cell.Hallucinated = true
+		case displayEntityNone:
+			tile := level.GetTile(cell.X, cell.Y)
+			if tile != nil && (cell.Visible || cell.Explored) && !tile.HallucinationKnown && (tile.Type == dungeon.TileStairsUp || tile.Type == dungeon.TileStairsDown) {
+				cell.Hallucinated = true
+			}
+		}
+	}
 }
 
 func overlayItems(cells []displayCell, level *dungeon.Level) {

@@ -28,7 +28,7 @@ GUI ドライバーまたは端末表示
 - `internal/game/actor/`: プレイヤー、モンスター、戦闘・状態。
 - `internal/game/dungeon/`: 26 階、タイル、部屋、罠、生成、可視性、階層間移動。
 - `internal/game/item/`, `magic/`, `identification/`: アイテム定義、効果、外観、識別。
-- `internal/game/save/`: JSON 保存、読込、検証、変換。現行 `SaveVersion` は `1.4.0`。
+- `internal/game/save/`: JSON 保存、読込、検証、変換。現行 `SaveVersion` は `1.5.0`。
 - `internal/ui/screen/`: 入力画面、論理表示セルの生成、文字・色とグリッドへの描画。
 - `cmd/gorogue/`, `cmd/gorogue-cli/`: GUI と CLI の起動。
 

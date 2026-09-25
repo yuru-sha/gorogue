@@ -12,7 +12,7 @@ import (
 
 const (
 	// SaveVersion represents the save file format version
-	SaveVersion    = "1.4.0"
+	SaveVersion    = "1.5.0"
 	UNKNOWN_VALUE  = "unknown"
 	saveVersionKey = "version"
 	saveFloorKey   = "floor"
@@ -161,9 +161,10 @@ type Floor struct {
 
 // Tile stores logical terrain and explored/visible state.
 type Tile struct {
-	Type     string `json:"type"`
-	Explored bool   `json:"explored"`
-	Visible  bool   `json:"visible"`
+	Type               string `json:"type"`
+	Explored           bool   `json:"explored"`
+	Visible            bool   `json:"visible"`
+	HallucinationKnown bool   `json:"hallucination_known"`
 }
 
 // Room represents a room in the dungeon.
@@ -485,9 +486,10 @@ func ConvertLevelToSave(level *dungeon.Level) *Floor {
 			tile := level.GetTile(x, y)
 			if tile != nil {
 				saveFloor.Tiles[y][x] = Tile{
-					Type:     ConvertTileTypeToString(tile.Type),
-					Explored: tile.Explored,
-					Visible:  tile.Visible,
+					Type:               ConvertTileTypeToString(tile.Type),
+					Explored:           tile.Explored,
+					Visible:            tile.Visible,
+					HallucinationKnown: tile.HallucinationKnown,
 				}
 			}
 		}

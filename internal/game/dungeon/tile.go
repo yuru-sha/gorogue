@@ -41,10 +41,11 @@ func (t TileType) String() string {
 
 // Tile stores logical terrain and exploration state.
 type Tile struct {
-	Type       TileType
-	Visible    bool
-	Explored   bool
-	IsWalkable bool
+	Type               TileType
+	Visible            bool
+	Explored           bool
+	IsWalkable         bool
+	HallucinationKnown bool
 }
 
 // Walkable returns whether the tile can be walked on.

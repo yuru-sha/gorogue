@@ -367,6 +367,10 @@ func TestPlayerAdvanceStatusesExpiresSourceTimers(t *testing.T) {
 	if player.CanConfuse || player.CanConfuseTurns != 0 {
 		t.Fatalf("confuse-attack status remained active: %v/%d", player.CanConfuse, player.CanConfuseTurns)
 	}
+	player.AdvanceStatuses()
+	if player.HallucinationTurns != 0 {
+		t.Fatalf("hallucination turns = %d after expiry, want 0", player.HallucinationTurns)
+	}
 }
 
 func TestPlayerArmorClassAndRustUseRogueEquipmentRules(t *testing.T) {

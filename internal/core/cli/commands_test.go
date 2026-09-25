@@ -336,3 +336,39 @@ func TestCLIModeInvalidArguments(t *testing.T) {
 		})
 	}
 }
+
+func TestCLIMapRevealTracksStairKnowledgeOnlyWhenSober(t *testing.T) {
+	for _, testCase := range []struct {
+		name          string
+		hallucinating bool
+	}{
+		{name: "sober"},
+		{name: "hallucinating", hallucinating: true},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			player := actor.NewPlayer(0, 0)
+			if testCase.hallucinating {
+				player.HallucinationTurns = 5
+			}
+			level := &dungeon.Level{
+				Width:  1,
+				Height: 1,
+				Tiles: [][]*dungeon.Tile{{
+					dungeon.NewTile(dungeon.TileStairsDown),
+				}},
+			}
+			mode := NewCLIMode(level, player)
+			mode.IsActive = true
+
+			if got := mode.ExecuteCommand("map reveal"); got != "Map revealed" {
+				t.Fatalf("map reveal result = %q", got)
+			}
+			if !level.GetTile(0, 0).Visible {
+				t.Fatal("map reveal did not make stairs visible")
+			}
+			if got := level.GetTile(0, 0).HallucinationKnown; got == testCase.hallucinating {
+				t.Fatalf("stair known state = %t while hallucinating=%t", got, testCase.hallucinating)
+			}
+		})
+	}
+}

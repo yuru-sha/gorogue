@@ -73,6 +73,35 @@ func TestSourcePotionStatusesAndStrengthEffects(t *testing.T) {
 	}
 }
 
+func TestCuringPotionsEndHallucination(t *testing.T) {
+	for _, potion := range []string{"extra healing", "poison"} {
+		t.Run(potion, func(t *testing.T) {
+			if err := logger.Setup(); err != nil {
+				t.Fatal(err)
+			}
+			defer logger.Cleanup()
+			player := actor.NewPlayerWithSeed(0, 0, 17)
+			player.HallucinationTurns = 5
+			level := &dungeon.Level{
+				Width:  1,
+				Height: 1,
+				Tiles: [][]*dungeon.Tile{{
+					dungeon.NewTile(dungeon.TileStairsDown),
+				}},
+			}
+
+			UsePotionOnLevel(potion, player, level)
+
+			if player.HallucinationTurns != 0 {
+				t.Fatalf("%s left hallucination active for %d turns", potion, player.HallucinationTurns)
+			}
+			if !level.GetTile(0, 0).HallucinationKnown {
+				t.Fatalf("%s did not remember visible stairs after curing hallucination", potion)
+			}
+		})
+	}
+}
+
 func TestSourceScrollEffectsChangeGameplayState(t *testing.T) {
 	player := actor.NewPlayerWithSeed(0, 0, 55)
 	if result := UseScroll("monster confusion", player, nil); !result.Success || !player.CanConfuse {
@@ -112,6 +141,7 @@ func TestLightWandIlluminatesRoomAndUsesCharge(t *testing.T) {
 			level.Tiles[y][x] = &dungeon.Tile{Type: dungeon.TileFloor, IsWalkable: true}
 		}
 	}
+	level.GetTile(3, 3).Type = dungeon.TileStairsDown
 	wand := item.NewItem(0, 0, item.ItemWand, "light", 250)
 	wand.Charges = 1
 	result := UseWand(wand, player, level, 0, 0)
@@ -124,6 +154,9 @@ func TestLightWandIlluminatesRoomAndUsesCharge(t *testing.T) {
 				t.Errorf("light wand did not reveal room tile (%d,%d)", x, y)
 			}
 		}
+	}
+	if !level.GetTile(3, 3).HallucinationKnown {
+		t.Fatal("lighting a sober room did not remember newly visible stairs")
 	}
 }
 
@@ -150,19 +183,42 @@ func TestBoltWandHitsFirstMonsterAndStopsAtWall(t *testing.T) {
 	}
 }
 
-func TestMagicMappingRevealsEveryTile(t *testing.T) {
-	level := openTestLevel(7, 4)
-	result := UseScroll("magic mapping", actor.NewPlayerWithSeed(0, 0, 83), level)
-	if !result.Success || !result.Identified {
-		t.Fatalf("magic-mapping result = %+v", result)
+func TestMagicMappingRevealsEveryTileAndTracksKnownStairs(t *testing.T) {
+	if err := logger.Setup(); err != nil {
+		t.Fatal(err)
 	}
-	for y := range level.Height {
-		for x := range level.Width {
-			tile := level.GetTile(x, y)
-			if !tile.Visible || !tile.Explored {
-				t.Errorf("mapped tile (%d,%d) visibility = %t/%t, want visible and explored", x, y, tile.Visible, tile.Explored)
+	defer logger.Cleanup()
+	for _, testCase := range []struct {
+		name          string
+		hallucinating bool
+	}{
+		{name: "sober"},
+		{name: "hallucinating", hallucinating: true},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			level := openTestLevel(7, 4)
+			level.GetTile(1, 1).Type = dungeon.TileStairsDown
+			player := actor.NewPlayerWithSeed(0, 0, 83)
+			if testCase.hallucinating {
+				player.HallucinationTurns = 5
 			}
-		}
+
+			result := UseScroll("magic mapping", player, level)
+			if !result.Success || !result.Identified {
+				t.Fatalf("magic-mapping result = %+v", result)
+			}
+			for y := range level.Height {
+				for x := range level.Width {
+					tile := level.GetTile(x, y)
+					if !tile.Visible || !tile.Explored {
+						t.Errorf("mapped tile (%d,%d) visibility = %t/%t, want visible and explored", x, y, tile.Visible, tile.Explored)
+					}
+				}
+			}
+			if got := level.GetTile(1, 1).HallucinationKnown; got == testCase.hallucinating {
+				t.Fatalf("stair known state = %t while hallucinating=%t", got, testCase.hallucinating)
+			}
+		})
 	}
 }
 

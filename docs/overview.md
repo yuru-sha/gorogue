@@ -34,4 +34,4 @@ go vet ./...
 - `internal/game/`: アクター、ダンジョン、アイテム、魔法、セーブ。
 - `internal/ui/screen/`: 画面、論理表示セル変換、文字レンダラー。
 
-JSON セーブの現行バージョンは `1.4.0` です。詳細な責務とデータの流れは [`docs/architecture.md`](architecture.md) を参照してください。
+JSON セーブの現行バージョンは `1.5.0` です。詳細な責務とデータの流れは [`docs/architecture.md`](architecture.md) を参照してください。

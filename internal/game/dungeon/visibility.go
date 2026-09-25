@@ -42,6 +42,32 @@ func (l *Level) UpdateVisibility(x, y int) {
 	}
 }
 
+// UpdateVisibilityForPlayer updates field of view and records known stairs
+// when the player is not hallucinating.
+func (l *Level) UpdateVisibilityForPlayer(x, y int, hallucinating bool) {
+	l.UpdateVisibility(x, y)
+	l.RememberKnownStairs(hallucinating)
+}
+
+// RememberKnownStairs records explored or visible stairs when undisguised.
+func (l *Level) RememberKnownStairs(hallucinating bool) {
+	if hallucinating {
+		return
+	}
+	l.rememberKnownStairs()
+}
+
+func (l *Level) rememberKnownStairs() {
+	for y := range l.Height {
+		for x := range l.Width {
+			tile := l.GetTile(x, y)
+			if tile != nil && (tile.Type == TileStairsUp || tile.Type == TileStairsDown) && (tile.Visible || tile.Explored) {
+				tile.HallucinationKnown = true
+			}
+		}
+	}
+}
+
 // LightRoomAt permanently lights the room containing the source location.
 // Corridors only glow temporarily, so they have no stored light state.
 func (l *Level) LightRoomAt(x, y int) bool {
