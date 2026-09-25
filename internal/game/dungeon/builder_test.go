@@ -23,10 +23,6 @@ func TestNewDungeonBuilder(t *testing.T) {
 		t.Error("DungeonBuilder level is nil")
 	}
 
-	if builder.roomConnector == nil {
-		t.Error("DungeonBuilder roomConnector is nil")
-	}
-
 	if builder.level.Width != 80 {
 		t.Errorf("Level width = %d, want 80", builder.level.Width)
 	}
@@ -53,13 +49,8 @@ func TestDungeonBuilderBuild(t *testing.T) {
 		t.Error("No rooms were generated")
 	}
 
-	// BSPシステムでは部屋数が異なる（最大15部屋程度）
-	if len(level.Rooms) < 3 {
-		t.Errorf("Too few rooms: %d, expected at least 3", len(level.Rooms))
-	}
-
-	if len(level.Rooms) > 20 {
-		t.Errorf("Too many rooms: %d, expected at most 20", len(level.Rooms))
+	if len(level.Rooms) < 6 || len(level.Rooms) > 9 {
+		t.Errorf("generated %d rooms, want 6-9 source room slots", len(level.Rooms))
 	}
 
 	// 全ての部屋が接続されているかチェック
@@ -90,41 +81,20 @@ func TestDungeonBuilderBuild(t *testing.T) {
 	}
 }
 
-func TestBuildExcludesNonRogueSpecialGeneration(t *testing.T) {
+func TestRogueRoomGraphOnEveryFloor(t *testing.T) {
 	for floor := 1; floor <= MaxFloors; floor++ {
 		t.Run("Floor"+strconv.Itoa(floor), func(t *testing.T) {
 			level := NewLevelWithSeed(80, 41, floor, 42)
-			if len(level.Rooms) == 0 {
-				t.Fatalf("floor %d generated no rooms", floor)
+			if len(level.Rooms) < 6 || len(level.Rooms) > 9 {
+				t.Fatalf("floor %d generated %d rooms, want 6-9", floor, len(level.Rooms))
 			}
-
-			for _, room := range level.Rooms {
+			for i, room := range level.Rooms {
 				if room.IsSpecial {
-					t.Errorf("floor %d generated an excluded special room", floor)
+					t.Errorf("floor %d room %d is not a Rogue 5.4.4 room type", floor, i)
 				}
 				if !room.Connected {
-					t.Errorf("floor %d generated a disconnected room", floor)
+					t.Errorf("floor %d room %d is not connected", floor, i)
 				}
-			}
-
-			upStairs, downStairs := 0, 0
-			for y := 0; y < level.Height; y++ {
-				for x := 0; x < level.Width; x++ {
-					switch level.GetTile(x, y).Type {
-					case TileStairsUp:
-						upStairs++
-					case TileStairsDown:
-						downStairs++
-					case TileSecretDoor:
-						t.Errorf("floor %d generated an excluded secret door at (%d,%d)", floor, x, y)
-					}
-				}
-			}
-			if floor > 1 && upStairs != 1 {
-				t.Errorf("floor %d has %d up stairs, want 1", floor, upStairs)
-			}
-			if floor < MaxFloors && downStairs != 1 {
-				t.Errorf("floor %d has %d down stairs, want 1", floor, downStairs)
 			}
 			assertWalkableTilesReachable(t, level)
 		})
@@ -135,7 +105,7 @@ func assertWalkableTilesReachable(t *testing.T, level *Level) {
 	t.Helper()
 	passable := func(tileType TileType) bool {
 		switch tileType {
-		case TileFloor, TileDoor, TileDoorClosed, TileDoorOpen, TileOpenDoor, TileStairsUp, TileStairsDown:
+		case TileFloor, TilePassage, TileSecretPassage, TileSecretDoor, TileDoor, TileDoorClosed, TileDoorOpen, TileOpenDoor, TileStairsUp, TileStairsDown:
 			return true
 		default:
 			return false

@@ -29,11 +29,36 @@ func (l *Level) UpdateVisibility(x, y int) {
 		},
 		true,
 	)
+	room := l.roomAtPosition(x, y)
 	for _, position := range visible {
+		if room != nil && room.IsDark && (absInt(position.X-x) > 1 || absInt(position.Y-y) > 1) {
+			continue
+		}
 		tile := l.GetTile(position.X, position.Y)
 		if tile != nil {
 			tile.Visible = true
 			tile.Explored = true
 		}
 	}
+}
+
+// LightRoomAt permanently lights the room containing the source location.
+// Corridors only glow temporarily, so they have no stored light state.
+func (l *Level) LightRoomAt(x, y int) bool {
+	room := l.roomAtPosition(x, y)
+	if room == nil {
+		return false
+	}
+	room.IsDark = false
+	l.UpdateVisibility(x, y)
+	return true
+}
+
+func (l *Level) roomAtPosition(x, y int) *Room {
+	for _, room := range l.Rooms {
+		if x >= room.X && x < room.X+room.Width && y >= room.Y && y < room.Y+room.Height {
+			return room
+		}
+	}
+	return nil
 }

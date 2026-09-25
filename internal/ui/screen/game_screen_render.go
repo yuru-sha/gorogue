@@ -5,6 +5,8 @@ import (
 	"reflect"
 
 	"github.com/anaseto/gruid"
+	"github.com/yuru-sha/gorogue/internal/game/dungeon"
+	gameitem "github.com/yuru-sha/gorogue/internal/game/item"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
@@ -29,11 +31,7 @@ func (s *GameScreen) Draw(grid *gruid.Grid) {
 	// Draw status lines (top 2 rows)
 	s.drawStatusLines(grid)
 
-	// Draw dungeon
-	s.drawDungeon(grid)
-
-	// Draw entities (items, monsters, player)
-	s.drawEntities(grid)
+	s.drawDisplayCells(grid)
 
 	// Draw message log (bottom 7 rows)
 	s.drawMessageLog(grid)
@@ -150,52 +148,83 @@ func (s *GameScreen) drawEquipmentLine(grid *gruid.Grid) {
 	s.drawText(grid, 0, 1, statusLine2, gruid.Style{Fg: 0xFFFFFF, Bg: 0x000000})
 }
 
-// drawDungeon draws the dungeon tiles
-func (s *GameScreen) drawDungeon(grid *gruid.Grid) {
-	for y := 0; y < s.level.Height; y++ {
-		for x := 0; x < s.level.Width; x++ {
-			tile := s.level.GetTile(x, y)
-			if tile == nil || (!tile.Visible && !tile.Explored) {
-				continue
-			}
-			grid.Set(gruid.Point{X: x, Y: y + 2}, gruid.Cell{
-				Rune:  tile.Rune,
-				Style: gruid.Style{Fg: tile.Color, Bg: 0x000000},
-			})
+// drawDisplayCells converts game state into logical display cells, then maps
+// those cells to terminal glyphs, colors, and gruid cells.
+func (s *GameScreen) drawDisplayCells(grid *gruid.Grid) {
+	if s.level == nil {
+		return
+	}
+	s.displayCells = convertDisplayCells(s.displayCells, s.level, s.player)
+	for _, cell := range s.displayCells {
+		if !cell.Visible && !cell.Explored {
+			continue
 		}
+		glyph, color := terrainAppearance(cell.Terrain)
+		switch cell.Entity {
+		case displayEntityItem:
+			glyph, color = itemAppearance(cell.ItemType)
+		case displayEntityTrap:
+			glyph, color = '^', 0xFFFF00
+		case displayEntityMonster:
+			glyph, color = cell.MonsterCode, 0xFFFFFF
+		case displayEntityPlayer:
+			glyph, color = '@', 0xFFFFFF
+		}
+		grid.Set(gruid.Point{X: cell.X, Y: cell.Y + 2}, gruid.Cell{
+			Rune:  glyph,
+			Style: gruid.Style{Fg: color, Bg: 0x000000},
+		})
 	}
 }
 
-// drawEntities draws all entities (items, monsters, player)
-func (s *GameScreen) drawEntities(grid *gruid.Grid) {
-	// アイテムの描画（最初に描画）
-	for _, item := range s.level.Items {
-		tile := s.level.GetTile(item.Position.X, item.Position.Y)
-		if tile == nil || !tile.Visible {
-			continue
-		}
-		grid.Set(gruid.Point{X: item.Position.X, Y: item.Position.Y + 2}, gruid.Cell{
-			Rune:  item.Symbol,
-			Style: gruid.Style{Fg: item.Color, Bg: 0x000000},
-		})
+func terrainAppearance(tileType dungeon.TileType) (rune, gruid.Color) {
+	switch tileType {
+	case dungeon.TileWall, dungeon.TileSecretDoor, dungeon.TileSecretPassage:
+		return '#', 0x826E32
+	case dungeon.TileFloor:
+		return '.', 0x808080
+	case dungeon.TileDoor, dungeon.TileDoorClosed:
+		return '+', 0x8B4513
+	case dungeon.TileDoorOpen, dungeon.TileOpenDoor:
+		return '/', 0x8B4513
+	case dungeon.TileStairsUp:
+		return '<', 0xFFFFFF
+	case dungeon.TileStairsDown:
+		return '>', 0xFFFFFF
+	case dungeon.TileWater:
+		return '~', 0x00FFFF
+	case dungeon.TileLava:
+		return '^', 0xFF0000
+	case dungeon.TilePassage:
+		return '#', 0x808080
+	default:
+		return ' ', 0xFFFFFF
 	}
+}
 
-	// モンスターの描画（アイテムの上に描画）
-	for _, monster := range s.level.Monsters {
-		tile := s.level.GetTile(monster.Position.X, monster.Position.Y)
-		if monster.IsAlive() && tile != nil && tile.Visible {
-			grid.Set(gruid.Point{X: monster.Position.X, Y: monster.Position.Y + 2}, gruid.Cell{
-				Rune:  monster.Type.Symbol,
-				Style: gruid.Style{Fg: monster.Color, Bg: 0x000000},
-			})
-		}
+func itemAppearance(itemType gameitem.ItemType) (rune, gruid.Color) {
+	switch itemType {
+	case gameitem.ItemWeapon:
+		return ')', 0xC0C0C0
+	case gameitem.ItemArmor:
+		return ']', 0x8B4513
+	case gameitem.ItemRing:
+		return '=', 0xFFD700
+	case gameitem.ItemScroll:
+		return '?', 0xFFFFFF
+	case gameitem.ItemPotion:
+		return '!', 0xFF1493
+	case gameitem.ItemWand:
+		return '/', 0x8A2BE2
+	case gameitem.ItemFood:
+		return ':', 0xFFA500
+	case gameitem.ItemGold:
+		return '*', 0xFFD700
+	case gameitem.ItemAmulet:
+		return ',', 0x9400D3
+	default:
+		return '*', 0xFFFFFF
 	}
-
-	// プレイヤーの描画（最上位に描画）
-	grid.Set(gruid.Point{X: s.player.Position.X, Y: s.player.Position.Y + 2}, gruid.Cell{
-		Rune:  s.player.Symbol,
-		Style: gruid.Style{Fg: s.player.Color, Bg: 0x000000},
-	})
 }
 
 // drawMessageLog draws the message log at the bottom

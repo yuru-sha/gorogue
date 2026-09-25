@@ -12,8 +12,6 @@ import (
 const (
 	MinRoomSize = 4
 	MaxRoomSize = 10
-	MaxRooms    = 30
-	MinRooms    = 15
 )
 
 // Room represents a room in the dungeon
@@ -21,6 +19,8 @@ type Room struct {
 	X, Y          int
 	Width, Height int
 	IsSpecial     bool
+	IsDark        bool
+	IsMaze        bool
 	Connected     bool
 }
 
@@ -31,8 +31,10 @@ type Level struct {
 	Rooms         []*Room
 	FloorNumber   int
 	Seed          int64
+	NoFood        int
 	Monsters      []*actor.Monster
 	Items         []*item.Item
+	Traps         []*Trap
 	rng           *rand.Rand
 	rngSource     *trackedRandomSource
 }
@@ -44,7 +46,12 @@ func NewLevel(width, height, floorNum int) *Level {
 
 // NewLevelWithSeed creates a reproducible dungeon level.
 func NewLevelWithSeed(width, height, floorNum int, seed int64) *Level {
-	level := newLevelWithRandomSource(width, height, floorNum, newTrackedRandomSource(seed))
+	return NewLevelWithSeedAndNoFood(width, height, floorNum, seed, 0)
+}
+
+// NewLevelWithSeedAndNoFood resumes Rogue's cross-level food generation state.
+func NewLevelWithSeedAndNoFood(width, height, floorNum int, seed int64, noFood int) *Level {
+	level := newLevelWithRandomSourceAndNoFood(width, height, floorNum, newTrackedRandomSource(seed), noFood)
 	level.Seed = seed
 	return level
 }
@@ -54,30 +61,19 @@ func newRandom() *rand.Rand {
 }
 
 func newLevelWithRandomSource(width, height, floorNum int, source *trackedRandomSource) *Level {
-	var level *Level
+	return newLevelWithRandomSourceAndNoFood(width, height, floorNum, source, 0)
+}
 
-	// 特別な階層（迷路階層）のチェック
-	if floorNum == 7 || floorNum == 13 || floorNum == 19 {
-		// 迷路階層を生成
-		mazeBuilder := NewMazeBuilderWithRand(width, height, floorNum, source.rand())
-		level = mazeBuilder.Build()
-		logger.Info("Created maze level",
-			"width", width,
-			"height", height,
-			"floor", floorNum,
-			"type", "maze",
-		)
-	} else {
-		// 通常の階層を生成
-		builder := NewDungeonBuilderWithRand(width, height, floorNum, source.rand())
-		level = builder.Build()
-		logger.Debug("Created normal level",
-			"width", width,
-			"height", height,
-			"floor", floorNum,
-			"type", "normal",
-		)
-	}
+func newLevelWithRandomSourceAndNoFood(width, height, floorNum int, source *trackedRandomSource, noFood int) *Level {
+	builder := NewDungeonBuilderWithRand(width, height, floorNum, source.rand())
+	builder.level.NoFood = noFood
+	level := builder.Build()
+	logger.Debug("Created level",
+		"width", width,
+		"height", height,
+		"floor", floorNum,
+		"rooms", len(level.Rooms),
+	)
 
 	level.rngSource = source
 	return level
@@ -99,43 +95,25 @@ func (l *Level) RandomDraws() uint64 {
 	return l.rngSource.draws
 }
 
-// SetRandomDraws restores the level random source by replaying its seed cursor.
+// SetRandomDraws restores a level's deterministic random cursor.
 func (l *Level) SetRandomDraws(draws uint64) error {
-	rngSource, err := newTrackedRandomSourceAt(l.Seed, draws)
+	source, err := newTrackedRandomSourceAt(l.Seed, draws)
 	if err != nil {
 		return err
 	}
-	l.rngSource = rngSource
-	l.rng = l.rngSource.rand()
+	l.rngSource = source
+	l.rng = source.rand()
 	return nil
 }
 
-// Generate generates the dungeon layout
+// Generate runs the source level-generation flow on an initialized level.
 func (l *Level) Generate() {
-	// 部屋の生成
-	numRooms := MinRooms + l.random().Intn(MaxRooms-MinRooms+1)
-	for range numRooms {
-		l.GenerateRoom()
-	}
-
-	// 部屋の接続
-	l.ConnectRooms()
-
-	// 階段の配置
-	l.PlaceStairs()
-
-	// モンスターの配置
-	l.SpawnMonsters()
-
-	// アイテムの配置
+	slots := l.generateRogueRooms()
+	l.connectRogueRooms(&slots)
+	l.NoFood++
 	l.SpawnItems()
-
-	logger.Info("Generated dungeon level",
-		"floor", l.FloorNumber,
-		"rooms", len(l.Rooms),
-		"monsters", len(l.Monsters),
-		"items", len(l.Items),
-	)
+	l.placeRogueTraps()
+	NewStairsManager(l).PlaceStairs()
 }
 
 // GenerateRoom generates a single room
@@ -174,109 +152,6 @@ func (l *Level) CanPlaceRoom(x, y, width, height int) bool {
 		}
 	}
 	return true
-}
-
-// ConnectRooms connects all rooms with corridors
-func (l *Level) ConnectRooms() {
-	if len(l.Rooms) < 2 {
-		return
-	}
-
-	// 最初の部屋を接続済みとしてマーク
-	l.Rooms[0].Connected = true
-
-	// 残りの部屋を接続
-	for i := 1; i < len(l.Rooms); i++ {
-		room := l.Rooms[i]
-		// 最も近い接続済みの部屋を探す
-		closestRoom := l.FindClosestConnectedRoom(room)
-		if closestRoom != nil {
-			l.ConnectRoomPair(room, closestRoom)
-			room.Connected = true
-		}
-	}
-}
-
-// FindClosestConnectedRoom finds the closest connected room
-func (l *Level) FindClosestConnectedRoom(room *Room) *Room {
-	var closest *Room
-	minDist := l.Width * l.Height
-
-	for _, other := range l.Rooms {
-		if other == room || !other.Connected {
-			continue
-		}
-
-		dist := (room.X-other.X)*(room.X-other.X) + (room.Y-other.Y)*(room.Y-other.Y)
-		if dist < minDist {
-			minDist = dist
-			closest = other
-		}
-	}
-
-	return closest
-}
-
-// ConnectRoomPair connects two rooms with a corridor
-func (l *Level) ConnectRoomPair(r1, r2 *Room) {
-	// 部屋の中心点を計算
-	x1 := r1.X + r1.Width/2
-	y1 := r1.Y + r1.Height/2
-	x2 := r2.X + r2.Width/2
-	y2 := r2.Y + r2.Height/2
-
-	// L字型の通路を生成
-	if l.random().Float64() < 0.5 {
-		l.CreateHorizontalCorridor(x1, x2, y1)
-		l.CreateVerticalCorridor(y1, y2, x2)
-	} else {
-		l.CreateVerticalCorridor(y1, y2, x1)
-		l.CreateHorizontalCorridor(x1, x2, y2)
-	}
-}
-
-// CreateHorizontalCorridor creates a horizontal corridor
-func (l *Level) CreateHorizontalCorridor(x1, x2, y int) {
-	for x := minInt(x1, x2); x <= maxInt(x1, x2); x++ {
-		if l.GetTile(x, y).Type == TileWall {
-			l.SetTile(x, y, TileFloor)
-		}
-	}
-}
-
-// CreateVerticalCorridor creates a vertical corridor
-func (l *Level) CreateVerticalCorridor(y1, y2, x int) {
-	for y := minInt(y1, y2); y <= maxInt(y1, y2); y++ {
-		if l.GetTile(x, y).Type == TileWall {
-			l.SetTile(x, y, TileFloor)
-		}
-	}
-}
-
-// PlaceStairs places the stairs in the dungeon
-func (l *Level) PlaceStairs() {
-	if len(l.Rooms) == 0 {
-		return
-	}
-
-	// 上り階段は最初の部屋に配置する。1階では地上への出口になる。
-	firstRoom := l.Rooms[0]
-	l.SetTile(
-		firstRoom.X+firstRoom.Width/2,
-		firstRoom.Y+firstRoom.Height/2,
-		TileStairsUp,
-	)
-
-	// 最終階層では下り階段を配置しない
-	if l.FloorNumber < 26 {
-		// 下り階段は最後の部屋に配置
-		lastRoom := l.Rooms[len(l.Rooms)-1]
-		l.SetTile(
-			lastRoom.X+lastRoom.Width/2,
-			lastRoom.Y+lastRoom.Height/2,
-			TileStairsDown,
-		)
-	}
 }
 
 // IsInBounds checks if the given coordinates are within the level bounds
@@ -340,159 +215,12 @@ func (l *Level) AddRoom(room *Room) {
 }
 
 // Helper functions
-func minInt(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
 
 func maxInt(a, b int) int {
 	if a > b {
 		return a
 	}
 	return b
-}
-
-// SpawnMonsters spawns monsters in the dungeon
-func (l *Level) SpawnMonsters() {
-	if len(l.Rooms) == 0 {
-		return
-	}
-
-	// 階層に応じたモンスター数を計算（DungeonManagerの計算を使用）
-	numMonsters := l.getMonsterSpawnCount()
-
-	// 各部屋にモンスターを配置
-	for range numMonsters {
-		maxAttempts := 50
-		placed := false
-		var x, y int
-
-		for range maxAttempts {
-			// ランダムな部屋を選択
-			room := l.Rooms[l.random().Intn(len(l.Rooms))]
-
-			// 部屋が十分な大きさかチェック
-			if room.Width <= 2 || room.Height <= 2 {
-				continue
-			}
-
-			// 部屋内のランダムな位置を選択
-			x = room.X + 1 + l.random().Intn(room.Width-2)
-			y = room.Y + 1 + l.random().Intn(room.Height-2)
-
-			// その位置が床タイルかチェック
-			if l.GetTile(x, y).Type != TileFloor {
-				continue
-			}
-
-			// 既にモンスターがいないかチェック
-			if l.GetMonsterAt(x, y) != nil {
-				continue
-			}
-
-			// モンスターを配置
-			placed = true
-			break
-		}
-
-		if !placed {
-			logger.Debug("Failed to place monster after max attempts", "floor", l.FloorNumber, "attempts", maxAttempts)
-			continue
-		}
-
-		// 階層に応じたモンスターを選択
-		monsterType := l.selectMonsterType()
-		monster := actor.NewMonster(x, y, monsterType)
-
-		// 階層に応じた難易度スケーリング
-		l.scaleMonsterForFloor(monster)
-
-		l.Monsters = append(l.Monsters, monster)
-
-		logger.Debug("Spawned monster",
-			"type", monster.Type.Name,
-			"x", x,
-			"y", y,
-			"floor", l.FloorNumber,
-		)
-	}
-
-	logger.Info("Finished spawning monsters",
-		"total_monsters", len(l.Monsters),
-		"floor", l.FloorNumber,
-	)
-}
-
-// selectMonsterType selects a monster type based on the floor level
-// Following original Rogue's monster distribution system
-func (l *Level) selectMonsterType() rune {
-	return actor.GetRandomMonsterTypeForFloorWithRand(l.FloorNumber, l.random())
-}
-
-// getMonsterSpawnCount returns the number of monsters to spawn on this floor
-func (l *Level) getMonsterSpawnCount() int {
-	switch {
-	case l.FloorNumber <= 3:
-		return 3 + (l.FloorNumber - 1) // 3-5体
-	case l.FloorNumber <= 8:
-		return 5 + (l.FloorNumber - 4) // 5-9体
-	case l.FloorNumber <= 15:
-		return 8 + (l.FloorNumber-9)/2 // 8-11体
-	case l.FloorNumber <= 22:
-		return 12 + (l.FloorNumber-16)/3 // 12-14体
-	default:
-		return 15 + (l.FloorNumber - 23) // 15-18体
-	}
-}
-
-// getDifficultyScaling returns the difficulty scaling for this floor
-func (l *Level) getDifficultyScaling() float64 {
-	switch {
-	case l.FloorNumber <= 5:
-		return 1.0 + (float64(l.FloorNumber-1) * 0.1) // 1.0 - 1.4
-	case l.FloorNumber <= 10:
-		return 1.5 + (float64(l.FloorNumber-6) * 0.1) // 1.5 - 1.9
-	case l.FloorNumber <= 15:
-		return 2.0 + (float64(l.FloorNumber-11) * 0.1) // 2.0 - 2.4
-	case l.FloorNumber <= 20:
-		return 2.5 + (float64(l.FloorNumber-16) * 0.1) // 2.5 - 2.9
-	case l.FloorNumber <= 26:
-		return 3.0 + (float64(l.FloorNumber-21) * 0.2) // 3.0 - 4.0
-	default:
-		return 4.0 // 最大難易度
-	}
-}
-
-// scaleMonsterForFloor scales monster stats based on the floor level
-func (l *Level) scaleMonsterForFloor(monster *actor.Monster) {
-	// 新しい階層スケーリング係数を使用
-	scaleFactor := l.getDifficultyScaling()
-
-	// HP, 攻撃力, 防御力を階層に応じて強化
-	monster.MaxHP = int(float64(monster.MaxHP) * scaleFactor)
-	monster.HP = monster.MaxHP
-	monster.Attack = int(float64(monster.Attack) * scaleFactor)
-	monster.Defense = int(float64(monster.Defense) * scaleFactor)
-
-	// 深い階層では追加のボーナス（21階以上）
-	if l.FloorNumber > 20 {
-		extraBonus := float64(l.FloorNumber-20) * 0.1
-		monster.MaxHP = int(float64(monster.MaxHP) * (1.0 + extraBonus))
-		monster.HP = monster.MaxHP
-		monster.Attack = int(float64(monster.Attack) * (1.0 + extraBonus))
-		monster.Defense = int(float64(monster.Defense) * (1.0 + extraBonus))
-	}
-
-	logger.Debug("Scaled monster for floor",
-		"floor", l.FloorNumber,
-		"type", monster.Type.Name,
-		"hp", monster.HP,
-		"attack", monster.Attack,
-		"defense", monster.Defense,
-		"scale_factor", scaleFactor,
-	)
 }
 
 // GetMonsterAt returns the monster at the given coordinates
@@ -541,185 +269,6 @@ func (l *Level) RemoveDeadMonsters() {
 		}
 	}
 	l.Monsters = aliveMonsters
-}
-
-// SpawnItems spawns items in the level
-func (l *Level) SpawnItems() {
-	logger.Debug("Starting item spawning", "floor", l.FloorNumber)
-
-	// 階層に応じたアイテムスポーン確率を取得
-	itemSpawnChance := l.getItemSpawnChance()
-
-	// 各部屋にアイテムを配置
-	for _, room := range l.Rooms {
-		// 通常の部屋: 階層に応じた確率でアイテムを配置
-		if l.random().Float64() < itemSpawnChance {
-			l.spawnItemInRoom(room)
-		}
-
-		// 特別な部屋: 必ずアイテムを配置
-		if room.IsSpecial {
-			l.spawnItemInRoom(room)
-		}
-	}
-
-	logger.Info("Finished spawning items",
-		"total_items", len(l.Items),
-		"floor", l.FloorNumber,
-	)
-}
-
-// spawnItemInRoom spawns an item in a specific room
-func (l *Level) spawnItemInRoom(room *Room) {
-	maxAttempts := 20
-	for range maxAttempts {
-		// 部屋内のランダムな位置を選択
-		x := room.X + l.random().Intn(room.Width)
-		y := room.Y + l.random().Intn(room.Height)
-
-		// その位置が有効かチェック
-		if !l.IsValidItemPosition(x, y) {
-			continue
-		}
-
-		// アイテムタイプを選択
-		itemType := l.selectItemType()
-
-		// アイテムを生成
-		var newItem *item.Item
-		switch itemType {
-		case item.ItemGold:
-			newItem = item.NewGoldWithRand(x, y, room.IsSpecial, l.random())
-			// 階層に応じてゴールドの価値を調整
-			if newItem != nil {
-				newItem.Value = int(float64(newItem.Value) * (1.0 + float64(l.FloorNumber-1)*0.1))
-			}
-		case item.ItemAmulet:
-			if l.FloorNumber >= 20 { // 深い階層でのみ魔除けを生成
-				newItem = item.NewAmulet(x, y)
-			} else {
-				continue // 深い階層でない場合は別のアイテムを試す
-			}
-		default:
-			newItem = l.createRandomItem(x, y, itemType)
-			// 階層に応じてアイテムの価値を調整
-			if newItem != nil {
-				newItem.Value = int(float64(newItem.Value) * (1.0 + float64(l.FloorNumber-1)*0.05))
-			}
-		}
-
-		if newItem != nil {
-			l.Items = append(l.Items, newItem)
-			logger.Debug("Spawned item",
-				"type", newItem.Name,
-				"x", x,
-				"y", y,
-				"floor", l.FloorNumber,
-			)
-		}
-		break
-	}
-}
-
-// getItemSpawnChance returns the item spawn chance for this floor
-func (l *Level) getItemSpawnChance() float64 {
-	switch {
-	case l.FloorNumber <= 5:
-		return 0.2 + (float64(l.FloorNumber-1) * 0.02) // 20%-28%
-	case l.FloorNumber <= 10:
-		return 0.3 + (float64(l.FloorNumber-6) * 0.02) // 30%-38%
-	case l.FloorNumber <= 15:
-		return 0.4 + (float64(l.FloorNumber-11) * 0.02) // 40%-48%
-	case l.FloorNumber <= 20:
-		return 0.5 + (float64(l.FloorNumber-16) * 0.02) // 50%-58%
-	default:
-		return 0.6 + (float64(l.FloorNumber-21) * 0.02) // 60%-70%
-	}
-}
-
-// selectItemType selects an item type based on the floor level
-func (l *Level) selectItemType() item.ItemType {
-	// 階層に応じたアイテム選択（より詳細な分布）
-	switch {
-	case l.FloorNumber <= 3:
-		// 最浅階層: 基本的なアイテムのみ
-		items := []item.ItemType{item.ItemGold, item.ItemFood, item.ItemPotion}
-		weights := []float64{0.5, 0.3, 0.2} // ゴールド50%、食料30%、薬20%
-		return l.selectWeightedItem(items, weights)
-	case l.FloorNumber <= 7:
-		// 浅い階層: 基本的なアイテム
-		items := []item.ItemType{item.ItemGold, item.ItemFood, item.ItemPotion, item.ItemScroll, item.ItemWand}
-		weights := []float64{0.35, 0.25, 0.2, 0.15, 0.05} // ゴールド35%、食料25%、薬20%、巻物15%、杖5%
-		return l.selectWeightedItem(items, weights)
-	case l.FloorNumber <= 12:
-		// 中間階層: より多様なアイテム
-		items := []item.ItemType{item.ItemGold, item.ItemFood, item.ItemPotion, item.ItemScroll, item.ItemWeapon, item.ItemWand}
-		weights := []float64{0.25, 0.2, 0.2, 0.15, 0.15, 0.05} // ゴールド25%、食料20%、薬20%、巻物15%、武器15%、杖5%
-		return l.selectWeightedItem(items, weights)
-	case l.FloorNumber <= 18:
-		// 深い階層: 高価なアイテム
-		items := []item.ItemType{item.ItemGold, item.ItemWeapon, item.ItemArmor, item.ItemRing, item.ItemScroll, item.ItemPotion, item.ItemWand}
-		weights := []float64{0.22, 0.18, 0.18, 0.14, 0.1, 0.1, 0.08} // ゴールド22%、武器18%、鎧18%、指輪14%、巻物10%、薬10%、杖8%
-		return l.selectWeightedItem(items, weights)
-	case l.FloorNumber <= 25:
-		// 最深階層: 最高のアイテム
-		items := []item.ItemType{item.ItemGold, item.ItemWeapon, item.ItemArmor, item.ItemRing, item.ItemScroll, item.ItemWand}
-		weights := []float64{0.18, 0.23, 0.23, 0.18, 0.1, 0.08} // ゴールド18%、武器23%、鎧23%、指輪18%、巻物10%、杖8%
-		return l.selectWeightedItem(items, weights)
-	default:
-		// 最終階層: 最高のアイテム。魔除けは専用配置で一つだけ置く。
-		items := []item.ItemType{item.ItemGold, item.ItemWeapon, item.ItemArmor, item.ItemRing, item.ItemWand}
-		weights := []float64{0.18, 0.25, 0.25, 0.22, 0.1} // ゴールド18%、武器25%、鎧25%、指輪22%、杖10%
-		return l.selectWeightedItem(items, weights)
-	}
-}
-
-// selectWeightedItem selects an item based on weighted probabilities
-func (l *Level) selectWeightedItem(items []item.ItemType, weights []float64) item.ItemType {
-	if len(items) != len(weights) {
-		// フォールバック: 最初のアイテムを返す
-		return items[0]
-	}
-
-	totalWeight := 0.0
-	for _, weight := range weights {
-		totalWeight += weight
-	}
-
-	r := l.random().Float64() * totalWeight
-	currentWeight := 0.0
-
-	for i, weight := range weights {
-		currentWeight += weight
-		if r <= currentWeight {
-			return items[i]
-		}
-	}
-
-	// フォールバック: 最後のアイテムを返す
-	return items[len(items)-1]
-}
-
-// createRandomItem creates a random item of the specified type
-func (l *Level) createRandomItem(x, y int, itemType item.ItemType) *item.Item {
-	switch itemType {
-	case item.ItemWeapon:
-		return item.NewRandomWeaponWithRand(x, y, l.FloorNumber, l.random())
-	case item.ItemArmor:
-		return item.NewRandomArmorWithRand(x, y, l.FloorNumber, l.random())
-	case item.ItemRing:
-		return item.NewRandomRingWithRand(x, y, l.random())
-	case item.ItemScroll:
-		return item.NewRandomScrollWithRand(x, y, l.random())
-	case item.ItemPotion:
-		return item.NewRandomPotionWithRand(x, y, l.random())
-	case item.ItemFood:
-		return item.NewFoodWithRand(x, y, l.random())
-	case item.ItemWand:
-		return item.NewRandomWandWithRand(x, y, l.FloorNumber, l.random())
-	default:
-		return nil
-	}
 }
 
 // IsValidItemPosition checks if an item can be placed at the given position

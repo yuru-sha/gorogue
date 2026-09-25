@@ -3,7 +3,6 @@
 package actor
 
 import (
-	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/entity"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
@@ -17,10 +16,10 @@ type Actor struct {
 	Defense int
 }
 
-// NewActor creates a new actor with the given stats
-func NewActor(x, y int, symbol rune, color gruid.Color, hp, attack, defense int) *Actor {
+// NewActor creates an actor with source combat stats.
+func NewActor(x, y, hp, attack, defense int) *Actor {
 	return &Actor{
-		Entity:  entity.NewEntity(x, y, symbol, color),
+		Entity:  entity.NewEntity(x, y),
 		HP:      hp,
 		MaxHP:   hp,
 		Attack:  attack,
@@ -62,10 +61,4 @@ func (a *Actor) Heal(amount int) {
 		"hp_before", oldHP,
 		"hp_after", a.HP,
 	)
-}
-
-// CalculateDamage calculates damage dealt to a target based on this actor's attack and target's defense
-func (a *Actor) CalculateDamage(targetDefense int) int {
-	// Minimum 1 damage.
-	return max(a.Attack-targetDefense, 1)
 }

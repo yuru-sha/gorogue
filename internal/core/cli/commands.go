@@ -23,12 +23,13 @@ const (
 
 // CLIMode provides command-line interface for debugging and AI control
 type CLIMode struct {
-	IsActive bool
-	Level    *dungeon.Level
-	Player   *actor.Player
-	Dungeon  *dungeon.DungeonManager
-	Save     *save.SaveGameIntegration
-	Commands map[string]*Command
+	IsActive       bool
+	Level          *dungeon.Level
+	Player         *actor.Player
+	Dungeon        *dungeon.DungeonManager
+	Save           *save.SaveGameIntegration
+	Commands       map[string]*Command
+	commandSession *gamecommand.Session
 }
 
 // Command represents a CLI command
@@ -51,11 +52,12 @@ func NewCLIModeWithDungeonManager(manager *dungeon.DungeonManager, player *actor
 
 func newCLIMode(level *dungeon.Level, player *actor.Player, manager *dungeon.DungeonManager) *CLIMode {
 	cli := &CLIMode{
-		IsActive: false,
-		Level:    level,
-		Player:   player,
-		Dungeon:  manager,
-		Commands: make(map[string]*Command),
+		IsActive:       false,
+		Level:          level,
+		Player:         player,
+		Dungeon:        manager,
+		Commands:       make(map[string]*Command),
+		commandSession: gamecommand.NewSession(),
 	}
 
 	cli.registerCommands()
@@ -217,8 +219,14 @@ func (c *CLIMode) SetSaveIntegration(integration *save.SaveGameIntegration) {
 	c.Save = integration
 }
 
+func (c *CLIMode) SetCommandSession(session *gamecommand.Session) {
+	if session != nil {
+		c.commandSession = session
+	}
+}
+
 func (c *CLIMode) executeGameplay(cmd gamecommand.Command, args ...string) string {
-	result := gamecommand.Execute(&gamecommand.Context{
+	result := c.commandSession.Execute(&gamecommand.Context{
 		Player:  c.Player,
 		Level:   c.Level,
 		Dungeon: c.Dungeon,

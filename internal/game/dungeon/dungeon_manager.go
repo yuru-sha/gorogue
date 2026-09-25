@@ -25,6 +25,7 @@ type DungeonManager struct {
 	floorSeeds   map[int]int64
 	rng          *rand.Rand
 	rngSource    *trackedRandomSource
+	noFood       int
 }
 
 // NewDungeonManager creates a new dungeon manager
@@ -84,6 +85,16 @@ func (dm *DungeonManager) Seed() int64 {
 	return dm.seed
 }
 
+// NoFood returns the count of consecutive generated floors without food.
+func (dm *DungeonManager) NoFood() int {
+	return dm.noFood
+}
+
+// SetNoFood restores the cross-floor food-generation counter from a save.
+func (dm *DungeonManager) SetNoFood(noFood int) {
+	dm.noFood = max(0, noFood)
+}
+
 // FloorSeeds returns the seeds used for generated floors.
 func (dm *DungeonManager) FloorSeeds() map[int]int64 {
 	seeds := make(map[int]int64, len(dm.floorSeeds))
@@ -125,7 +136,8 @@ func (dm *DungeonManager) generateLevel(floor int) *Level {
 		floorSeed = dm.seed + int64(floor)*1000003
 		dm.floorSeeds[floor] = floorSeed
 	}
-	level := NewLevelWithSeed(DungeonWidth, DungeonHeight, floor, floorSeed)
+	level := NewLevelWithSeedAndNoFood(DungeonWidth, DungeonHeight, floor, floorSeed, dm.noFood)
+	dm.noFood = level.NoFood
 	dm.levels[floor] = level
 
 	// 最終階層の場合はAmulet of Yendorを配置
@@ -153,8 +165,13 @@ func (dm *DungeonManager) MoveToFloor(targetFloor int) bool {
 		return false
 	}
 
-	// 対象の階層が存在しない場合は生成
-	if _, exists := dm.levels[targetFloor]; !exists {
+	if targetFloor > dm.currentFloor {
+		for floor := dm.currentFloor + 1; floor <= targetFloor; floor++ {
+			if _, exists := dm.levels[floor]; !exists {
+				dm.generateLevel(floor)
+			}
+		}
+	} else if _, exists := dm.levels[targetFloor]; !exists {
 		dm.generateLevel(targetFloor)
 	}
 
@@ -247,73 +264,6 @@ func (dm *DungeonManager) CanGoDownstairs() bool {
 	level := dm.GetCurrentLevel()
 	tile := level.GetTile(dm.player.Position.X, dm.player.Position.Y)
 	return tile != nil && tile.Type == TileStairsDown && dm.currentFloor < MaxFloors
-}
-
-// GetFloorDifficulty returns the difficulty scaling for the given floor
-// Based on original Rogue's progressive difficulty system
-func (dm *DungeonManager) GetFloorDifficulty(floor int) float64 {
-	switch {
-	case floor <= 5:
-		// 初心者向け階層 (1-5階)
-		return 1.0 + (float64(floor-1) * 0.1) // 1.0 - 1.4
-	case floor <= 10:
-		// 中級者向け階層 (6-10階)
-		return 1.5 + (float64(floor-6) * 0.1) // 1.5 - 1.9
-	case floor <= 15:
-		// 上級者向け階層 (11-15階)
-		return 2.0 + (float64(floor-11) * 0.1) // 2.0 - 2.4
-	case floor <= 20:
-		// エキスパート階層 (16-20階)
-		return 2.5 + (float64(floor-16) * 0.1) // 2.5 - 2.9
-	case floor <= 26:
-		// マスター階層 (21-26階)
-		return 3.0 + (float64(floor-21) * 0.2) // 3.0 - 4.0
-	default:
-		return 4.0 // 最大難易度
-	}
-}
-
-// GetMonsterSpawnCount returns the number of monsters to spawn on a given floor
-func (dm *DungeonManager) GetMonsterSpawnCount(floor int) int {
-	switch {
-	case floor <= 3:
-		return 3 + (floor - 1) // 3-5体
-	case floor <= 8:
-		return 5 + (floor - 4) // 5-9体
-	case floor <= 15:
-		return 8 + (floor-9)/2 // 8-11体
-	case floor <= 22:
-		return 12 + (floor-16)/3 // 12-14体
-	default:
-		return 15 + (floor - 23) // 15-18体
-	}
-}
-
-// GetItemSpawnChance returns the item spawn chance for a given floor
-func (dm *DungeonManager) GetItemSpawnChance(floor int) float64 {
-	switch {
-	case floor <= 5:
-		return 0.2 + (float64(floor-1) * 0.02) // 20%-28%
-	case floor <= 10:
-		return 0.3 + (float64(floor-6) * 0.02) // 30%-38%
-	case floor <= 15:
-		return 0.4 + (float64(floor-11) * 0.02) // 40%-48%
-	case floor <= 20:
-		return 0.5 + (float64(floor-16) * 0.02) // 50%-58%
-	default:
-		return 0.6 + (float64(floor-21) * 0.02) // 60%-70%
-	}
-}
-
-// IsSpecialFloor returns whether this floor should have special mechanics
-func (dm *DungeonManager) IsSpecialFloor(floor int) bool {
-	// 迷路階層: 7, 13, 19
-	return floor == 7 || floor == 13 || floor == 19
-}
-
-// IsMazeFloor returns whether this floor should be a maze floor
-func (dm *DungeonManager) IsMazeFloor(floor int) bool {
-	return dm.IsSpecialFloor(floor)
 }
 
 // IsOnFinalFloor checks if the player is on the final floor
@@ -423,69 +373,25 @@ func (dm *DungeonManager) CheckVictoryCondition() bool {
 	return false
 }
 
-// GetFloorInfo returns comprehensive information about the current floor
+// GetFloorInfo returns navigation and objective information about the current floor.
 func (dm *DungeonManager) GetFloorInfo() map[string]any {
-	info := map[string]any{
+	return map[string]any{
 		"current_floor":     dm.currentFloor,
 		"max_floors":        MaxFloors,
-		"difficulty":        dm.GetFloorDifficulty(dm.currentFloor),
-		"monster_count":     dm.GetMonsterSpawnCount(dm.currentFloor),
-		"item_spawn_chance": dm.GetItemSpawnChance(dm.currentFloor),
-		"is_special":        dm.IsSpecialFloor(dm.currentFloor),
-		"is_maze":           dm.IsMazeFloor(dm.currentFloor),
 		"is_final":          dm.IsOnFinalFloor(),
 		"has_amulet":        dm.HasAmuletOfYendor(),
 		"player_has_amulet": dm.PlayerHasAmulet(),
 		"can_escape":        dm.CanEscapeWithAmulet(),
 	}
-
-	// 特別な階層の情報を追加
-	if dm.IsSpecialFloor(dm.currentFloor) {
-		info["special_type"] = "maze"
-	}
-
-	return info
 }
 
-// GetProgressInfo returns progress information for the 26-floor journey
+// GetProgressInfo returns progress information for the 26-floor journey.
 func (dm *DungeonManager) GetProgressInfo() map[string]any {
 	progress := float64(dm.currentFloor*100) / float64(MaxFloors)
-
 	return map[string]any{
 		"current_floor":    dm.currentFloor,
 		"max_floors":       MaxFloors,
 		"progress_percent": progress,
 		"floors_remaining": MaxFloors - dm.currentFloor,
-		"difficulty_tier":  dm.getDifficultyTier(),
-		"next_special":     dm.getNextSpecialFloor(),
 	}
-}
-
-// getDifficultyTier returns the current difficulty tier
-func (dm *DungeonManager) getDifficultyTier() string {
-	switch {
-	case dm.currentFloor <= 5:
-		return "初心者"
-	case dm.currentFloor <= 10:
-		return "中級者"
-	case dm.currentFloor <= 15:
-		return "上級者"
-	case dm.currentFloor <= 20:
-		return "エキスパート"
-	case dm.currentFloor <= 26:
-		return "マスター"
-	default:
-		return "不明"
-	}
-}
-
-// getNextSpecialFloor returns the next special floor number
-func (dm *DungeonManager) getNextSpecialFloor() int {
-	specialFloors := []int{7, 13, 19, 26}
-	for _, floor := range specialFloors {
-		if floor > dm.currentFloor {
-			return floor
-		}
-	}
-	return -1 // 特別な階層が残っていない
 }

@@ -20,7 +20,7 @@ const (
 
 // Engine represents the game engine and implements gruid.Model interface
 type Engine struct {
-	grid            gruid.Grid
+	renderer        *uiscreen.TextRenderer
 	stateManager    *state.StateManager
 	dungeonManager  *dungeon.DungeonManager
 	player          *actor.Player
@@ -42,7 +42,7 @@ func NewEngine() *Engine {
 // NewEngineWithSeed creates an engine with reproducible game randomness.
 func NewEngineWithSeed(seed int64) *Engine {
 	// グリッドの初期化
-	grid := gruid.NewGrid(screenWidth, screenHeight)
+	renderer := uiscreen.NewTextRenderer(screenWidth, screenHeight)
 
 	// プレイヤーの生成（仮位置、後でダンジョンマネージャーが適切な位置に配置）
 	player := actor.NewPlayerWithSeed(0, 0, seed)
@@ -105,7 +105,7 @@ func NewEngineWithSeed(seed int64) *Engine {
 	stateManager.SetState(state.StateMenu)
 
 	engine := &Engine{
-		grid:            grid,
+		renderer:        renderer,
 		stateManager:    stateManager,
 		dungeonManager:  dungeonManager,
 		player:          player,
@@ -201,12 +201,7 @@ func (e *Engine) restartGame() {
 // Draw implements gruid.Model.Draw
 func (e *Engine) Draw() gruid.Grid {
 	// グリッドをクリア
-	e.grid.Fill(gruid.Cell{Rune: ' '})
-
-	// 現在の状態を描画 - state managerを使用
-	e.stateManager.Draw(&e.grid)
-
-	return e.grid
+	return e.renderer.Draw(e.stateManager)
 }
 
 // Model returns the game's model configuration

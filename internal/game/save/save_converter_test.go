@@ -286,10 +286,30 @@ func TestSaveConverterPreservesRuntimeRandomState(t *testing.T) {
 	}
 }
 
-func TestSaveConverterPreservesIdentificationAppearances(t *testing.T) {
+func TestSaveConverterPreservesRogueState(t *testing.T) {
 	logger.Setup()
 	player := actor.NewPlayerWithSeed(0, 0, 7)
+	player.FoodLeft = 87
+	player.BlindTurns = 3
+	player.Running = true
+	player.HasteTurns = 9
+	player.HasteSkipMonsterTurn = true
+	player.CanConfuse = true
+	player.CanConfuseTurns = 6
+	potion := item.NewItem(0, 0, item.ItemPotion, "healing", 25)
+	if !player.IdentifyMgr.SetCall(potion, "sick stuff") {
+		t.Fatal("SetCall() rejected unidentified potion")
+	}
+	wantCalledName := player.IdentifyMgr.GetDisplayName(potion)
+
 	dungeonManager := dungeon.NewDungeonManagerWithSeed(player, 42)
+	level := dungeonManager.GetCurrentLevel()
+	level.Traps = []*dungeon.Trap{{
+		Type:       dungeon.TrapDart,
+		Position:   dungeon.Position{X: 3, Y: 4},
+		Discovered: true,
+	}}
+	dungeonManager.SetNoFood(3)
 	saveData := ToSaveData(player, dungeonManager, GameInfo{}, Stats{}, Settings{})
 	encoded, err := json.Marshal(saveData)
 	if err != nil {
@@ -299,45 +319,25 @@ func TestSaveConverterPreservesIdentificationAppearances(t *testing.T) {
 	if err := json.Unmarshal(encoded, &persisted); err != nil {
 		t.Fatalf("json.Unmarshal() error = %v", err)
 	}
-
-	restoredPlayer, _, err := NewSaveConverter().FromSaveData(&persisted)
+	restoredPlayer, restoredDungeonManager, err := NewSaveConverter().FromSaveData(&persisted)
 	if err != nil {
 		t.Fatalf("FromSaveData() error = %v", err)
 	}
 
-	testItems := []*item.Item{
-		item.NewItem(0, 0, item.ItemScroll, "teleportation", 100),
-		item.NewItem(0, 0, item.ItemPotion, "healing", 25),
-		item.NewItem(0, 0, item.ItemRing, "protection", 200),
-		item.NewItem(0, 0, item.ItemWand, "wand of light", 120),
+	if restoredPlayer.FoodLeft != 87 || restoredPlayer.BlindTurns != 3 || !restoredPlayer.Running ||
+		restoredPlayer.HasteTurns != 9 || !restoredPlayer.HasteSkipMonsterTurn ||
+		!restoredPlayer.CanConfuse || restoredPlayer.CanConfuseTurns != 6 {
+		t.Fatalf("restored Rogue player state differs: %#v", restoredPlayer)
 	}
-	for _, testItem := range testItems {
-		want := player.IdentifyMgr.GetDisplayName(testItem)
-		if got := restoredPlayer.IdentifyMgr.GetDisplayName(testItem); got != want {
-			t.Errorf("display name for %q = %q, want %q", testItem.Name, got, want)
-		}
+	if got := restoredPlayer.IdentifyMgr.GetDisplayName(potion); got != wantCalledName {
+		t.Fatalf("called potion display name = %q, want %q", got, wantCalledName)
 	}
-}
-
-// TestSaveConverter_ConvertAIStateToString tests AI state conversion
-func TestSaveConverter_ConvertAIStateToString(t *testing.T) {
-	testCases := []struct {
-		aiState  actor.AIState
-		expected string
-	}{
-		{actor.StateIdle, "idle"},
-		{actor.StatePatrol, "patrol"},
-		{actor.StateChase, "chase"},
-		{actor.StateAttack, "attack"},
-		{actor.StateSearch, "search"},
-		{actor.StateFlee, "flee"},
+	if restoredDungeonManager.NoFood() != 3 {
+		t.Fatalf("no-food count = %d, want 3", restoredDungeonManager.NoFood())
 	}
-
-	for _, tc := range testCases {
-		result := ConvertAIStateToString(tc.aiState)
-		if result != tc.expected {
-			t.Errorf("ConvertAIStateToString(%v) = %s, expected %s", tc.aiState, result, tc.expected)
-		}
+	restoredTrap := restoredDungeonManager.GetCurrentLevel().Traps[0]
+	if restoredTrap.Type != dungeon.TrapDart || restoredTrap.Position != (dungeon.Position{X: 3, Y: 4}) || !restoredTrap.Discovered {
+		t.Fatalf("restored trap = %#v, want discovered dart at (3,4)", restoredTrap)
 	}
 }
 
@@ -415,42 +415,6 @@ func TestSaveConverter_StringToTileType(t *testing.T) {
 			}
 			if result != tc.expected {
 				t.Errorf("convertStringToTileType(%s) = %v, expected %v", tc.input, result, tc.expected)
-			}
-		}
-	}
-}
-
-// TestSaveConverter_StringToAIState tests string to AI state conversion
-func TestSaveConverter_StringToAIState(t *testing.T) {
-	converter := NewSaveConverter()
-
-	testCases := []struct {
-		input    string
-		expected actor.AIState
-		hasError bool
-	}{
-		{"idle", actor.StateIdle, false},
-		{"patrol", actor.StatePatrol, false},
-		{"chase", actor.StateChase, false},
-		{"attack", actor.StateAttack, false},
-		{"search", actor.StateSearch, false},
-		{"flee", actor.StateFlee, false},
-		{"unknown", 0, true},
-		{"", 0, true},
-	}
-
-	for _, tc := range testCases {
-		result, err := converter.convertStringToAIState(tc.input)
-		if tc.hasError {
-			if err == nil {
-				t.Errorf("convertStringToAIState(%s) should have returned error", tc.input)
-			}
-		} else {
-			if err != nil {
-				t.Errorf("convertStringToAIState(%s) returned unexpected error: %v", tc.input, err)
-			}
-			if result != tc.expected {
-				t.Errorf("convertStringToAIState(%s) = %v, expected %v", tc.input, result, tc.expected)
 			}
 		}
 	}
@@ -564,131 +528,103 @@ func TestSaveConverter_ConvertSaveItem(t *testing.T) {
 
 // TestSaveConverter_ConvertSaveMonster tests save monster conversion
 func TestSaveConverter_ConvertSaveMonster(t *testing.T) {
-	converter := NewSaveConverter()
-
-	// Create test save monster
 	saveMonster := Monster{
 		X:              25,
 		Y:              30,
 		Type:           "A",
-		Symbol:         'A',
-		Name:           "アント",
 		HP:             10,
 		MaxHP:          12,
-		Attack:         4,
+		Attack:         5,
 		Defense:        2,
-		Speed:          1,
-		Color:          0x800000,
+		MonsterLevel:   5,
+		Experience:     20,
 		TurnCount:      5,
 		IsActive:       true,
-		AIState:        "idle",
-		LastPlayerPosX: 20,
-		LastPlayerPosY: 25,
-		PatrolPath:     []Pos{{X: 25, Y: 30}, {X: 27, Y: 30}},
-		PatrolIndex:    0,
-		AlertLevel:     0,
-		SearchTurns:    0,
-		OriginalPosX:   25,
-		OriginalPosY:   30,
-		ViewRange:      5,
-		DetectionRange: 4,
+		IsRunning:      true,
+		IsInvisible:    true,
+		GoldValue:      73,
+		GreedTargetX:   22,
+		GreedTargetY:   29,
+		HasGreedTarget: true,
+		Carry:          true,
+		Floor:          9,
 	}
-
-	// Convert to game monster
-	gameMonster, err := converter.convertSaveMonster(saveMonster)
+	gameMonster, err := NewSaveConverter().convertSaveMonster(saveMonster)
 	if err != nil {
-		t.Fatalf("convertSaveMonster failed: %v", err)
+		t.Fatalf("convertSaveMonster() error = %v", err)
 	}
-
-	// Verify conversion
 	if gameMonster.Position.X != 25 || gameMonster.Position.Y != 30 {
-		t.Errorf("Monster position mismatch: expected (25,30), got (%d,%d)",
-			gameMonster.Position.X, gameMonster.Position.Y)
+		t.Fatalf("position = (%d,%d), want (25,30)", gameMonster.Position.X, gameMonster.Position.Y)
 	}
-
-	if gameMonster.Type.Symbol != 'A' {
-		t.Errorf("Monster symbol mismatch: expected 'A', got %c", gameMonster.Type.Symbol)
+	if gameMonster.Type.Code != 'A' || gameMonster.Type.Level != 5 || gameMonster.Type.Experience != 20 {
+		t.Fatalf("monster type = %#v, want A level 5 XP 20", gameMonster.Type)
 	}
-
-	if gameMonster.HP != 10 {
-		t.Errorf("Monster HP mismatch: expected 10, got %d", gameMonster.HP)
+	if gameMonster.HP != 10 || gameMonster.MaxHP != 12 || gameMonster.Attack != 5 || gameMonster.Defense != 2 {
+		t.Fatalf("combat state = HP %d/%d attack %d defense %d", gameMonster.HP, gameMonster.MaxHP, gameMonster.Attack, gameMonster.Defense)
 	}
-
-	if gameMonster.MaxHP != 12 {
-		t.Errorf("Monster MaxHP mismatch: expected 12, got %d", gameMonster.MaxHP)
+	if !gameMonster.IsRunning || !gameMonster.IsInvisible || !gameMonster.Carry || !gameMonster.HasGreedTarget {
+		t.Fatalf("monster status was not restored: %#v", gameMonster)
 	}
-
-	if gameMonster.AIState != actor.StateIdle {
-		t.Errorf("Monster AI state mismatch: expected %v, got %v", actor.StateIdle, gameMonster.AIState)
-	}
-
-	if gameMonster.ViewRange != 5 {
-		t.Errorf("Monster view range mismatch: expected 5, got %d", gameMonster.ViewRange)
-	}
-
-	if len(gameMonster.PatrolPath) != 2 {
-		t.Errorf("Monster patrol path length mismatch: expected 2, got %d", len(gameMonster.PatrolPath))
+	if gameMonster.GoldValue != 73 || gameMonster.GreedTarget.X != 22 || gameMonster.GreedTarget.Y != 29 || gameMonster.Floor != 9 {
+		t.Fatalf("monster gold/greed/floor state was not restored: %#v", gameMonster)
 	}
 }
 
 // TestSaveConverter_ValidatePlayer tests player validation
 func TestSaveConverter_ValidatePlayer(t *testing.T) {
 	converter := NewSaveConverter()
-
-	// Create valid player
 	player := actor.NewPlayer(10, 10)
-	player.Level = 5
-	player.HP = 30
-	player.MaxHP = 50
-	player.Gold = 100
-	player.Exp = 200
-
-	// Test valid player
+	player.Level, player.HP, player.MaxHP, player.Gold, player.Exp = 5, 30, 50, 100, 25
 	if err := converter.validatePlayer(player); err != nil {
-		t.Errorf("validatePlayer failed for valid player: %v", err)
+		t.Fatalf("validatePlayer(valid) error = %v", err)
 	}
 
-	// Test invalid level
 	player.Level = 0
 	if err := converter.validatePlayer(player); err == nil {
-		t.Error("validatePlayer should fail for invalid level")
+		t.Fatal("validatePlayer accepted level zero")
 	}
 	player.Level = 5
-
-	// Test invalid HP
 	player.HP = -1
 	if err := converter.validatePlayer(player); err == nil {
-		t.Error("validatePlayer should fail for negative HP")
+		t.Fatal("validatePlayer accepted negative HP")
 	}
-	player.HP = 30
-
-	// Test invalid MaxHP
-	player.MaxHP = 0
-	if err := converter.validatePlayer(player); err == nil {
-		t.Error("validatePlayer should fail for invalid MaxHP")
+	player.HP, player.MaxHP = 60, 50
+	if err := converter.validatePlayer(player); err != nil || player.HP != player.MaxHP {
+		t.Fatalf("validatePlayer should clamp HP to MaxHP: hp=%d max=%d err=%v", player.HP, player.MaxHP, err)
 	}
-	player.MaxHP = 50
-
-	// Test HP > MaxHP (should be corrected)
-	player.HP = 60
-	if err := converter.validatePlayer(player); err != nil {
-		t.Errorf("validatePlayer should correct HP > MaxHP: %v", err)
-	}
-	if player.HP != player.MaxHP {
-		t.Errorf("HP should be corrected to MaxHP: expected %d, got %d", player.MaxHP, player.HP)
-	}
-
-	// Test negative gold
 	player.Gold = -1
 	if err := converter.validatePlayer(player); err == nil {
-		t.Error("validatePlayer should fail for negative gold")
+		t.Fatal("validatePlayer accepted negative gold")
 	}
-	player.Gold = 100
+}
 
-	// Test negative experience
-	player.Exp = -1
-	if err := converter.validatePlayer(player); err == nil {
-		t.Error("validatePlayer should fail for negative experience")
+// TestSaveConverter_ErrorHandling tests malformed conversion inputs.
+func TestSaveConverter_ErrorHandling(t *testing.T) {
+	converter := NewSaveConverter()
+
+	for _, testCase := range []struct {
+		name          string
+		monsterType   string
+		expectedError string
+	}{
+		{name: "unknown", monsterType: "?", expectedError: "unknown monster type"},
+		{name: "empty", monsterType: "", expectedError: "empty monster type"},
+		{name: "multi-character", monsterType: "BLAH", expectedError: "exactly one rune"},
+		{name: "malformed UTF-8", monsterType: string([]byte{0xff}), expectedError: "invalid UTF-8"},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			_, err := converter.convertSaveMonster(Monster{Type: testCase.monsterType})
+			if err == nil || !strings.Contains(err.Error(), testCase.expectedError) {
+				t.Fatalf("convertSaveMonster() error = %v, want error containing %q", err, testCase.expectedError)
+			}
+		})
+	}
+
+	if _, err := converter.convertSaveItemToGameItem(InventoryItem{Type: "invalid_type"}); err == nil {
+		t.Error("convertSaveItemToGameItem() accepted an invalid item type")
+	}
+	if _, err := converter.convertStringToTileType("invalid_tile"); err == nil {
+		t.Error("convertStringToTileType() accepted an invalid tile type")
 	}
 }
 
@@ -848,67 +784,6 @@ func BenchmarkSaveConverter_ConvertPlayerToSave(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = ConvertPlayerToSave(player)
-	}
-}
-
-// TestSaveConverter_ErrorHandling tests error handling in conversion
-func TestSaveConverter_ErrorHandling(t *testing.T) {
-	converter := NewSaveConverter()
-
-	// Test conversion with invalid monster type
-	saveMonster := Monster{
-		Type:   "?", // ? は定義されていないモンスタータイプ
-		Symbol: '?',
-	}
-
-	_, err := converter.convertSaveMonster(saveMonster)
-	if err == nil {
-		t.Error("convertSaveMonster should fail with invalid monster type")
-	}
-
-	saveMonster.Type = ""
-	if _, err := converter.convertSaveMonster(saveMonster); err == nil {
-		t.Error("convertSaveMonster should fail with an empty monster type")
-	}
-	saveMonster.AIState = ConvertAIStateToString(actor.StateIdle)
-
-	for _, testCase := range []struct {
-		name          string
-		monsterType   string
-		expectedError string
-	}{
-		{name: "multi-character", monsterType: "BLAH", expectedError: "exactly one rune"},
-		{name: "malformed UTF-8", monsterType: string([]byte{0xff}), expectedError: "invalid UTF-8"},
-	} {
-		t.Run(testCase.name, func(t *testing.T) {
-			saveMonster.Type = testCase.monsterType
-			_, err := converter.convertSaveMonster(saveMonster)
-			if err == nil || !strings.Contains(err.Error(), testCase.expectedError) {
-				t.Fatalf("convertSaveMonster() error = %v, want error containing %q", err, testCase.expectedError)
-			}
-		})
-	}
-
-	// Test conversion with invalid item type
-	saveItem := InventoryItem{
-		Type: "invalid_type",
-	}
-
-	_, err = converter.convertSaveItemToGameItem(saveItem)
-	if err == nil {
-		t.Error("convertSaveItemToGameItem should fail with invalid item type")
-	}
-
-	// Test conversion with invalid tile type
-	_, err = converter.convertStringToTileType("invalid_tile")
-	if err == nil {
-		t.Error("convertStringToTileType should fail with invalid tile type")
-	}
-
-	// Test conversion with invalid AI state
-	_, err = converter.convertStringToAIState("invalid_state")
-	if err == nil {
-		t.Error("convertStringToAIState should fail with invalid AI state")
 	}
 }
 
