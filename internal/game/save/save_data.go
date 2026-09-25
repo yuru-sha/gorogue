@@ -5,7 +5,6 @@ package save
 import (
 	"time"
 
-	"github.com/yuru-sha/gorogue/internal/core/entity"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
 	"github.com/yuru-sha/gorogue/internal/game/item"
@@ -13,7 +12,7 @@ import (
 
 const (
 	// SaveVersion represents the save file format version
-	SaveVersion    = "1.3.0"
+	SaveVersion    = "1.4.0"
 	UNKNOWN_VALUE  = "unknown"
 	saveVersionKey = "version"
 	saveFloorKey   = "floor"
@@ -51,15 +50,35 @@ type Player struct {
 	X int `json:"x"`
 	Y int `json:"y"`
 
-	// Base stats
-	Level   int `json:"level"`
-	HP      int `json:"hp"`
-	MaxHP   int `json:"max_hp"`
-	Attack  int `json:"attack"`
-	Defense int `json:"defense"`
-	Hunger  int `json:"hunger"`
-	Exp     int `json:"exp"`
-	Gold    int `json:"gold"`
+	// Base stats and Rogue state
+	Level            int  `json:"level"`
+	HP               int  `json:"hp"`
+	MaxHP            int  `json:"max_hp"`
+	Attack           int  `json:"attack"`
+	Defense          int  `json:"defense"`
+	Hunger           int  `json:"hunger"`
+	Exp              int  `json:"exp"`
+	Gold             int  `json:"gold"`
+	Strength         int  `json:"strength"`
+	MaxStrength      int  `json:"max_strength"`
+	FoodLeft         int  `json:"food_left"`
+	HungerState      int  `json:"hunger_state"`
+	QuietTurns       int  `json:"quiet_turns"`
+	Running          bool `json:"running"`
+	NoCommand        int  `json:"no_command_turns"`
+	NoMove           int  `json:"no_move_turns"`
+	Blind            int  `json:"blind_turns"`
+	Confused         int  `json:"confused_turns"`
+	Hallucinated     int  `json:"hallucination_turns"`
+	Haste            int  `json:"haste_turns"`
+	HasteSkipMonster bool `json:"haste_skip_monster_turn"`
+	SeeInvisible     int  `json:"see_invisible_turns"`
+	DetectMonsters   int  `json:"monster_detection_turns"`
+	Levitation       int  `json:"levitation_turns"`
+	Paralyzed        int  `json:"paralyzed_turns"`
+	CanConfuse       bool `json:"can_confuse"`
+	CanConfuseTurns  int  `json:"can_confuse_turns"`
+	Held             bool `json:"held"`
 
 	// Inventory
 	Inventory []InventoryItem `json:"inventory"`
@@ -68,9 +87,8 @@ type Player struct {
 	// Identification system
 	IdentifiedItems           map[string]bool   `json:"identified_items"`
 	IdentificationAppearances map[string]string `json:"identification_appearances"`
-
-	// Status effects (for future expansion)
-	StatusEffects []StatusEffect `json:"status_effects"`
+	IdentificationCalls       map[string]string `json:"identification_calls"`
+	StatusEffects             []StatusEffect    `json:"status_effects"`
 }
 
 // InventoryItem represents an item in the player's inventory
@@ -83,6 +101,7 @@ type InventoryItem struct {
 	IsIdentified bool   `json:"is_identified"`
 	IsCursed     bool   `json:"is_cursed"`
 	IsBlessed    bool   `json:"is_blessed"`
+	IsProtected  bool   `json:"is_protected"`
 	Damage       int    `json:"damage"`
 	Defense      int    `json:"defense"`
 	Enchantment  int    `json:"enchantment"`
@@ -108,13 +127,14 @@ type StatusEffect struct {
 	Source    string `json:"source"`
 }
 
-// Dungeon represents the complete dungeon state
+// Dungeon represents the complete dungeon state.
 type Dungeon struct {
 	Seed          int64          `json:"seed"`
 	CurrentFloor  int            `json:"current_floor"`
 	Floors        map[int]*Floor `json:"floors"`
 	VisitedFloors map[int]bool   `json:"visited_floors"`
-	FloorSeeds    map[int]int64  `json:"floor_seeds"` // For regeneration consistency
+	FloorSeeds    map[int]int64  `json:"floor_seeds"`
+	NoFood        int            `json:"no_food"`
 	RandomState   RandomState    `json:"random_state"`
 }
 
@@ -123,7 +143,7 @@ type RandomState struct {
 	Draws uint64 `json:"draws"`
 }
 
-// Floor represents a single dungeon floor state
+// Floor represents a single dungeon floor state.
 type Floor struct {
 	FloorNumber int         `json:"floor_number"`
 	Width       int         `json:"width"`
@@ -132,73 +152,78 @@ type Floor struct {
 	Rooms       []Room      `json:"rooms"`
 	Monsters    []Monster   `json:"monsters"`
 	Items       []Item      `json:"items"`
+	Traps       []Trap      `json:"traps"`
 	Visited     bool        `json:"visited"`
 	Seed        int64       `json:"seed"`
 	IsGenerated bool        `json:"is_generated"`
-	IsMaze      bool        `json:"is_maze"`
-	IsSpecial   bool        `json:"is_special"`
 	RandomState RandomState `json:"random_state"`
 }
 
-// Tile represents a single tile in the dungeon
+// Tile stores logical terrain and explored/visible state.
 type Tile struct {
 	Type     string `json:"type"`
 	Explored bool   `json:"explored"`
-	Lit      bool   `json:"lit"`
 	Visible  bool   `json:"visible"`
 }
 
-// Room represents a room in the dungeon
+// Room represents a room in the dungeon.
 type Room struct {
 	X         int    `json:"x"`
 	Y         int    `json:"y"`
 	Width     int    `json:"width"`
 	Height    int    `json:"height"`
 	IsSpecial bool   `json:"is_special"`
+	IsDark    bool   `json:"is_dark"`
+	IsMaze    bool   `json:"is_maze"`
 	Connected bool   `json:"connected"`
-	RoomType  string `json:"room_type,omitempty"` // treasure, armory, etc.
+	RoomType  string `json:"room_type,omitempty"`
 }
 
-// Monster represents a monster's state
+// Trap stores the type, location, and discovered state of a trap.
+type Trap struct {
+	X          int    `json:"x"`
+	Y          int    `json:"y"`
+	Type       string `json:"type"`
+	Discovered bool   `json:"discovered"`
+}
+
+// Monster represents a monster's state.
 type Monster struct {
-	// Basic properties
-	X      int    `json:"x"`
-	Y      int    `json:"y"`
-	Type   string `json:"type"`
-	Symbol rune   `json:"symbol"`
-	Name   string `json:"name"`
-
-	// Stats
-	HP      int `json:"hp"`
-	MaxHP   int `json:"max_hp"`
-	Attack  int `json:"attack"`
-	Defense int `json:"defense"`
-	Speed   int `json:"speed"`
-	Color   int `json:"color"`
-
-	// AI state
-	TurnCount      int    `json:"turn_count"`
-	IsActive       bool   `json:"is_active"`
-	AIState        string `json:"ai_state"`
-	LastPlayerPosX int    `json:"last_player_pos_x"`
-	LastPlayerPosY int    `json:"last_player_pos_y"`
-	PatrolPath     []Pos  `json:"patrol_path"`
-	PatrolIndex    int    `json:"patrol_index"`
-	AlertLevel     int    `json:"alert_level"`
-	SearchTurns    int    `json:"search_turns"`
-	OriginalPosX   int    `json:"original_pos_x"`
-	OriginalPosY   int    `json:"original_pos_y"`
-	ViewRange      int    `json:"view_range"`
-	DetectionRange int    `json:"detection_range"`
+	X            int    `json:"x"`
+	Y            int    `json:"y"`
+	Type         string `json:"type"`
+	HP           int    `json:"hp"`
+	MaxHP        int    `json:"max_hp"`
+	Attack       int    `json:"attack"`
+	Defense      int    `json:"defense"`
+	MonsterLevel int    `json:"monster_level"`
+	Experience   int    `json:"experience"`
+	TurnCount    int    `json:"turn_count"`
+	IsActive     bool   `json:"is_active"`
+	IsRunning    bool   `json:"is_running"`
+	IsHeld       bool   `json:"is_held"`
+	WasAdjacent  bool   `json:"was_adjacent"`
+	IsFound      bool   `json:"is_found"`
+	IsConfused   bool   `json:"is_confused"`
+	//nolint:misspell // Preserve the existing save-format JSON key.
+	IsCancelled    bool `json:"is_cancelled"`
+	IsInvisible    bool `json:"is_invisible"`
+	IsHasted       bool `json:"is_hasted"`
+	IsSlowed       bool `json:"is_slowed"`
+	FlytrapHits    int  `json:"flytrap_hits"`
+	GoldValue      int  `json:"gold_value"`
+	GreedTargetX   int  `json:"greed_target_x"`
+	GreedTargetY   int  `json:"greed_target_y"`
+	HasGreedTarget bool `json:"has_greed_target"`
+	Carry          bool `json:"carry"`
+	Mean           bool `json:"mean"`
+	Flying         bool `json:"flying"`
+	Greedy         bool `json:"greedy"`
+	Regenerates    bool `json:"regenerates"`
+	Floor          int  `json:"floor"`
 }
 
-// Pos represents a position coordinate
-type Pos struct {
-	X int `json:"x"`
-	Y int `json:"y"`
-}
-
-// Item represents an item on the floor
+// Item represents an item on the floor.
 type Item struct {
 	X            int    `json:"x"`
 	Y            int    `json:"y"`
@@ -210,14 +235,13 @@ type Item struct {
 	IsIdentified bool   `json:"is_identified"`
 	IsCursed     bool   `json:"is_cursed"`
 	IsBlessed    bool   `json:"is_blessed"`
+	IsProtected  bool   `json:"is_protected"`
 	Damage       int    `json:"damage"`
 	Defense      int    `json:"defense"`
 	Enchantment  int    `json:"enchantment"`
 	Charges      int    `json:"charges"`
 	MaxCharges   int    `json:"max_charges"`
 	ItemID       int    `json:"item_id"`
-	Symbol       rune   `json:"symbol"`
-	Color        int    `json:"color"`
 }
 
 // Stats represents game statistics
@@ -330,10 +354,31 @@ func ConvertPlayerToSave(player *actor.Player) Player {
 		Hunger:                    player.Hunger,
 		Exp:                       player.Exp,
 		Gold:                      player.Gold,
+		Strength:                  player.Strength,
+		MaxStrength:               player.MaxStrength,
+		FoodLeft:                  player.FoodLeft,
+		HungerState:               player.HungerState,
+		QuietTurns:                player.QuietTurns,
+		Running:                   player.Running,
+		NoCommand:                 player.NoCommandTurns,
+		NoMove:                    player.NoMoveTurns,
+		Blind:                     player.BlindTurns,
+		Confused:                  player.ConfusedTurns,
+		Hallucinated:              player.HallucinationTurns,
+		Haste:                     player.HasteTurns,
+		HasteSkipMonster:          player.HasteSkipMonsterTurn,
+		SeeInvisible:              player.SeeInvisibleTurns,
+		DetectMonsters:            player.MonsterDetectionTurns,
+		Levitation:                player.LevitationTurns,
+		Paralyzed:                 player.ParalyzedTurns,
+		CanConfuse:                player.CanConfuse,
+		CanConfuseTurns:           player.CanConfuseTurns,
+		Held:                      player.Held,
 		Inventory:                 make([]InventoryItem, 0),
 		Equipment:                 Equipment{},
 		IdentifiedItems:           make(map[string]bool),
 		IdentificationAppearances: make(map[string]string),
+		IdentificationCalls:       make(map[string]string),
 		StatusEffects:             make([]StatusEffect, 0),
 	}
 
@@ -367,6 +412,7 @@ func ConvertPlayerToSave(player *actor.Player) Player {
 
 	savePlayer.IdentifiedItems = player.IdentifyMgr.SaveState()
 	savePlayer.IdentificationAppearances = player.IdentifyMgr.SaveAppearanceState()
+	savePlayer.IdentificationCalls = player.IdentifyMgr.SaveCallState()
 
 	return savePlayer
 }
@@ -381,6 +427,7 @@ func convertItemToSave(gameItem *item.Item) InventoryItem {
 		IsIdentified: gameItem.IsIdentified,
 		IsCursed:     gameItem.IsCursed,
 		IsBlessed:    gameItem.IsBlessed,
+		IsProtected:  gameItem.IsProtected,
 		Damage:       gameItem.Damage,
 		Defense:      gameItem.Defense,
 		Enchantment:  gameItem.Enchantment,
@@ -390,7 +437,7 @@ func convertItemToSave(gameItem *item.Item) InventoryItem {
 	}
 }
 
-// ConvertDungeonToSave converts dungeon manager to save format
+// ConvertDungeonToSave converts dungeon manager to save format.
 func ConvertDungeonToSave(dungeonManager *dungeon.DungeonManager) Dungeon {
 	saveDungeon := Dungeon{
 		Seed:          dungeonManager.Seed(),
@@ -398,9 +445,9 @@ func ConvertDungeonToSave(dungeonManager *dungeon.DungeonManager) Dungeon {
 		Floors:        make(map[int]*Floor),
 		VisitedFloors: make(map[int]bool),
 		FloorSeeds:    dungeonManager.FloorSeeds(),
+		NoFood:        dungeonManager.NoFood(),
 		RandomState:   RandomState{Draws: dungeonManager.RandomDraws()},
 	}
-
 	// Convert each floor
 	for floorNum := 1; floorNum <= dungeon.MaxFloors; floorNum++ {
 		if level := dungeonManager.GetFloorLevel(floorNum); level != nil {
@@ -422,18 +469,16 @@ func ConvertLevelToSave(level *dungeon.Level) *Floor {
 		Width:       level.Width,
 		Height:      level.Height,
 		Tiles:       make([][]Tile, level.Height),
-		Rooms:       make([]Room, 0),
-		Monsters:    make([]Monster, 0),
-		Items:       make([]Item, 0),
+		Rooms:       make([]Room, 0, len(level.Rooms)),
+		Monsters:    make([]Monster, 0, len(level.Monsters)),
+		Items:       make([]Item, 0, len(level.Items)),
+		Traps:       make([]Trap, 0, len(level.Traps)),
 		Visited:     true,
 		Seed:        level.Seed,
 		IsGenerated: true,
-		IsMaze:      level.FloorNumber == 7 || level.FloorNumber == 13 || level.FloorNumber == 19,
-		IsSpecial:   level.FloorNumber%5 == 0,
 		RandomState: RandomState{Draws: level.RandomDraws()},
 	}
 
-	// Convert tiles
 	for y := 0; y < level.Height; y++ {
 		saveFloor.Tiles[y] = make([]Tile, level.Width)
 		for x := 0; x < level.Width; x++ {
@@ -442,81 +487,90 @@ func ConvertLevelToSave(level *dungeon.Level) *Floor {
 				saveFloor.Tiles[y][x] = Tile{
 					Type:     ConvertTileTypeToString(tile.Type),
 					Explored: tile.Explored,
-					Lit:      true, // Placeholder - would need lighting system
 					Visible:  tile.Visible,
 				}
 			}
 		}
 	}
 
-	// Convert rooms
 	for _, room := range level.Rooms {
-		saveRoom := Room{
+		saveFloor.Rooms = append(saveFloor.Rooms, Room{
 			X:         room.X,
 			Y:         room.Y,
 			Width:     room.Width,
 			Height:    room.Height,
 			IsSpecial: room.IsSpecial,
+			IsDark:    room.IsDark,
+			IsMaze:    room.IsMaze,
 			Connected: room.Connected,
-			RoomType:  "", // Placeholder for room type
-		}
-		saveFloor.Rooms = append(saveFloor.Rooms, saveRoom)
+		})
 	}
 
-	// Convert monsters
 	for _, monster := range level.Monsters {
-		saveMonster := Monster{
+		saveFloor.Monsters = append(saveFloor.Monsters, Monster{
 			X:              monster.Position.X,
 			Y:              monster.Position.Y,
-			Type:           string(monster.Type.Symbol),
-			Symbol:         monster.Type.Symbol,
-			Name:           monster.Type.Name,
+			Type:           string(monster.Type.Code),
 			HP:             monster.HP,
 			MaxHP:          monster.MaxHP,
 			Attack:         monster.Attack,
 			Defense:        monster.Defense,
-			Speed:          monster.Type.Speed,
-			Color:          int(monster.Type.Color),
+			MonsterLevel:   monster.Type.Level,
+			Experience:     monster.Type.Experience,
 			TurnCount:      monster.TurnCount,
 			IsActive:       monster.IsActive,
-			AIState:        ConvertAIStateToString(monster.AIState),
-			LastPlayerPosX: monster.LastPlayerPos.X,
-			LastPlayerPosY: monster.LastPlayerPos.Y,
-			PatrolPath:     ConvertPatrolPath(monster.PatrolPath),
-			PatrolIndex:    monster.PatrolIndex,
-			AlertLevel:     monster.AlertLevel,
-			SearchTurns:    monster.SearchTurns,
-			OriginalPosX:   monster.OriginalPos.X,
-			OriginalPosY:   monster.OriginalPos.Y,
-			ViewRange:      monster.ViewRange,
-			DetectionRange: monster.DetectionRange,
-		}
-		saveFloor.Monsters = append(saveFloor.Monsters, saveMonster)
+			IsRunning:      monster.IsRunning,
+			IsHeld:         monster.IsHeld,
+			WasAdjacent:    monster.WasAdjacent,
+			IsFound:        monster.IsFound,
+			IsConfused:     monster.IsConfused,
+			IsCancelled:    monster.IsCancelled,
+			IsInvisible:    monster.IsInvisible,
+			IsHasted:       monster.IsHasted,
+			IsSlowed:       monster.IsSlowed,
+			FlytrapHits:    monster.FlytrapHits,
+			GoldValue:      monster.GoldValue,
+			GreedTargetX:   monster.GreedTarget.X,
+			GreedTargetY:   monster.GreedTarget.Y,
+			HasGreedTarget: monster.HasGreedTarget,
+			Carry:          monster.Carry,
+			Mean:           monster.Mean,
+			Flying:         monster.Flying,
+			Greedy:         monster.Greedy,
+			Regenerates:    monster.Regenerates,
+			Floor:          monster.Floor,
+		})
 	}
 
-	// Convert items
-	for _, item := range level.Items {
-		saveItem := Item{
-			X:            item.Position.X,
-			Y:            item.Position.Y,
-			Type:         ConvertItemTypeToString(item.Type),
-			Name:         item.Name,
-			RealName:     item.RealName,
-			Value:        item.Value,
-			Quantity:     item.Quantity,
-			IsIdentified: item.IsIdentified,
-			IsCursed:     item.IsCursed,
-			IsBlessed:    item.IsBlessed,
-			Damage:       item.Damage,
-			Defense:      item.Defense,
-			Enchantment:  item.Enchantment,
-			Charges:      item.Charges,
-			MaxCharges:   item.MaxCharges,
-			ItemID:       item.ItemID,
-			Symbol:       item.Symbol,
-			Color:        int(item.Color),
-		}
-		saveFloor.Items = append(saveFloor.Items, saveItem)
+	for _, gameItem := range level.Items {
+		saveFloor.Items = append(saveFloor.Items, Item{
+			X:            gameItem.Position.X,
+			Y:            gameItem.Position.Y,
+			Type:         ConvertItemTypeToString(gameItem.Type),
+			Name:         gameItem.Name,
+			RealName:     gameItem.RealName,
+			Value:        gameItem.Value,
+			Quantity:     gameItem.Quantity,
+			IsIdentified: gameItem.IsIdentified,
+			IsCursed:     gameItem.IsCursed,
+			IsBlessed:    gameItem.IsBlessed,
+			IsProtected:  gameItem.IsProtected,
+			Damage:       gameItem.Damage,
+			Defense:      gameItem.Defense,
+			Enchantment:  gameItem.Enchantment,
+			Charges:      gameItem.Charges,
+			MaxCharges:   gameItem.MaxCharges,
+			ItemID:       gameItem.ItemID,
+		})
+	}
+
+	for _, trap := range level.Traps {
+		saveFloor.Traps = append(saveFloor.Traps, Trap{
+			X:          trap.Position.X,
+			Y:          trap.Position.Y,
+			Type:       trap.Type.String(),
+			Discovered: trap.Discovered,
+		})
 	}
 
 	return saveFloor
@@ -557,6 +611,10 @@ func ConvertTileTypeToString(tileType dungeon.TileType) string {
 		return "wall"
 	case dungeon.TileFloor:
 		return saveFloorKey
+	case dungeon.TilePassage:
+		return "passage"
+	case dungeon.TileSecretPassage:
+		return "secret_passage"
 	case dungeon.TileDoor:
 		return "door"
 	case dungeon.TileSecretDoor:
@@ -576,33 +634,4 @@ func ConvertTileTypeToString(tileType dungeon.TileType) string {
 	default:
 		return UNKNOWN_VALUE
 	}
-}
-
-// ConvertAIStateToString converts AI state to string
-func ConvertAIStateToString(aiState actor.AIState) string {
-	switch aiState {
-	case actor.StateIdle:
-		return "idle"
-	case actor.StatePatrol:
-		return "patrol"
-	case actor.StateChase:
-		return "chase"
-	case actor.StateAttack:
-		return "attack"
-	case actor.StateSearch:
-		return "search"
-	case actor.StateFlee:
-		return "flee"
-	default:
-		return UNKNOWN_VALUE
-	}
-}
-
-// ConvertPatrolPath converts patrol path to save format
-func ConvertPatrolPath(patrolPath []entity.Position) []Pos {
-	savePath := make([]Pos, len(patrolPath))
-	for i, pos := range patrolPath {
-		savePath[i] = Pos{X: pos.X, Y: pos.Y}
-	}
-	return savePath
 }

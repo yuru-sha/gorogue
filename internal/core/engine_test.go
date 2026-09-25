@@ -45,11 +45,15 @@ func TestEngineRendersGameOverAfterFatalInventoryAction(t *testing.T) {
 	engine.gameScreen.SetLevel(level)
 
 	engine.Update(gruid.MsgKeyDown{Key: "d"})
+	if !strings.Contains(engine.Draw().String(), "Drop which item?") {
+		t.Fatal("drop selection prompt was not rendered")
+	}
 	if effect := engine.Update(gruid.MsgKeyDown{Key: "a"}); effect != nil {
 		t.Fatal("fatal inventory action returned an end effect before rendering game over")
 	}
 	if got := engine.stateManager.GetCurrentState(); got != state.StateGameOver {
-		t.Fatalf("current state = %v, want StateGameOver", got)
+		t.Fatalf("current state = %v, HP=%d, inventory=%d, dropped=%d; want StateGameOver",
+			got, engine.player.HP, engine.player.Inventory.Size(), len(level.Items))
 	}
 
 	grid := engine.Draw()
@@ -155,7 +159,9 @@ func fatalEngineLevel() *dungeon.Level {
 	}
 	monster := actor.NewMonster(2, 1, 'E')
 	monster.Type.Speed = 1
-	monster.Attack = 100
+	monster.Type.Level = 1000
+	monster.Type.Damage = "100x100"
+	monster.IsRunning = true
 	level.Monsters = []*actor.Monster{monster}
 	return level
 }

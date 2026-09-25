@@ -20,7 +20,7 @@ func NewParser() *Parser {
 
 // initializeKeyMap sets up the key to command mappings.
 func (p *Parser) initializeKeyMap() {
-	// Movement commands - vi keys.
+	// Movement commands use Rogue's vi keys.
 	p.keyMap["h"] = Command{Type: CmdMoveWest, Direction: Direction{X: -1, Y: 0}}
 	p.keyMap["j"] = Command{Type: CmdMoveSouth, Direction: Direction{X: 0, Y: 1}}
 	p.keyMap["k"] = Command{Type: CmdMoveNorth, Direction: Direction{X: 0, Y: -1}}
@@ -29,57 +29,47 @@ func (p *Parser) initializeKeyMap() {
 	p.keyMap["u"] = Command{Type: CmdMoveNorthEast, Direction: Direction{X: 1, Y: -1}}
 	p.keyMap["b"] = Command{Type: CmdMoveSouthWest, Direction: Direction{X: -1, Y: 1}}
 	p.keyMap["n"] = Command{Type: CmdMoveSouthEast, Direction: Direction{X: 1, Y: 1}}
-
-	// Uppercase movement keys run in the same direction.
-	p.keyMap["H"] = Command{Type: CmdMoveWest, Direction: Direction{X: -1, Y: 0}}
-	p.keyMap["J"] = Command{Type: CmdMoveSouth, Direction: Direction{X: 0, Y: 1}}
-	p.keyMap["K"] = Command{Type: CmdMoveNorth, Direction: Direction{X: 0, Y: -1}}
-	p.keyMap["L"] = Command{Type: CmdMoveEast, Direction: Direction{X: 1, Y: 0}}
-	p.keyMap["Y"] = Command{Type: CmdMoveNorthWest, Direction: Direction{X: -1, Y: -1}}
-	p.keyMap["U"] = Command{Type: CmdMoveNorthEast, Direction: Direction{X: 1, Y: -1}}
-	p.keyMap["B"] = Command{Type: CmdMoveSouthWest, Direction: Direction{X: -1, Y: 1}}
-	p.keyMap["N"] = Command{Type: CmdMoveSouthEast, Direction: Direction{X: 1, Y: 1}}
-
-	// Movement commands - arrow keys
 	p.keyMap[gruid.KeyArrowLeft] = Command{Type: CmdMoveWest, Direction: Direction{X: -1, Y: 0}}
 	p.keyMap[gruid.KeyArrowDown] = Command{Type: CmdMoveSouth, Direction: Direction{X: 0, Y: 1}}
 	p.keyMap[gruid.KeyArrowUp] = Command{Type: CmdMoveNorth, Direction: Direction{X: 0, Y: -1}}
 	p.keyMap[gruid.KeyArrowRight] = Command{Type: CmdMoveEast, Direction: Direction{X: 1, Y: 0}}
+	p.keyMap["Left"] = p.keyMap[gruid.KeyArrowLeft]
+	p.keyMap["Down"] = p.keyMap[gruid.KeyArrowDown]
+	p.keyMap["Up"] = p.keyMap[gruid.KeyArrowUp]
+	p.keyMap["Right"] = p.keyMap[gruid.KeyArrowRight]
+	p.keyMap["H"] = Command{Type: CmdRun, Direction: Direction{X: -1, Y: 0}}
+	p.keyMap["J"] = Command{Type: CmdRun, Direction: Direction{X: 0, Y: 1}}
+	p.keyMap["K"] = Command{Type: CmdRun, Direction: Direction{X: 0, Y: -1}}
+	p.keyMap["L"] = Command{Type: CmdRun, Direction: Direction{X: 1, Y: 0}}
+	p.keyMap["Y"] = Command{Type: CmdRun, Direction: Direction{X: -1, Y: -1}}
+	p.keyMap["U"] = Command{Type: CmdRun, Direction: Direction{X: 1, Y: -1}}
+	p.keyMap["B"] = Command{Type: CmdRun, Direction: Direction{X: -1, Y: 1}}
+	p.keyMap["N"] = Command{Type: CmdRun, Direction: Direction{X: 1, Y: 1}}
 
-	// Movement commands - numpad (for when numlock is off)
-	p.keyMap["Left"] = Command{Type: CmdMoveWest, Direction: Direction{X: -1, Y: 0}}
-	p.keyMap["Down"] = Command{Type: CmdMoveSouth, Direction: Direction{X: 0, Y: 1}}
-	p.keyMap["Up"] = Command{Type: CmdMoveNorth, Direction: Direction{X: 0, Y: -1}}
-	p.keyMap["Right"] = Command{Type: CmdMoveEast, Direction: Direction{X: 1, Y: 0}}
-
-	// Action commands. Each key has one meaning; movement keys are not reused.
 	p.keyMap["i"] = Command{Type: CmdInventory}
 	p.keyMap[","] = Command{Type: CmdPickUp}
-	p.keyMap["g"] = Command{Type: CmdPickUp}
 	p.keyMap["d"] = Command{Type: CmdDrop}
-	p.keyMap["a"] = Command{Type: CmdUse}
-	p.keyMap["z"] = Command{Type: CmdUse}
+	p.keyMap["a"] = Command{Type: CmdRepeat}
 	p.keyMap["q"] = Command{Type: CmdQuaff}
 	p.keyMap["r"] = Command{Type: CmdRead}
 	p.keyMap["w"] = Command{Type: CmdWield}
-	p.keyMap["t"] = Command{Type: CmdTakeOff}
+	p.keyMap["W"] = Command{Type: CmdWear}
+	p.keyMap["T"] = Command{Type: CmdTakeOff}
+	p.keyMap["P"] = Command{Type: CmdRingOn}
+	p.keyMap["R"] = Command{Type: CmdRingOff}
 	p.keyMap["e"] = Command{Type: CmdEat}
-	p.keyMap["o"] = Command{Type: CmdOpen}
-	p.keyMap["c"] = Command{Type: CmdClose}
-	p.keyMap["s"] = Command{Type: CmdSearch}
-	p.keyMap["D"] = Command{Type: CmdDisarm}
-	p.keyMap["f"] = Command{Type: CmdFight}
-	p.keyMap["x"] = Command{Type: CmdLook}
-	p.keyMap[" "] = Command{Type: CmdWait}
 	p.keyMap["."] = Command{Type: CmdWait}
-	p.keyMap["^L"] = Command{Type: CmdLook}
-	p.keyMap["^R"] = Command{Type: CmdLook}
+	p.keyMap["s"] = Command{Type: CmdSearch}
+	p.keyMap["^"] = Command{Type: CmdFindTrap}
+	p.keyMap["f"] = Command{Type: CmdFight}
+	p.keyMap["t"] = Command{Type: CmdThrow}
+	p.keyMap["z"] = Command{Type: CmdZap}
+	p.keyMap["@"] = Command{Type: CmdCharacter}
+	p.keyMap["c"] = Command{Type: CmdCall}
+	p.keyMap["D"] = Command{Type: CmdDiscover}
 
-	// Stair commands.
-	p.keyMap["<"] = Command{Type: CmdGoUpstairs}   // Go up
-	p.keyMap[">"] = Command{Type: CmdGoDownstairs} // Go down
-
-	// System commands.
+	p.keyMap["<"] = Command{Type: CmdGoUpstairs}
+	p.keyMap[">"] = Command{Type: CmdGoDownstairs}
 	p.keyMap["Q"] = Command{Type: CmdQuit}
 	p.keyMap["?"] = Command{Type: CmdHelp}
 	p.keyMap["/"] = Command{Type: CmdSymbol}
@@ -87,6 +77,9 @@ func (p *Parser) initializeKeyMap() {
 	p.keyMap["^W"] = Command{Type: CmdWizard}
 	p.keyMap[":"] = Command{Type: CmdCLI}
 }
+
+// Only command keys from Rogue are assigned gameplay meanings here;
+// nonconflicting frontend conveniences remain available through named CLI commands.
 
 // Parse converts a key input to a command
 func (p *Parser) Parse(key gruid.Key) Command {
@@ -101,47 +94,39 @@ func (p *Parser) Parse(key gruid.Key) Command {
 func (p *Parser) GetKeyBindings() map[string]string {
 	bindings := make(map[string]string)
 
-	// Movement
-	bindings["h,j,k,l"] = "Move west, south, north, east"
-	bindings["y,u,b,n"] = "Move diagonally (NW, NE, SW, SE)"
-	bindings["H,J,K,L"] = "Run in direction (until wall/object)"
-	bindings["Y,U,B,N"] = "Run diagonally"
+	bindings["h,j,k,l,y,u,b,n"] = "Move one square in eight directions"
+	bindings["H,J,K,L,Y,U,B,N"] = "Run in eight directions"
 	bindings["Arrow keys"] = "Move in four directions"
-	bindings["Numpad"] = "Move with keys 1-9 (including diagonals)"
 
-	// Actions
-	bindings["i"] = "Inventory - show what you are carrying"
-	bindings[","] = "Pick up object(s) (PyRogue style)"
-	bindings["g"] = "Get/pick up object(s) (alternative)"
-	bindings["a"] = "Apply/use an item"
-	bindings["z"] = "Apply/use an item (alternative)"
+	bindings["i"] = "Show inventory"
+	bindings[","] = "Pick up an item"
+	bindings["d"] = "Drop an item"
+	bindings["a"] = "Repeat last command"
 	bindings["q"] = "Quaff a potion"
 	bindings["r"] = "Read a scroll"
-	bindings["w"] = "Wield/wear an item"
-	bindings["t"] = "Take off an item"
+	bindings["w"] = "Wield a weapon"
+	bindings["W"] = "Wear armor"
+	bindings["T"] = "Take off armor"
+	bindings["P"] = "Put on a ring"
+	bindings["R"] = "Remove a ring"
 	bindings["e"] = "Eat food"
-	bindings["d"] = "Drop an item"
-	bindings["o"] = "Open a door"
-	bindings["c"] = "Close a door"
-	bindings["s"] = "Search for traps/doors"
-	bindings["D"] = "Disarm a trap"
-	bindings["f"] = "Fight (attack adjacent monster)"
-	bindings["x"] = "Look/examine surroundings"
-	bindings["."] = "Rest for a turn"
-	bindings["Space"] = "Rest for a turn"
-	bindings["Ctrl+L"] = "Redraw the screen"
-	bindings["Ctrl+R"] = "Repeat last message"
+	bindings["."] = "Rest"
+	bindings["s"] = "Search nearby for traps"
+	bindings["^"] = "Search for a trap in a direction"
+	bindings["f"] = "Fight in a direction"
+	bindings["t"] = "Throw an item"
+	bindings["z"] = "Zap a wand or staff"
+	bindings["@"] = "Show character information"
+	bindings["D"] = "Show discovered items"
+	bindings["c"] = "Name an unidentified item"
 
-	// Stairs
 	bindings["<"] = "Go up a staircase"
 	bindings[">"] = "Go down a staircase"
-
-	// System
 	bindings["Q"] = "Quit the game"
 	bindings["?"] = "Show this help"
 	bindings["/"] = "Show symbol explanation"
 	bindings["ESC"] = "Cancel command"
-	bindings["Ctrl+W"] = "Toggle wizard mode"
+	bindings["^W"] = "Toggle wizard mode"
 	bindings[":"] = "Enter CLI debug mode"
 
 	return bindings

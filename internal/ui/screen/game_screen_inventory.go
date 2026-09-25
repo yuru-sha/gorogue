@@ -12,28 +12,39 @@ func (s *GameScreen) showInventory() {
 	s.addCommandResult(s.executeCommand(command.Command{Type: command.CmdInventory}))
 }
 
-// enterEquipMode enters equipment selection mode
-func (s *GameScreen) enterEquipMode() {
+func (s *GameScreen) enterEquipModeFor(action command.Type) {
+	s.equipAction = action
 	if s.player.Inventory.IsEmpty() {
 		s.AddMessage("You have nothing to equip.")
 		return
 	}
 
-	// 装備可能なアイテムをリストアップ
 	s.equippableItems = make([]*gameitem.Item, 0)
-	for _, item := range s.player.Inventory.Items {
-		if s.canEquip(item) {
-			s.equippableItems = append(s.equippableItems, item)
+	for _, candidate := range s.player.Inventory.Items {
+		if s.canEquip(candidate) && fitsEquipAction(candidate, action) {
+			s.equippableItems = append(s.equippableItems, candidate)
 		}
 	}
-
 	if len(s.equippableItems) == 0 {
-		s.AddMessage("You have no equippable items.")
+		s.AddMessage("You have no matching equipment.")
 		return
 	}
 
 	s.inputMode = ModeEquip
 	s.showEquipMenu()
+}
+
+func fitsEquipAction(candidate *gameitem.Item, action command.Type) bool {
+	switch action {
+	case command.CmdWield:
+		return candidate.Type == gameitem.ItemWeapon
+	case command.CmdWear:
+		return candidate.Type == gameitem.ItemArmor
+	case command.CmdRingOn:
+		return candidate.Type == gameitem.ItemRing
+	default:
+		return true
+	}
 }
 
 // showEquipMenu shows the equip item menu
@@ -44,54 +55,40 @@ func (s *GameScreen) showEquipMenu() {
 		displayName := s.player.IdentifyMgr.GetDisplayName(item)
 		s.AddMessage(fmt.Sprintf("%c) %s", letter, displayName))
 	}
-	s.AddMessage("Equip which item? (a-z, ESC to cancel)")
+	s.AddMessage("Select an item (a-z, ESC to cancel)")
 }
 
-// enterUnequipMode enters unequip selection mode
-func (s *GameScreen) enterUnequipMode() {
-	// 現在装備しているアイテムがあるかチェック
+func (s *GameScreen) enterUnequipModeFor(action command.Type) {
+	s.unequipAction = action
 	if s.player.Equipment.Weapon == nil && s.player.Equipment.Armor == nil &&
 		s.player.Equipment.RingLeft == nil && s.player.Equipment.RingRight == nil {
 		s.AddMessage("You have nothing equipped to take off.")
 		return
 	}
-
+	if action == command.CmdTakeOff && s.player.Equipment.Armor == nil {
+		s.AddMessage("You are not wearing armor.")
+		return
+	}
+	if action == command.CmdRingOff &&
+		s.player.Equipment.RingLeft == nil && s.player.Equipment.RingRight == nil {
+		s.AddMessage("You are not wearing a ring.")
+		return
+	}
 	s.inputMode = ModeUnequip
 	s.showUnequipMenu()
 }
 
-// showUnequipMenu shows the unequip item menu
 func (s *GameScreen) showUnequipMenu() {
-	// 現在装備しているアイテムをチェック
-	equippedItems := make([]string, 0)
-
-	if s.player.Equipment.Weapon != nil {
-		weaponName := s.player.IdentifyMgr.GetDisplayName(s.player.Equipment.Weapon)
-		equippedItems = append(equippedItems, fmt.Sprintf("(w) %s", weaponName))
+	var prompt string
+	switch s.unequipAction {
+	case command.CmdTakeOff:
+		prompt = "(a)rmor"
+	case command.CmdRingOff:
+		prompt = "(l)eft ring, (r)ight ring"
+	default:
+		prompt = "(w)eapon, (a)rmor, (l)eft ring, (r)ight ring"
 	}
-	if s.player.Equipment.Armor != nil {
-		armorName := s.player.IdentifyMgr.GetDisplayName(s.player.Equipment.Armor)
-		equippedItems = append(equippedItems, fmt.Sprintf("(a) %s", armorName))
-	}
-	if s.player.Equipment.RingLeft != nil {
-		ringName := s.player.IdentifyMgr.GetDisplayName(s.player.Equipment.RingLeft)
-		equippedItems = append(equippedItems, fmt.Sprintf("(l) %s", ringName))
-	}
-	if s.player.Equipment.RingRight != nil {
-		ringName := s.player.IdentifyMgr.GetDisplayName(s.player.Equipment.RingRight)
-		equippedItems = append(equippedItems, fmt.Sprintf("(r) %s", ringName))
-	}
-
-	if len(equippedItems) == 0 {
-		s.AddMessage("You have nothing equipped to take off.")
-		return
-	}
-
-	s.AddMessage("Currently equipped:")
-	for _, item := range equippedItems {
-		s.AddMessage(item)
-	}
-	s.AddMessage("Take off which item? (w)eapon, (a)rmor, (l)eft ring, (r)ight ring")
+	s.AddMessage("Take off which item? " + prompt)
 }
 
 // enterDropMode enters drop selection mode
@@ -190,6 +187,25 @@ func (s *GameScreen) showScrolls() {
 		}
 	}
 	s.AddMessage("Read which scroll? (a-z, ESC to cancel)")
+}
+
+func (s *GameScreen) showIdentifyTargets(types []gameitem.ItemType) {
+	s.AddMessage("Identify which item?")
+	shown := 0
+	for index, candidate := range s.player.Inventory.Items {
+		for _, targetType := range types {
+			if candidate.Type != targetType {
+				continue
+			}
+			name := s.player.IdentifyMgr.GetDisplayName(candidate)
+			s.AddMessage(fmt.Sprintf("%c) %s", rune('a'+index), name))
+			shown++
+			break
+		}
+	}
+	if shown == 0 {
+		s.AddMessage("You have no matching items. ESC to cancel.")
+	}
 }
 
 // enterEatMode enters food selection mode.

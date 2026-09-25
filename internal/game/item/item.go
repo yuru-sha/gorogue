@@ -2,9 +2,9 @@ package item
 
 import (
 	"math/rand"
+	"strings"
 	"time"
 
-	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/entity"
 )
 
@@ -23,78 +23,30 @@ const (
 	ItemAmulet // イェンダーの魔除け
 )
 
+const (
+	teleportationName          = "teleportation"
+	weaponDamageOneDieOneSide  = "1x1"
+	weaponDamageOneDieTwoSides = "1x2"
+)
+
 // Item represents an item in the game
 type Item struct {
 	*entity.Entity
 	Type         ItemType
 	Name         string
-	RealName     string // 真の名前（識別前後で同じ）
-	Value        int    // ゴールドとしての価値
+	RealName     string // canonical name, unchanged by identification
+	Value        int    // gold value
 	Quantity     int
-	IsIdentified bool // このアイテムが識別済みかどうか
-	IsCursed     bool // 呪われているかどうか
-	IsBlessed    bool // 祝福されているかどうか
-	// 武器・防具用
-	Damage      int // 武器のダメージ
-	Defense     int // 防具の防御力
-	Enchantment int // 強化値 (+1, +2, etc.)
-	// 杖用
-	Charges    int // 杖の残りチャージ数
-	MaxCharges int // 杖の最大チャージ数
-	// 識別用
-	ItemID int // PyRouge準拠のID
-}
-
-// GetItemSymbol returns the symbol for a given item type
-func GetItemSymbol(t ItemType) rune {
-	switch t {
-	case ItemWeapon:
-		return ')'
-	case ItemArmor:
-		return '['
-	case ItemRing:
-		return '='
-	case ItemScroll:
-		return '?'
-	case ItemPotion:
-		return '!'
-	case ItemWand:
-		return '/'
-	case ItemFood:
-		return '%'
-	case ItemGold:
-		return '$'
-	case ItemAmulet:
-		return '*'
-	default:
-		return '*'
-	}
-}
-
-// GetItemColor returns the color for a given item type - PyRogue風
-func GetItemColor(t ItemType) gruid.Color {
-	switch t {
-	case ItemWeapon:
-		return 0xC0C0C0 // Silver - PyRogue風
-	case ItemArmor:
-		return 0x8B4513 // Brown - PyRogue風
-	case ItemRing:
-		return 0xFFD700 // Gold - PyRogue風
-	case ItemScroll:
-		return 0xFFFFFF // White - PyRogue風
-	case ItemPotion:
-		return 0xFF1493 // DeepPink - PyRogue風
-	case ItemWand:
-		return 0x8A2BE2 // BlueViolet - PyRogue風
-	case ItemFood:
-		return 0xFFA500 // Orange - PyRogue風
-	case ItemGold:
-		return 0xFFD700 // Gold - PyRogue風
-	case ItemAmulet:
-		return 0x9400D3 // Purple - PyRogue風（特別なアイテム）
-	default:
-		return 0xDA70D6 // Orchid - PyRogue風（デフォルト紫系）
-	}
+	IsIdentified bool
+	IsCursed     bool
+	IsBlessed    bool
+	IsProtected  bool
+	Damage       int // maximum native melee damage for weapons
+	Defense      int // positive defense bonus, derived from Rogue armor class
+	Enchantment  int
+	Charges      int
+	MaxCharges   int
+	ItemID       int
 }
 
 // NewItem creates a new item
@@ -107,7 +59,7 @@ func NewItem(x, y int, itemType ItemType, name string, value int) *Item {
 	}
 
 	return &Item{
-		Entity:       entity.NewEntity(x, y, GetItemSymbol(itemType), GetItemColor(itemType)),
+		Entity:       entity.NewEntity(x, y),
 		Type:         itemType,
 		Name:         name,
 		RealName:     name,
@@ -119,88 +71,79 @@ func NewItem(x, y int, itemType ItemType, name string, value int) *Item {
 	}
 }
 
-// NewGold creates a new gold pile with random amount
+// NewGold creates a source-sized gold pile for the first dungeon level.
 func NewGold(x, y int, isSpecialRoom bool) *Item {
 	return NewGoldWithRand(x, y, isSpecialRoom, nil)
 }
 
-// NewGoldWithRand creates gold using the supplied random source.
-func NewGoldWithRand(x, y int, isSpecialRoom bool, rng *rand.Rand) *Item {
+// NewGoldWithRand preserves the existing API; Rogue uses the same floor-based
+// gold formula in every room.
+func NewGoldWithRand(x, y int, _ bool, rng *rand.Rand) *Item {
+	return NewGoldForFloorWithRand(x, y, 1, rng)
+}
+
+// NewGoldForFloorWithRand creates gold using Rogue's GOLDCALC formula.
+func NewGoldForFloorWithRand(x, y, floor int, rng *rand.Rand) *Item {
 	rng = ensureRand(rng)
-	var amount int
-	if isSpecialRoom {
-		amount = 100 + rng.Intn(151) // 100-250
-	} else {
-		amount = 1 + rng.Intn(250) // 1-250
-	}
+	amount := rng.Intn(50+10*floor) + 2
 	return NewItem(x, y, ItemGold, "Gold", amount)
 }
 
-// NewAmulet creates Yendor's amulet
+// NewAmulet creates Yendor's amulet.
 func NewAmulet(x, y int) *Item {
-	return NewItem(x, y, ItemAmulet, "イェンダーの魔除け", 1000)
+	return NewItem(x, y, ItemAmulet, "The Amulet of Yendor", 0)
 }
 
-// NewRandomScroll creates a random scroll
+// NewRandomScroll creates a random scroll.
 func NewRandomScroll(x, y int) *Item {
 	return NewRandomScrollWithRand(x, y, nil)
 }
 
-// NewRandomScrollWithRand creates a random scroll using the supplied random source.
+// NewRandomScrollWithRand creates a source-weighted Rogue scroll.
 func NewRandomScrollWithRand(x, y int, rng *rand.Rand) *Item {
 	rng = ensureRand(rng)
-	scrollTypes := []string{
-		"identify", "teleportation", "sleep", "enchant armor", "enchant weapon",
-		"create monster", "remove curse", "aggravate monster", "magic mapping",
-		"hold monster", "confuse monster", "scare monster", "blank paper",
-		"light", "food detection", "gold detection", "potion detection",
-		"magic detection", "monster detection", "trap detection",
-	}
-
-	scrollType := scrollTypes[rng.Intn(len(scrollTypes))]
-	return NewItem(x, y, ItemScroll, scrollType, 50+rng.Intn(100))
+	scroll := chooseItemDefinition(rng, ScrollTypes)
+	return NewItem(x, y, ItemScroll, scroll.Name, scroll.Value)
 }
 
-// NewRandomPotion creates a random potion
+// NewRandomPotion creates a random potion.
 func NewRandomPotion(x, y int) *Item {
 	return NewRandomPotionWithRand(x, y, nil)
 }
 
-// NewRandomPotionWithRand creates a random potion using the supplied random source.
+// NewRandomPotionWithRand creates a source-weighted Rogue potion.
 func NewRandomPotionWithRand(x, y int, rng *rand.Rand) *Item {
 	rng = ensureRand(rng)
-	potionTypes := []string{
-		"healing", "extra healing", "haste self", "restore strength", "blindness",
-		"paralysis", "confusion", "hallucination", "poison", "gain strength",
-		"see invisible", "gain experience", "thirst quenching", "magic detection",
-		"monster detection", "object detection", "raise level", "gain dexterity",
-		"gain constitution", "gain intelligence", "levitation", "invisibility",
-	}
-
-	potionType := potionTypes[rng.Intn(len(potionTypes))]
-	return NewItem(x, y, ItemPotion, potionType, 25+rng.Intn(75))
+	potion := chooseItemDefinition(rng, PotionTypes)
+	return NewItem(x, y, ItemPotion, potion.Name, potion.Value)
 }
 
-// NewRandomRing creates a random ring
+// NewRandomRing creates a random ring.
 func NewRandomRing(x, y int) *Item {
 	return NewRandomRingWithRand(x, y, nil)
 }
 
-// NewRandomRingWithRand creates a random ring using the supplied random source.
+// NewRandomRingWithRand creates a source-weighted Rogue ring.
 func NewRandomRingWithRand(x, y int, rng *rand.Rand) *Item {
 	rng = ensureRand(rng)
-	ringTypes := []string{
-		"protection", "add strength", "sustain strength", "searching", "see invisible",
-		"adornment", "teleportation", "stealth", "regeneration", "slow digestion",
-		"dexterity", "increase damage", "protection from magic", "hunger",
-		"aggravate monster", "maintain armor", "teleport control",
-	}
+	ring := chooseItemDefinition(rng, RingTypes)
+	result := NewItem(x, y, ItemRing, ring.Name, ring.Value)
+	result.ItemID = ring.ID
 
-	ringType := ringTypes[rng.Intn(len(ringTypes))]
-	return NewItem(x, y, ItemRing, ringType, 100+rng.Intn(200))
+	switch ring.Name {
+	case "add strength", "protection", "dexterity", "increase damage":
+		result.Enchantment = rng.Intn(3)
+		if result.Enchantment == 0 {
+			result.Enchantment = -1
+			result.IsCursed = true
+		}
+	case "aggravate monster", teleportationName:
+		result.IsCursed = true
+	}
+	return result
 }
 
-// NewFood creates food item
+// NewFood creates a source-weighted food ration or slime-mold.
 func NewFood(x, y int) *Item {
 	return NewFoodWithRand(x, y, nil)
 }
@@ -208,9 +151,74 @@ func NewFood(x, y int) *Item {
 // NewFoodWithRand creates food using the supplied random source.
 func NewFoodWithRand(x, y int, rng *rand.Rand) *Item {
 	rng = ensureRand(rng)
-	foodTypes := []string{"food ration", "slime-mold", "fruit"}
-	foodType := foodTypes[rng.Intn(len(foodTypes))]
-	return NewItem(x, y, ItemFood, foodType, 10+rng.Intn(20))
+	name := FoodTypes[0].Name
+	if rng.Intn(10) == 0 {
+		name = FoodTypes[1].Name
+	}
+	return NewItem(x, y, ItemFood, name, 0)
+
+}
+
+// NewRandomThingWithRand creates one source-weighted generated item.
+// Gold and the Amulet are placed separately in Rogue.
+func NewRandomThingWithRand(x, y, floor int, rng *rand.Rand) *Item {
+	rng = ensureRand(rng)
+	switch rollProbability(rng, ThingProbabilities[:]) {
+	case 0:
+		return NewRandomPotionWithRand(x, y, rng)
+	case 1:
+		return NewRandomScrollWithRand(x, y, rng)
+	case 2:
+		return NewFoodWithRand(x, y, rng)
+	case 3:
+		return NewRandomWeaponWithRand(x, y, floor, rng)
+	case 4:
+		return NewRandomArmorWithRand(x, y, floor, rng)
+	case 5:
+		return NewRandomRingWithRand(x, y, rng)
+	default:
+		return NewRandomWandWithRand(x, y, floor, rng)
+	}
+}
+
+// NewRandomThingWithStateWithRand applies Rogue's cross-level food guarantee.
+// noFood is the number of consecutive generated floors without food; the
+// returned value resets to zero when the generated item is food.
+func NewRandomThingWithStateWithRand(x, y, floor, noFood int, rng *rand.Rand) (generated *Item, consecutiveNoFood int) {
+	rng = ensureRand(rng)
+	if noFood > 3 {
+		return NewFoodWithRand(x, y, rng), 0
+	}
+	generated = NewRandomThingWithRand(x, y, floor, rng)
+	consecutiveNoFood = noFood
+	if generated.Type == ItemFood {
+		consecutiveNoFood = 0
+	}
+	return generated, consecutiveNoFood
+}
+
+func chooseItemDefinition(rng *rand.Rand, definitions []ItemDefinition) ItemDefinition {
+	roll := rng.Intn(100)
+	cumulative := 0
+	for _, definition := range definitions {
+		cumulative += definition.Probability
+		if roll < cumulative {
+			return definition
+		}
+	}
+	return definitions[0]
+}
+
+func rollProbability(rng *rand.Rand, probabilities []int) int {
+	roll := rng.Intn(100)
+	cumulative := 0
+	for i, probability := range probabilities {
+		cumulative += probability
+		if roll < cumulative {
+			return i
+		}
+	}
+	return 0
 }
 
 func ensureRand(rng *rand.Rand) *rand.Rand {
@@ -220,153 +228,273 @@ func ensureRand(rng *rand.Rand) *rand.Rand {
 	return rng
 }
 
-// WeaponDefinition represents a weapon type
+// ItemDefinition is a source-native item name, probability, and value.
+type ItemDefinition struct {
+	ID          int
+	Name        string
+	Probability int
+	Value       int
+}
+
+// WeaponDefinition stores Rogue's weapon damage dice and appearance probability.
 type WeaponDefinition struct {
-	ID       int
-	Name     string
-	Damage   int
-	Value    int
-	MinFloor int
-	MaxFloor int
+	ID           int
+	Name         string
+	Damage       int
+	Value        int
+	MinFloor     int
+	MaxFloor     int
+	Probability  int
+	MeleeDamage  string
+	ThrownDamage string
+	MinQuantity  int
+	MaxQuantity  int
+	LauncherID   int
 }
 
-// PyRogue準拠の武器定義
+// WeaponTypes follows weap_info and init_dam in Rogue 5.4.4.
 var WeaponTypes = []WeaponDefinition{
-	{101, "Dagger", 3, 10, 1, 26},
-	{102, "Mace", 5, 15, 1, 26},
-	{103, "Long Sword", 8, 25, 3, 26},
-	{104, "Bow", 6, 20, 2, 26},
-	{105, "Crossbow", 10, 30, 5, 26},
-	{106, "Two-Handed Sword", 14, 75, 7, 26},
+	{102, "mace", 8, 8, 1, 26, 11, "2x4", "1x3", 1, 1, 0},
+	{103, "long sword", 12, 15, 1, 26, 11, "3x4", weaponDamageOneDieTwoSides, 1, 1, 0},
+	{104, "short bow", 1, 15, 1, 26, 12, weaponDamageOneDieOneSide, weaponDamageOneDieOneSide, 1, 1, 0},
+	{107, "arrow", 1, 1, 1, 26, 12, weaponDamageOneDieOneSide, "2x3", 8, 15, 104},
+	{101, "dagger", 6, 3, 1, 26, 8, "1x6", "1x4", 2, 5, 0},
+	{106, "two handed sword", 16, 75, 1, 26, 10, "4x4", "1x2", 1, 1, 0},
+	{108, "dart", 1, 2, 1, 26, 12, weaponDamageOneDieOneSide, "1x3", 8, 15, 0},
+	{109, "shuriken", 2, 5, 1, 26, 12, "1x2", "2x4", 8, 15, 0},
+	{110, "spear", 6, 5, 1, 26, 12, "2x3", "1x6", 1, 1, 0},
 }
 
-// ArmorDefinition represents an armor type
+func WeaponForItem(itm *Item) (WeaponDefinition, bool) {
+	if itm == nil {
+		return WeaponDefinition{}, false
+	}
+	if itm.ItemID != 0 {
+		for _, definition := range WeaponTypes {
+			if definition.ID == itm.ItemID {
+				return definition, true
+			}
+		}
+	}
+	name := strings.TrimSpace(itm.RealName)
+	if name == "" {
+		name = itm.Name
+	}
+	for _, definition := range WeaponTypes {
+		if strings.EqualFold(name, definition.Name) {
+			return definition, true
+		}
+	}
+	return WeaponDefinition{}, false
+}
+
+// ArmorDefinition stores protection bonus (10 - Rogue armor class).
 type ArmorDefinition struct {
-	ID       int
-	Name     string
-	Defense  int
-	Value    int
-	MinFloor int
-	MaxFloor int
+	ID          int
+	Name        string
+	Defense     int
+	Value       int
+	MinFloor    int
+	MaxFloor    int
+	Probability int
+	ArmorClass  int
 }
 
-// PyRogue準拠の防具定義
+// ArmorTypes follows arm_info and a_class in Rogue 5.4.4.
 var ArmorTypes = []ArmorDefinition{
-	{201, "Leather Armor", 2, 20, 1, 26},
-	{202, "Studded Leather", 3, 30, 2, 26},
-	{203, "Ring Mail", 4, 40, 3, 26},
-	{204, "Scale Mail", 5, 50, 4, 26},
-	{205, "Chain Mail", 6, 60, 5, 26},
-	{206, "Splint Mail", 7, 70, 6, 26},
-	{207, "Banded Mail", 8, 80, 7, 26},
-	{208, "Plate Mail", 9, 90, 8, 26},
+	{201, "leather armor", 2, 20, 1, 26, 20, 8},
+	{203, "ring mail", 3, 25, 1, 26, 15, 7},
+	{202, "studded leather armor", 3, 20, 1, 26, 15, 7},
+	{204, "scale mail", 4, 30, 1, 26, 13, 6},
+	{205, "chain mail", 5, 75, 1, 26, 12, 5},
+	{206, "splint mail", 6, 80, 1, 26, 10, 4},
+	{207, "banded mail", 6, 90, 1, 26, 10, 4},
+	{208, "plate mail", 7, 150, 1, 26, 5, 3},
 }
 
-// WandDefinition represents a wand type
+// PotionTypes follows pot_info in Rogue 5.4.4.
+var PotionTypes = []ItemDefinition{
+	{1, "confusion", 7, 5},
+	{2, "hallucination", 8, 5},
+	{3, "poison", 8, 5},
+	{4, "gain strength", 13, 150},
+	{5, "see invisible", 3, 100},
+	{6, "healing", 13, 130},
+	{7, "monster detection", 6, 130},
+	{8, "magic detection", 6, 105},
+	{9, "raise level", 2, 250},
+	{10, "extra healing", 5, 200},
+	{11, "haste self", 5, 190},
+	{12, "restore strength", 13, 130},
+	{13, "blindness", 5, 5},
+	{14, "levitation", 6, 75},
+}
+
+// ScrollTypes follows scr_info in Rogue 5.4.4.
+var ScrollTypes = []ItemDefinition{
+	{1, "monster confusion", 7, 140},
+	{2, "magic mapping", 4, 150},
+	{3, "hold monster", 2, 180},
+	{4, "sleep", 3, 5},
+	{5, "enchant armor", 7, 160},
+	{6, "identify potion", 10, 80},
+	{7, "identify scroll", 10, 80},
+	{8, "identify weapon", 6, 80},
+	{9, "identify armor", 7, 100},
+	{10, "identify ring, wand or staff", 10, 115},
+	{11, "scare monster", 3, 200},
+	{12, "food detection", 2, 60},
+	{13, teleportationName, 5, 165},
+	{14, "enchant weapon", 8, 150},
+	{15, "create monster", 4, 75},
+	{16, "remove curse", 7, 105},
+	{17, "aggravate monsters", 3, 20},
+	{18, "protect armor", 2, 250},
+}
+
+// RingTypes follows ring_info in Rogue 5.4.4.
+var RingTypes = []ItemDefinition{
+	{1, "protection", 9, 400},
+	{2, "add strength", 9, 400},
+	{3, "sustain strength", 5, 280},
+	{4, "searching", 10, 420},
+	{5, "see invisible", 10, 310},
+	{6, "adornment", 1, 10},
+	{7, "aggravate monster", 10, 10},
+	{8, "dexterity", 8, 440},
+	{9, "increase damage", 8, 400},
+	{10, "regeneration", 4, 460},
+	{11, "slow digestion", 9, 240},
+	{12, teleportationName, 5, 30},
+	{13, "stealth", 7, 470},
+	{14, "maintain armor", 5, 380},
+}
+
+// FoodTypes follows Rogue's 90% ration / 10% slime-mold selection.
+var FoodTypes = []ItemDefinition{
+	{1, "food ration", 90, 0},
+	{2, "slime-mold", 10, 0},
+}
+
+// ThingProbabilities follows things[] in Rogue 5.4.4, in its native order.
+var ThingProbabilities = [...]int{26, 36, 16, 7, 7, 4, 4}
+
+// WandDefinition follows ws_info and fix_stick in Rogue 5.4.4.
 type WandDefinition struct {
-	ID         int
-	Name       string
-	MinCharges int
-	MaxCharges int
-	Value      int
-	MinFloor   int
-	MaxFloor   int
+	ID          int
+	Name        string
+	MinCharges  int
+	MaxCharges  int
+	Value       int
+	MinFloor    int
+	MaxFloor    int
+	Probability int
 }
 
-// PyRogue準拠の杖定義
 var WandTypes = []WandDefinition{
-	{601, "Wand of Light", 10, 20, 120, 1, 26},
-	{602, "Wand of Lightning", 4, 8, 200, 3, 26},
-	{603, "Wand of Fire", 4, 8, 200, 3, 26},
-	{604, "Wand of Cold", 4, 8, 200, 3, 26},
-	{605, "Wand of Polymorph", 5, 10, 210, 5, 26},
-	{606, "Wand of Magic Missile", 3, 6, 170, 2, 26},
-	{607, "Wand of Haste Monster", 5, 10, 180, 4, 26},
-	{608, "Wand of Slow Monster", 5, 10, 180, 4, 26},
-	{609, "Wand of Invisibility", 5, 10, 190, 6, 26},
-	{610, "Wand of Teleportation", 3, 6, 210, 5, 26},
-	{611, "Wand of Sleep", 5, 10, 170, 3, 26},
-	{612, "Wand of Drain Life", 2, 4, 280, 8, 26},
+	{601, "light", 10, 19, 250, 1, 26, 12},
+	{609, "invisibility", 3, 7, 5, 1, 26, 6},
+	{602, "lightning", 3, 7, 330, 1, 26, 3},
+	{603, "fire", 3, 7, 330, 1, 26, 3},
+	{604, "cold", 3, 7, 330, 1, 26, 3},
+	{605, "polymorph", 3, 7, 310, 1, 26, 15},
+	{606, "magic missile", 3, 7, 170, 1, 26, 10},
+	{607, "haste monster", 3, 7, 5, 1, 26, 10},
+	{608, "slow monster", 3, 7, 350, 1, 26, 11},
+	{612, "drain life", 3, 7, 300, 1, 26, 9},
+	{613, "nothing", 3, 7, 5, 1, 26, 1},
+	{610, "teleport away", 3, 7, 340, 1, 26, 6},
+	{614, "teleport to", 3, 7, 50, 1, 26, 6},
+	{615, "cancellation", 3, 7, 280, 1, 26, 5},
 }
 
-// NewRandomWeapon creates a random weapon appropriate for the floor
+// NewRandomWeapon creates a random weapon using source probabilities.
 func NewRandomWeapon(x, y, floor int) *Item {
 	return NewRandomWeaponWithRand(x, y, floor, nil)
 }
 
-// NewRandomWeaponWithRand creates a random weapon using the supplied random source.
-func NewRandomWeaponWithRand(x, y, floor int, rng *rand.Rand) *Item {
+// NewRandomWeaponWithRand creates a source-weighted weapon using the supplied RNG.
+func NewRandomWeaponWithRand(x, y, _ int, rng *rand.Rand) *Item {
 	rng = ensureRand(rng)
-	var validWeapons []WeaponDefinition
-	for _, weapon := range WeaponTypes {
-		if floor >= weapon.MinFloor && floor <= weapon.MaxFloor {
-			validWeapons = append(validWeapons, weapon)
+	roll := rng.Intn(100)
+	weapon := WeaponTypes[0]
+	for _, candidate := range WeaponTypes {
+		if roll < candidate.Probability {
+			weapon = candidate
+			break
 		}
+		roll -= candidate.Probability
 	}
 
-	if len(validWeapons) == 0 {
-		validWeapons = WeaponTypes // Fallback
+	result := NewItem(x, y, ItemWeapon, weapon.Name, weapon.Value)
+	result.Damage = weapon.Damage
+	result.ItemID = weapon.ID
+	result.Quantity = weapon.MinQuantity
+	if weapon.MaxQuantity > weapon.MinQuantity {
+		result.Quantity += rng.Intn(weapon.MaxQuantity - weapon.MinQuantity + 1)
 	}
-
-	weapon := validWeapons[rng.Intn(len(validWeapons))]
-	item := NewItem(x, y, ItemWeapon, weapon.Name, weapon.Value)
-	item.Damage = weapon.Damage
-	item.ItemID = weapon.ID
-	item.Enchantment = rng.Intn(3) - 1 // -1, 0, or +1
-	return item
+	enchantmentRoll := rng.Intn(100)
+	if enchantmentRoll < 10 {
+		result.IsCursed = true
+		result.Enchantment = -(rng.Intn(3) + 1)
+	} else if enchantmentRoll < 15 {
+		result.Enchantment = rng.Intn(3) + 1
+	}
+	return result
 }
 
-// NewRandomArmor creates a random armor appropriate for the floor
+// NewRandomArmor creates random armor using source probabilities.
 func NewRandomArmor(x, y, floor int) *Item {
 	return NewRandomArmorWithRand(x, y, floor, nil)
 }
 
-// NewRandomArmorWithRand creates random armor using the supplied random source.
+// NewRandomArmorWithRand creates source-weighted armor using the supplied RNG.
 func NewRandomArmorWithRand(x, y, floor int, rng *rand.Rand) *Item {
 	rng = ensureRand(rng)
-	var validArmors []ArmorDefinition
-	for _, armor := range ArmorTypes {
-		if floor >= armor.MinFloor && floor <= armor.MaxFloor {
-			validArmors = append(validArmors, armor)
+	roll := rng.Intn(100)
+	armor := ArmorTypes[0]
+	for _, candidate := range ArmorTypes {
+		if roll < candidate.Probability {
+			armor = candidate
+			break
 		}
+		roll -= candidate.Probability
 	}
 
-	if len(validArmors) == 0 {
-		validArmors = ArmorTypes // Fallback
+	result := NewItem(x, y, ItemArmor, armor.Name, armor.Value)
+	result.Defense = armor.Defense
+	result.ItemID = armor.ID
+	enchantmentRoll := rng.Intn(100)
+	if enchantmentRoll < 20 {
+		result.IsCursed = true
+		result.Enchantment = -(rng.Intn(3) + 1)
+	} else if enchantmentRoll < 28 {
+		result.Enchantment = rng.Intn(3) + 1
 	}
-
-	armor := validArmors[rng.Intn(len(validArmors))]
-	item := NewItem(x, y, ItemArmor, armor.Name, armor.Value)
-	item.Defense = armor.Defense
-	item.ItemID = armor.ID
-	item.Enchantment = rng.Intn(3) - 1 // -1, 0, or +1
-	return item
+	return result
 }
 
-// NewRandomWand creates a random wand appropriate for the floor
+// NewRandomWand creates a random wand using source probabilities.
 func NewRandomWand(x, y, floor int) *Item {
 	return NewRandomWandWithRand(x, y, floor, nil)
 }
 
-// NewRandomWandWithRand creates a random wand using the supplied random source.
+// NewRandomWandWithRand creates a source-weighted wand using the supplied RNG.
 func NewRandomWandWithRand(x, y, floor int, rng *rand.Rand) *Item {
 	rng = ensureRand(rng)
-	var validWands []WandDefinition
-	for _, wand := range WandTypes {
-		if floor >= wand.MinFloor && floor <= wand.MaxFloor {
-			validWands = append(validWands, wand)
+	roll := rng.Intn(100)
+	wand := WandTypes[0]
+	for _, candidate := range WandTypes {
+		if roll < candidate.Probability {
+			wand = candidate
+			break
 		}
+		roll -= candidate.Probability
 	}
 
-	if len(validWands) == 0 {
-		validWands = WandTypes // Fallback
-	}
-
-	wand := validWands[rng.Intn(len(validWands))]
-	item := NewItem(x, y, ItemWand, wand.Name, wand.Value)
-	item.Charges = wand.MinCharges + rng.Intn(wand.MaxCharges-wand.MinCharges+1)
-	item.MaxCharges = item.Charges
-	item.ItemID = wand.ID
-	item.IsIdentified = false // 杖は要識別
-	return item
+	result := NewItem(x, y, ItemWand, wand.Name, wand.Value)
+	result.Charges = wand.MinCharges + rng.Intn(wand.MaxCharges-wand.MinCharges+1)
+	result.ItemID = wand.ID
+	result.IsIdentified = false
+	return result
 }

@@ -108,8 +108,10 @@ func TestPickupParityTracksTurnOnlyOnSuccess(t *testing.T) {
 		newLevel := func(player *actor.Player) *dungeon.Level {
 			level := newTestFloor(5, 5)
 			level.Items = []*item.Item{item.NewItem(1, 1, item.ItemFood, "parity food", 1)}
-			monster := actor.NewMonster(3, 1, 'B')
-			monster.Type.Speed = 100
+			monster := actor.NewMonster(2, 1, 'B')
+			monster.IsSlowed = true
+			monster.TurnCount = 0
+			monster.IsRunning = true
 			level.Monsters = []*actor.Monster{monster}
 			return level
 		}
@@ -249,8 +251,10 @@ func TestGameplayPotionUseConsumesATurnForBothEntryPoints(t *testing.T) {
 
 	newLevel := func(player *actor.Player) *dungeon.Level {
 		level := newTestFloor(5, 5)
-		monster := actor.NewMonster(player.Position.X+2, player.Position.Y, 'B')
-		monster.Type.Speed = 100
+		monster := actor.NewMonster(player.Position.X+1, player.Position.Y, 'B')
+		monster.IsSlowed = true
+		monster.TurnCount = 0
+		monster.IsRunning = true
 		level.Monsters = []*actor.Monster{monster}
 		return level
 	}
@@ -261,7 +265,7 @@ func TestGameplayPotionUseConsumesATurnForBothEntryPoints(t *testing.T) {
 	guiLevel := newLevel(guiPlayer)
 	gui := NewGameScreen(80, 50, guiPlayer)
 	gui.SetLevel(guiLevel)
-	gui.HandleInput(gruid.MsgKeyDown{Key: "a"})
+	gui.HandleInput(gruid.MsgKeyDown{Key: "q"})
 	gui.HandleInput(gruid.MsgKeyDown{Key: "a"})
 
 	cliPlayer := actor.NewPlayerWithSeed(1, 1, 42)
@@ -270,7 +274,7 @@ func TestGameplayPotionUseConsumesATurnForBothEntryPoints(t *testing.T) {
 	cliLevel := newLevel(cliPlayer)
 	cliMode := cli.NewCLIMode(cliLevel, cliPlayer)
 	cliMode.IsActive = true
-	cliMode.ExecuteCommand("use a")
+	cliMode.ExecuteCommand("quaff a")
 
 	if guiPlayer.HP != cliPlayer.HP || guiLevel.Monsters[0].TurnCount != cliLevel.Monsters[0].TurnCount {
 		t.Fatalf("potion state mismatch: GUI=(hp=%d turns=%d) CLI=(hp=%d turns=%d)",
@@ -373,14 +377,18 @@ func TestEquipmentReplacementPreservesStateThroughEitherEntryPoint(t *testing.T)
 			guiCandidate := setup(guiPlayer)
 			gui := NewGameScreen(80, 50, guiPlayer)
 			gui.SetLevel(newTestFloor(5, 5))
-			gui.HandleInput(gruid.MsgKeyDown{Key: "w"})
+			action, cliAction := gruid.Key("w"), "wield "
+			if tc.itemType == item.ItemArmor {
+				action, cliAction = "W", "wear "
+			}
+			gui.HandleInput(gruid.MsgKeyDown{Key: action})
 			gui.HandleInput(gruid.MsgKeyDown{Key: "a"})
 
 			cliPlayer := actor.NewPlayerWithSeed(1, 1, 42)
 			cliCandidate := setup(cliPlayer)
 			cliMode := cli.NewCLIMode(newTestFloor(5, 5), cliPlayer)
 			cliMode.IsActive = true
-			cliResult := cliMode.ExecuteCommand("equip " + string(rune('a'+len(cliPlayer.Inventory.Items)-1)))
+			cliResult := cliMode.ExecuteCommand(cliAction + string(rune('a'+len(cliPlayer.Inventory.Items)-1)))
 
 			check := func(player *actor.Player, candidate *item.Item) {
 				var equipped *item.Item
@@ -389,25 +397,16 @@ func TestEquipmentReplacementPreservesStateThroughEitherEntryPoint(t *testing.T)
 				} else {
 					equipped = player.Equipment.Armor
 				}
-				if equipped == nil || equipped.Name != tc.oldName {
-					t.Fatalf("equipped item changed: got %v", equipped)
+				if equipped != candidate {
+					t.Fatalf("equipped item = %v, want replacement %q", equipped, tc.newName)
 				}
-				preserved := false
-				for _, inventoryItem := range player.Inventory.Items {
-					if inventoryItem == candidate {
-						preserved = true
-						break
-					}
-				}
-				if !preserved {
-					t.Fatal("replacement item was removed from inventory")
-				}
-				expectedSize := 1
 				if tc.fillPack {
-					expectedSize = player.Inventory.Capacity
-				}
-				if len(player.Inventory.Items) != expectedSize {
-					t.Fatalf("inventory changed: got %d, want %d", len(player.Inventory.Items), expectedSize)
+					if len(player.Inventory.Items) != player.Inventory.Capacity ||
+						player.Inventory.Items[len(player.Inventory.Items)-1].Name != tc.oldName {
+						t.Fatal("replacement did not preserve a full inventory and return the old item")
+					}
+				} else if len(player.Inventory.Items) != 1 || player.Inventory.Items[0].Name != tc.oldName {
+					t.Fatalf("replaced item was not returned to inventory: %v", player.Inventory.Items)
 				}
 			}
 			check(guiPlayer, guiCandidate)
@@ -426,25 +425,24 @@ func TestCursedEquipmentCannotBeUnequippedThroughEitherEntryPoint(t *testing.T) 
 
 	guiPlayer := actor.NewPlayerWithSeed(1, 1, 42)
 	guiLevel := newTestFloor(5, 5)
-	guiCursedWeapon := item.NewItem(1, 1, item.ItemWeapon, "cursed sword", 1)
-	guiCursedWeapon.IsCursed = true
-	guiPlayer.Equipment.EquipItem(guiCursedWeapon)
+	guiCursedArmor := item.NewItem(1, 1, item.ItemArmor, "cursed armor", 1)
+	guiCursedArmor.IsCursed = true
+	guiPlayer.Equipment.EquipItem(guiCursedArmor)
 	gui := NewGameScreen(80, 50, guiPlayer)
 	gui.SetLevel(guiLevel)
-	gui.HandleInput(gruid.MsgKeyDown{Key: "t"})
-	gui.HandleInput(gruid.MsgKeyDown{Key: "w"})
+	gui.HandleInput(gruid.MsgKeyDown{Key: "T"})
 
 	cliPlayer := actor.NewPlayerWithSeed(1, 1, 42)
 	cliLevel := newTestFloor(5, 5)
-	cliCursedWeapon := item.NewItem(1, 1, item.ItemWeapon, "cursed sword", 1)
-	cliCursedWeapon.IsCursed = true
-	cliPlayer.Equipment.EquipItem(cliCursedWeapon)
+	cliCursedArmor := item.NewItem(1, 1, item.ItemArmor, "cursed armor", 1)
+	cliCursedArmor.IsCursed = true
+	cliPlayer.Equipment.EquipItem(cliCursedArmor)
 	cliMode := cli.NewCLIMode(cliLevel, cliPlayer)
 	cliMode.IsActive = true
-	cliResult := cliMode.ExecuteCommand("unequip weapon")
+	cliResult := cliMode.ExecuteCommand("takeoff")
 
-	if guiPlayer.Equipment.Weapon == nil || cliPlayer.Equipment.Weapon == nil {
-		t.Fatal("cursed equipment was removed")
+	if guiPlayer.Equipment.Armor == nil || cliPlayer.Equipment.Armor == nil {
+		t.Fatal("cursed armor was removed")
 	}
 	if got := gui.messages[len(gui.messages)-1]; got != cliResult {
 		t.Fatalf("cursed equipment message mismatch: GUI=%q CLI=%q", got, cliResult)
@@ -491,14 +489,14 @@ func TestInventoryCommandsAdvanceMonstersThroughEitherEntryPoint(t *testing.T) {
 		},
 		{
 			name:       "unequip",
-			guiKeys:    []gruid.Key{"t", "w"},
-			cliCommand: "unequip weapon",
+			guiKeys:    []gruid.Key{"T"},
+			cliCommand: "takeoff",
 			setup: func(player *actor.Player) {
-				player.Equipment.EquipItem(item.NewItem(1, 1, item.ItemWeapon, "sword", 1))
+				player.Equipment.EquipItem(item.NewItem(1, 1, item.ItemArmor, "armor", 1))
 			},
 			check: func(t *testing.T, player *actor.Player, level *dungeon.Level) {
-				if player.Inventory.Size() != 1 || player.Equipment.Weapon != nil {
-					t.Fatalf("unequip state = inventory %d, weapon %v", player.Inventory.Size(), player.Equipment.Weapon)
+				if player.Inventory.Size() != 1 || player.Equipment.Armor != nil {
+					t.Fatalf("take-off state = inventory %d, armor %v", player.Inventory.Size(), player.Equipment.Armor)
 				}
 			},
 		},
@@ -510,7 +508,7 @@ func TestInventoryCommandsAdvanceMonstersThroughEitherEntryPoint(t *testing.T) {
 			tt.setup(guiPlayer)
 			guiLevel := newTestFloor(5, 5)
 			guiMonster := actor.NewMonster(3, 1, 'O')
-			guiMonster.Type.Speed = 2
+			guiMonster.IsSlowed, guiMonster.TurnCount, guiMonster.IsRunning = true, 0, true
 			guiLevel.Monsters = []*actor.Monster{guiMonster}
 			gui := NewGameScreen(80, 50, guiPlayer)
 			gui.SetLevel(guiLevel)
@@ -522,7 +520,7 @@ func TestInventoryCommandsAdvanceMonstersThroughEitherEntryPoint(t *testing.T) {
 			tt.setup(cliPlayer)
 			cliLevel := newTestFloor(5, 5)
 			cliMonster := actor.NewMonster(3, 1, 'O')
-			cliMonster.Type.Speed = 2
+			cliMonster.IsSlowed, cliMonster.TurnCount, cliMonster.IsRunning = true, 0, true
 			cliLevel.Monsters = []*actor.Monster{cliMonster}
 			cliMode := cli.NewCLIMode(cliLevel, cliPlayer)
 			cliMode.IsActive = true
@@ -583,7 +581,7 @@ func TestFailedInventoryCommandsDoNotAdvanceMonstersThroughEitherEntryPoint(t *t
 			}
 			guiLevel := newTestFloor(5, 5)
 			guiMonster := actor.NewMonster(3, 1, 'O')
-			guiMonster.Type.Speed = 2
+			guiMonster.IsSlowed, guiMonster.TurnCount, guiMonster.IsRunning = true, 0, true
 			guiLevel.Monsters = []*actor.Monster{guiMonster}
 			gui := NewGameScreen(80, 50, guiPlayer)
 			gui.SetLevel(guiLevel)
@@ -595,7 +593,7 @@ func TestFailedInventoryCommandsDoNotAdvanceMonstersThroughEitherEntryPoint(t *t
 			}
 			cliLevel := newTestFloor(5, 5)
 			cliMonster := actor.NewMonster(3, 1, 'O')
-			cliMonster.Type.Speed = 2
+			cliMonster.IsSlowed, cliMonster.TurnCount, cliMonster.IsRunning = true, 0, true
 			cliLevel.Monsters = []*actor.Monster{cliMonster}
 			cliMode := cli.NewCLIMode(cliLevel, cliPlayer)
 			cliMode.IsActive = true
@@ -639,11 +637,11 @@ func TestFatalInventoryCommandsEnterGameOverAndReportLoss(t *testing.T) {
 			},
 		},
 		{
-			name:       "unequip",
-			guiKeys:    []gruid.Key{"t", "w"},
-			cliCommand: "unequip weapon",
+			name:       "take off armor",
+			guiKeys:    []gruid.Key{"T"},
+			cliCommand: "takeoff",
 			setup: func(player *actor.Player) {
-				player.Equipment.EquipItem(item.NewItem(1, 1, item.ItemWeapon, "sword", 1))
+				player.Equipment.EquipItem(item.NewItem(1, 1, item.ItemArmor, "armor", 1))
 			},
 		},
 	}
@@ -685,6 +683,7 @@ func fatalInventoryLevel() *dungeon.Level {
 	level := newTestFloor(5, 5)
 	monster := actor.NewMonster(2, 1, 'E')
 	monster.Type.Speed = 1
+	monster.IsRunning = true
 	monster.Attack = 100
 	level.Monsters = []*actor.Monster{monster}
 	return level

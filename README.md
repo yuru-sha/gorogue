@@ -4,42 +4,54 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/yuru-sha/gorogue)
 
-GoRogue is a Go implementation of the classic Rogue-style dungeon crawler. It is inspired by [PyRogue](https://github.com/yuru-sha/pyrogue) and uses [gruid](https://github.com/anaseto/gruid) with SDL2 for the graphical frontend.
+GoRogue is a Go and gruid implementation of the Rogue 5.4.4 text roguelike. [`SPEC.md`](SPEC.md) is the source of truth for requirements and acceptance criteria.
 
-## Current scope
+## Current game
 
-The product requirements and acceptance criteria are defined in [`SPEC.md`](SPEC.md). The current implementation includes:
+- Seeded 26-floor dungeons with Rogue rooms, corridors, dark and treasure rooms, maze floors, hidden passages/doors, stairs, and traps.
+- Rogue movement, combat, progression, hunger, monsters, equipment, items, effects, and identification.
+- Shared command execution for the GUI and CLI.
+- Victory requires returning the Amulet of Yendor to the surface; death is permanent.
+- JSON save format `1.4.0` stores the state required to resume a game. Older save formats are not automatically migrated.
 
-- A 26-floor, procedurally generated dungeon with seeded generation.
-- Turn-based movement and combat with permadeath.
-- Weapons, armor, food, potions, scrolls, wands, rings, gold, and the Amulet of Yendor.
-- Item identification and equipment management.
-- Victory by returning the Amulet of Yendor to the surface.
-- JSON save/load with save format version `1.3.0`, including runtime RNG state and identification appearances.
-- SDL2 GUI, CLI, and seed-aware game APIs.
+## Controls
 
-Some legacy design documents describe features that are not part of the current scope. See [`docs/architecture.md`](docs/architecture.md) and [`docs/development.md`](docs/development.md) for the current implementation boundaries.
+| Key | Action |
+| --- | --- |
+| `h j k l y u b n` | Move in eight directions |
+| `H J K L Y U B N` | Run in eight directions |
+| Arrow keys | Move in four directions |
+| `.` | Rest |
+| `f` | Fight in a direction |
+| `,` / `d` | Pick up / drop an item |
+| `e` | Eat food |
+| `w` / `W` / `T` | Wield / wear / take off armor |
+| `P` / `R` | Put on / remove a ring |
+| `t` | Throw an item |
+| `q` / `r` / `z` | Quaff / read / zap |
+| `s` / `^` | Search nearby / search in a direction |
+| `i` / `@` | Inventory / character information |
+| `D` / `c` | Discovered items / name an unidentified item |
+| `<` / `>` | Go up / down stairs |
+| `a` | Repeat the last command |
+| `?` / `/` | Help / explain a symbol |
+| `Q` / Escape | Quit / cancel |
 
-## Requirements
-
-- Go 1.27.0 or later
-- `make`
-- `pkg-config`
-- SDL2 development libraries
-
-On macOS with Homebrew:
-
-```bash
-brew install pkg-config sdl2
-```
+GoRogue conveniences: `^W` toggles wizard mode and `:` enters the CLI debug prompt.
 
 ## Build and run
 
-```bash
-# Set up Go tools and verify SDL2
+Requirements: Go version in [`go.mod`](go.mod), `make`, `pkg-config`, and SDL2 development libraries for the GUI. On macOS:
+
+```sh
+brew install pkg-config sdl2
+```
+
+```sh
+# Set up development tools and verify SDL2
 make setup-dev
 
-# Build the SDL2 GUI
+# Build and run the GUI
 make build
 make run
 
@@ -47,69 +59,29 @@ make run
 go run ./cmd/gorogue-cli --seed 12345
 ```
 
-The GUI chooses a seed automatically. Passing the same seed and input sequence to the CLI or API reproduces the same generated game state where the current save/runtime boundaries permit.
+The GUI chooses a seed automatically. The CLI and game APIs accept an explicit seed; the same version, seed, and input sequence reproduce the same game random stream.
 
-## Controls
+## Development checks
 
-| Key | Action |
-| --- | --- |
-| `h`, `j`, `k`, `l` | Move west, south, north, east |
-| `y`, `u`, `b`, `n` | Move diagonally |
-| Arrow keys | Move in four directions |
-| `.` or Space | Wait/rest |
-| `i` | Open inventory |
-| `,` or `g` | Pick up an item |
-| `d` | Drop an item |
-| `a` or `z` | Use/apply an item |
-| `q` | Quaff a potion |
-| `r` | Read a scroll |
-| `w` / `t` | Wield/wear or take off an item |
-| `e` | Eat food |
-| `<` / `>` | Use stairs |
-| `x` | Look around |
-| `?` | Show help |
-| `Q` or Escape | Quit or cancel |
-
-Moving into an adjacent monster attacks it. The game also supports doors, searching, traps, wizard mode, and an in-game CLI debug mode.
-
-## CLI examples
-
-```bash
-# Interactive mode
-go run ./cmd/gorogue-cli --seed 12345
-
-# Batch commands from stdin
-printf 'status\nquit\n' | go run ./cmd/gorogue-cli --seed 12345 --interactive=false
-
-# Show CLI options
-go run ./cmd/gorogue-cli --help
-```
-
-## Development
-
-```bash
+```sh
 go test ./...
 go vet ./...
+make ci-checks
 git diff --check
 ```
 
-The repository-specific development commands and architecture notes are in [`docs/development.md`](docs/development.md). The full design source of truth is [`SPEC.md`](SPEC.md).
+See [`docs/development.md`](docs/development.md) for development commands and [`docs/architecture.md`](docs/architecture.md) for package boundaries and state/rendering flow.
 
 ## Project layout
 
-```text
-cmd/gorogue/          SDL2 GUI entry point
-cmd/gorogue-cli/      CLI entry point
-internal/core/        Engine, commands, and CLI integration
-internal/game/        Actors, dungeon, items, magic, and saves
-internal/ui/           Screens and rendering
-docs/                  Architecture and development notes
-```
+- `cmd/gorogue/`: SDL2 GUI entry point.
+- `cmd/gorogue-cli/`: CLI entry point.
+- `internal/core/command/`: shared command parsing and execution.
+- `internal/core/`, `internal/game/`: game flow and rules.
+- `internal/ui/screen/`: screens, logical display-cell conversion, and text rendering.
 
 ## License
 
 MIT
-
-## GitHub Release
 
 See [docs/agents/release.md](docs/agents/release.md) for the release note format and creation procedure. The shared body template is [.github/release-notes-template.md](.github/release-notes-template.md), and the generated-note categories are managed in [.github/release.yml](.github/release.yml).

@@ -1,8 +1,6 @@
 package dungeon
 
 import (
-	"slices"
-
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
@@ -41,126 +39,19 @@ func (s *StairsManager) PlaceStairs() {
 	)
 }
 
-// placeUpStairs places up stairs in the first room
 func (s *StairsManager) placeUpStairs() {
-	// 上り階段は最初の部屋（接続済み）に配置
-	firstRoom := s.level.Rooms[0]
-
-	// 部屋の中央に配置を試みる
-	centerX := firstRoom.X + firstRoom.Width/2
-	centerY := firstRoom.Y + firstRoom.Height/2
-
-	if s.isValidStairPosition(centerX, centerY) {
-		s.level.SetTile(centerX, centerY, TileStairsUp)
-		logger.Debug("Placed up stairs in center of first room",
-			"x", centerX,
-			"y", centerY,
-		)
-		return
-	}
-
-	// 中央に配置できない場合は、部屋内のランダムな位置に配置
-	s.placeStairsInRoom(firstRoom, TileStairsUp)
+	s.placeRogueStairs(TileStairsUp)
 }
 
-// placeDownStairs places down stairs in the last connected room
 func (s *StairsManager) placeDownStairs() {
-	// 下り階段は最後の接続済み部屋に配置
-	var lastConnectedRoom *Room
-	for _, v := range slices.Backward(s.level.Rooms) {
-		if v.Connected {
-			lastConnectedRoom = v
-			break
-		}
-	}
-
-	if lastConnectedRoom == nil {
-		// フォールバック: 最後の部屋を使用
-		lastConnectedRoom = s.level.Rooms[len(s.level.Rooms)-1]
-	}
-
-	// 部屋の中央に配置を試みる
-	centerX := lastConnectedRoom.X + lastConnectedRoom.Width/2
-	centerY := lastConnectedRoom.Y + lastConnectedRoom.Height/2
-
-	if s.isValidStairPosition(centerX, centerY) {
-		s.level.SetTile(centerX, centerY, TileStairsDown)
-		logger.Debug("Placed down stairs in center of last connected room",
-			"x", centerX,
-			"y", centerY,
-		)
-		return
-	}
-
-	// 中央に配置できない場合は、部屋内のランダムな位置に配置
-	s.placeStairsInRoom(lastConnectedRoom, TileStairsDown)
+	s.placeRogueStairs(TileStairsDown)
 }
 
-// placeStairsInRoom places stairs in a specific room
-func (s *StairsManager) placeStairsInRoom(room *Room, stairType TileType) {
-	maxAttempts := 20
-
-	for attempts := range maxAttempts {
-		// 部屋の境界から1マス内側の範囲でランダムな位置を選択
-		x := room.X + 1 + s.level.random().Intn(room.Width-2)
-		y := room.Y + 1 + s.level.random().Intn(room.Height-2)
-
-		if s.isValidStairPosition(x, y) {
-			s.level.SetTile(x, y, stairType)
-			logger.Debug("Placed stairs in room",
-				"type", stairType,
-				"x", x,
-				"y", y,
-				"attempts", attempts+1,
-			)
-			return
-		}
+func (s *StairsManager) placeRogueStairs(stairType TileType) {
+	position, ok := s.level.findRogueFloor(nil, 0, false)
+	if ok {
+		s.level.SetTile(position.X, position.Y, stairType)
 	}
-
-	// 全ての試行が失敗した場合のフォールバック
-	// 部屋の左上角に配置
-	x := room.X + 1
-	y := room.Y + 1
-
-	if s.level.IsInBounds(x, y) {
-		s.level.SetTile(x, y, stairType)
-		logger.Warn("Placed stairs at fallback position",
-			"type", stairType,
-			"x", x,
-			"y", y,
-		)
-	}
-}
-
-// isValidStairPosition checks if a position is valid for stair placement
-func (s *StairsManager) isValidStairPosition(x, y int) bool {
-	// 境界チェック
-	if !s.level.IsInBounds(x, y) {
-		return false
-	}
-
-	// 床タイルかチェック
-	tile := s.level.GetTile(x, y)
-	if tile.Type != TileFloor {
-		return false
-	}
-
-	// 既に階段がある位置かチェック
-	if tile.Type == TileStairsUp || tile.Type == TileStairsDown {
-		return false
-	}
-
-	// モンスターがいないかチェック
-	if s.level.GetMonsterAt(x, y) != nil {
-		return false
-	}
-
-	// アイテムがないかチェック
-	if s.level.GetItemAt(x, y) != nil {
-		return false
-	}
-
-	return true
 }
 
 // GetStairPositions returns the positions of stairs in the level

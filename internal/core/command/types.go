@@ -14,26 +14,36 @@ const (
 	CmdMoveNorthEast
 	CmdMoveSouthWest
 	CmdMoveSouthEast
+	CmdRun
 
 	// Action commands
-	CmdLook      // Look around (x)
+	CmdLook      // Look around (CLI convenience)
 	CmdInventory // Show inventory (i)
 	CmdPickUp    // Pick up item (,)
 	CmdDrop      // Drop item (d)
-	CmdUse       // Use/Apply item (a)
+	CmdUse       // Use/Apply item (CLI convenience)
 	CmdQuaff     // Quaff potion (q)
 	CmdRead      // Read scroll (r)
-	CmdWield     // Wield/wear item (w)
-	CmdTakeOff   // Take off item (t)
+	CmdWield     // Wield a weapon (w)
+	CmdWear      // Wear armor (W)
+	CmdTakeOff   // Take off armor/ring (T/R)
+	CmdRingOn    // Put on a ring (P)
+	CmdRingOff   // Remove a ring (R)
+	CmdThrow     // Throw an item (t)
+	CmdZap       // Zap a wand or staff (z)
 	CmdEat       // Eat food (e)
-	CmdWait      // Wait/Rest (.)
-	CmdSearch    // Search (s)
-	CmdOpen      // Open door (o)
-	CmdClose     // Close door (c)
+	CmdWait      // Rest (.)
+	CmdSearch    // Search nearby (s)
+	CmdFindTrap  // Search for a trap in a direction (^)
+	CmdOpen      // Open door (CLI convenience)
+	CmdClose     // Close door (CLI convenience)
 	CmdFight     // Fight/Attack (f)
-	CmdDisarm    // Disarm trap (d)
-	CmdEquip     // Equip item (e)
-	CmdUnequip   // Unequip item (r)
+	CmdEquip     // Equip item (CLI convenience)
+	CmdUnequip   // Unequip item (CLI convenience)
+	CmdRepeat    // Repeat the last command (a)
+	CmdCharacter // Show character information (@)
+	CmdCall      // Assign a call name to an unidentified item (c)
+	CmdDiscover  // List discovered source item names (D)
 
 	// Stair commands
 	CmdGoUpstairs   // Go up stairs (<)
@@ -84,6 +94,8 @@ func (t Type) String() string {
 		return "Move South-West"
 	case CmdMoveSouthEast:
 		return "Move South-East"
+	case CmdRun:
+		return "Run"
 	case CmdLook:
 		return "Look"
 	case CmdInventory:
@@ -99,27 +111,45 @@ func (t Type) String() string {
 	case CmdRead:
 		return "Read"
 	case CmdWield:
-		return "Wield/Wear"
+		return "Wield"
+	case CmdWear:
+		return "Wear"
 	case CmdTakeOff:
 		return "Take Off"
+	case CmdRingOn:
+		return "Put On Ring"
+	case CmdRingOff:
+		return "Remove Ring"
+	case CmdThrow:
+		return "Throw"
+	case CmdZap:
+		return "Zap"
 	case CmdEat:
 		return "Eat"
 	case CmdWait:
 		return "Wait/Rest"
 	case CmdSearch:
 		return "Search"
+	case CmdFindTrap:
+		return "Find Trap"
 	case CmdOpen:
 		return "Open"
 	case CmdClose:
 		return "Close"
 	case CmdFight:
 		return "Fight"
-	case CmdDisarm:
-		return "Disarm"
 	case CmdEquip:
 		return "Equip"
 	case CmdUnequip:
 		return "Unequip"
+	case CmdRepeat:
+		return "Repeat"
+	case CmdCharacter:
+		return "Character"
+	case CmdDiscover:
+		return "Discover"
+	case CmdCall:
+		return "Call"
 	case CmdGoUpstairs:
 		return "Go Upstairs"
 	case CmdGoDownstairs:

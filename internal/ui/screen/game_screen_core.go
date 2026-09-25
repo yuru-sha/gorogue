@@ -5,7 +5,6 @@ package screen
 import (
 	"strings"
 
-	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/cli"
 	"github.com/yuru-sha/gorogue/internal/core/command"
 	"github.com/yuru-sha/gorogue/internal/core/wizard"
@@ -27,9 +26,13 @@ const (
 	ModeUse
 	ModeQuaff
 	ModeRead
+	ModeReadTarget
 	ModeEat
 	ModeCLI
 	ModeDirection
+	ModeThrow
+	ModeZap
+	ModeCall
 )
 
 // GameScreen handles the main game display
@@ -37,10 +40,10 @@ type GameScreen struct {
 	width, height     int
 	player            *actor.Player
 	level             *dungeon.Level
+	displayCells      []displayCell
 	dungeonManager    *dungeon.DungeonManager
 	messages          []string
 	lastStats         map[string]any     // 前回のステータス情報
-	grid              gruid.Grid         // 画面全体のグリッド
 	wizardMode        *wizard.WizardMode // ウィザードモード
 	cliMode           *cli.CLIMode       // CLIデバッグモード
 	saveIntegration   *save.SaveGameIntegration
@@ -49,7 +52,15 @@ type GameScreen struct {
 	cliBuffer         string           // CLI入力バッファ
 	cliHistory        []string         // CLIコマンド履歴
 	cmdParser         *command.Parser  // Command parser
-	directionCallback func(dx, dy int) // Direction mode callback
+	commandSession    *command.Session
+	directionCallback func(dx, dy int)
+	pendingCommand    command.Type
+	pendingDirection  command.Direction
+	equipAction       command.Type
+	unequipAction     command.Type
+	callItemLetter    rune
+	pendingReadScroll rune
+	callNameBuffer    string
 }
 
 // NewGameScreen creates a new game screen
@@ -60,12 +71,12 @@ func NewGameScreen(width, height int, player *actor.Player) *GameScreen {
 		player:          player,
 		messages:        make([]string, 0, 7), // 7行分のメッセージを保持
 		lastStats:       make(map[string]any),
-		grid:            gruid.NewGrid(width, height),
 		inputMode:       ModeNormal,
 		equippableItems: make([]*gameitem.Item, 0),
 		cliBuffer:       "",
 		cliHistory:      make([]string, 0),
 		cmdParser:       command.NewParser(),
+		commandSession:  command.NewSession(),
 	}
 
 	// PyRogue風の初期メッセージを追加
@@ -95,6 +106,7 @@ func (s *GameScreen) SetLevel(level *dungeon.Level) {
 		s.cliMode = cli.NewCLIMode(level, s.player)
 	}
 	s.cliMode.SetSaveIntegration(s.saveIntegration)
+	s.cliMode.SetCommandSession(s.commandSession)
 	logger.Debug("Set dungeon level for game screen",
 		"width", level.Width,
 		"height", level.Height,
@@ -119,6 +131,7 @@ func (s *GameScreen) SetDungeonManager(dm *dungeon.DungeonManager) {
 		}
 		if s.cliMode != nil {
 			s.cliMode.SetSaveIntegration(s.saveIntegration)
+			s.cliMode.SetCommandSession(s.commandSession)
 		}
 	}
 	logger.Debug("Set dungeon manager for game screen")
@@ -133,7 +146,7 @@ func (s *GameScreen) SetSaveIntegration(integration *save.SaveGameIntegration) {
 }
 
 func (s *GameScreen) executeCommand(cmd command.Command, args ...string) command.Result {
-	result := command.Execute(&command.Context{
+	result := s.commandSession.Execute(&command.Context{
 		Player:  s.player,
 		Level:   s.level,
 		Dungeon: s.dungeonManager,

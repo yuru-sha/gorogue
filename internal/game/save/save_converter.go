@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"unicode/utf8"
 
-	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/entity"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
@@ -74,7 +73,6 @@ func (sc *SaveConverter) convertSavePlayer(savePlayer Player, seed int64) (*acto
 	// Create player with base stats
 	player := actor.NewPlayerWithSeed(savePlayer.X, savePlayer.Y, seed)
 
-	// Set stats
 	player.Level = savePlayer.Level
 	player.HP = savePlayer.HP
 	player.MaxHP = savePlayer.MaxHP
@@ -83,7 +81,26 @@ func (sc *SaveConverter) convertSavePlayer(savePlayer Player, seed int64) (*acto
 	player.Hunger = savePlayer.Hunger
 	player.Exp = savePlayer.Exp
 	player.Gold = savePlayer.Gold
-
+	player.Strength = savePlayer.Strength
+	player.MaxStrength = savePlayer.MaxStrength
+	player.FoodLeft = savePlayer.FoodLeft
+	player.HungerState = savePlayer.HungerState
+	player.QuietTurns = savePlayer.QuietTurns
+	player.Running = savePlayer.Running
+	player.NoCommandTurns = savePlayer.NoCommand
+	player.NoMoveTurns = savePlayer.NoMove
+	player.BlindTurns = savePlayer.Blind
+	player.ConfusedTurns = savePlayer.Confused
+	player.HallucinationTurns = savePlayer.Hallucinated
+	player.HasteTurns = savePlayer.Haste
+	player.HasteSkipMonsterTurn = savePlayer.HasteSkipMonster
+	player.SeeInvisibleTurns = savePlayer.SeeInvisible
+	player.MonsterDetectionTurns = savePlayer.DetectMonsters
+	player.LevitationTurns = savePlayer.Levitation
+	player.ParalyzedTurns = savePlayer.Paralyzed
+	player.CanConfuse = savePlayer.CanConfuse
+	player.CanConfuseTurns = savePlayer.CanConfuseTurns
+	player.Held = savePlayer.Held
 	// Convert inventory
 	if err := sc.convertInventory(savePlayer.Inventory, player.Inventory); err != nil {
 		return nil, fmt.Errorf("failed to convert inventory: %w", err)
@@ -96,11 +113,12 @@ func (sc *SaveConverter) convertSavePlayer(savePlayer Player, seed int64) (*acto
 
 	// Convert identification state
 	player.IdentifyMgr.LoadAppearanceState(savePlayer.IdentificationAppearances)
+	player.IdentifyMgr.LoadCallState(savePlayer.IdentificationCalls)
 	if err := sc.convertIdentifiedItems(savePlayer.IdentifiedItems, player.IdentifyMgr); err != nil {
 		return nil, fmt.Errorf("failed to convert identified items: %w", err)
 	}
 
-	// TODO: Convert status effects when implemented
+	// Status effects are stored in the explicit Rogue counters above.
 
 	if sc.validateData {
 		if err := sc.validatePlayer(player); err != nil {
@@ -184,7 +202,7 @@ func (sc *SaveConverter) convertSaveItemToGameItem(saveItem InventoryItem) (*ite
 
 	// Create game item
 	gameItem := &item.Item{
-		Entity:       entity.NewEntity(0, 0, item.GetItemSymbol(itemType), item.GetItemColor(itemType)),
+		Entity:       entity.NewEntity(0, 0),
 		Type:         itemType,
 		Name:         saveItem.Name,
 		RealName:     saveItem.RealName,
@@ -193,6 +211,7 @@ func (sc *SaveConverter) convertSaveItemToGameItem(saveItem InventoryItem) (*ite
 		IsIdentified: saveItem.IsIdentified,
 		IsCursed:     saveItem.IsCursed,
 		IsBlessed:    saveItem.IsBlessed,
+		IsProtected:  saveItem.IsProtected,
 		Damage:       saveItem.Damage,
 		Defense:      saveItem.Defense,
 		Enchantment:  saveItem.Enchantment,
@@ -216,7 +235,7 @@ func (sc *SaveConverter) convertFloorItemToGameItem(saveItem Item) (*item.Item, 
 
 	// Create game item
 	gameItem := &item.Item{
-		Entity:       entity.NewEntity(saveItem.X, saveItem.Y, saveItem.Symbol, gruid.Color(saveItem.Color)), //nolint:gosec // saved colors are uint32 gruid values
+		Entity:       entity.NewEntity(saveItem.X, saveItem.Y),
 		Type:         itemType,
 		Name:         saveItem.Name,
 		RealName:     saveItem.RealName,
@@ -225,6 +244,7 @@ func (sc *SaveConverter) convertFloorItemToGameItem(saveItem Item) (*item.Item, 
 		IsIdentified: saveItem.IsIdentified,
 		IsCursed:     saveItem.IsCursed,
 		IsBlessed:    saveItem.IsBlessed,
+		IsProtected:  saveItem.IsProtected,
 		Damage:       saveItem.Damage,
 		Defense:      saveItem.Defense,
 		Enchantment:  saveItem.Enchantment,
@@ -277,33 +297,27 @@ func (sc *SaveConverter) convertSaveDungeon(saveDungeon Dungeon, player *actor.P
 		return nil, fmt.Errorf("current floor %d is missing", saveDungeon.CurrentFloor)
 	}
 
-	// Create dungeon manager
 	dungeonManager := dungeon.NewDungeonManagerWithSeed(player, saveDungeon.Seed)
+	dungeonManager.SetNoFood(saveDungeon.NoFood)
 	if !dungeonManager.MoveToFloor(saveDungeon.CurrentFloor) {
 		return nil, fmt.Errorf("failed to set current floor: %d", saveDungeon.CurrentFloor)
 	}
 
-	// Convert each floor
 	for floorNum, saveFloor := range saveDungeon.Floors {
 		if saveFloor == nil {
 			return nil, fmt.Errorf("floor %d is missing", floorNum)
 		}
-
 		level, err := sc.convertSaveFloor(saveFloor)
 		if err != nil {
-			logger.Warn("Failed to convert floor",
-				"floor", floorNum,
-				"error", err,
-			)
+			logger.Warn("Failed to convert floor", "floor", floorNum, "error", err)
 			return nil, fmt.Errorf("failed to convert floor %d: %w", floorNum, err)
 		}
-
-		// Set the level in the dungeon manager
 		dungeonManager.SetLevel(floorNum, level)
 		if floorSeed, ok := saveDungeon.FloorSeeds[floorNum]; ok {
 			dungeonManager.SetFloorSeed(floorNum, floorSeed)
 		}
 	}
+	dungeonManager.SetNoFood(saveDungeon.NoFood)
 
 	if err := dungeonManager.SetRandomDraws(saveDungeon.RandomState.Draws); err != nil {
 		return nil, fmt.Errorf("failed to restore dungeon random state: %w", err)
@@ -323,13 +337,6 @@ func validateSavePosition(label string, x, y, width, height int) error {
 		return fmt.Errorf("%s position out of bounds: (%d,%d) for %dx%d floor", label, x, y, width, height)
 	}
 	return nil
-}
-
-func validateOptionalSavePosition(label string, x, y, width, height int) error {
-	if x == -1 && y == -1 {
-		return nil
-	}
-	return validateSavePosition(label, x, y, width, height)
 }
 
 func validateSaveFloorShape(saveFloor *Floor) error {
@@ -362,7 +369,15 @@ func saveMonsterType(monsterType string) (actor.MonsterType, error) {
 	return resolved, nil
 }
 
-// convertSaveFloor converts save floor to level
+func convertTrapType(value string) (dungeon.TrapType, error) {
+	for trapType := dungeon.TrapDoor; trapType <= dungeon.TrapMystery; trapType++ {
+		if trapType.String() == value {
+			return trapType, nil
+		}
+	}
+	return 0, fmt.Errorf("unknown trap type: %s", value)
+}
+
 func (sc *SaveConverter) convertSaveFloor(saveFloor *Floor) (*dungeon.Level, error) {
 	if err := validateSaveFloorDimensions(saveFloor.Width, saveFloor.Height); err != nil {
 		return nil, err
@@ -371,22 +386,21 @@ func (sc *SaveConverter) convertSaveFloor(saveFloor *Floor) (*dungeon.Level, err
 		return nil, err
 	}
 
-	// Create level
 	level := &dungeon.Level{
 		Width:       saveFloor.Width,
 		Height:      saveFloor.Height,
 		FloorNumber: saveFloor.FloorNumber,
 		Seed:        saveFloor.Seed,
 		Tiles:       make([][]*dungeon.Tile, saveFloor.Height),
-		Rooms:       make([]*dungeon.Room, 0),
-		Monsters:    make([]*actor.Monster, 0),
-		Items:       make([]*item.Item, 0),
+		Rooms:       make([]*dungeon.Room, 0, len(saveFloor.Rooms)),
+		Monsters:    make([]*actor.Monster, 0, len(saveFloor.Monsters)),
+		Items:       make([]*item.Item, 0, len(saveFloor.Items)),
+		Traps:       make([]*dungeon.Trap, 0, len(saveFloor.Traps)),
 	}
 	if err := level.SetRandomDraws(saveFloor.RandomState.Draws); err != nil {
 		return nil, fmt.Errorf("failed to restore floor random state: %w", err)
 	}
 
-	// Convert tiles
 	for y := 0; y < saveFloor.Height; y++ {
 		level.Tiles[y] = make([]*dungeon.Tile, saveFloor.Width)
 		for x := 0; x < saveFloor.Width; x++ {
@@ -402,18 +416,18 @@ func (sc *SaveConverter) convertSaveFloor(saveFloor *Floor) (*dungeon.Level, err
 		}
 	}
 
-	// Convert rooms
 	for i := range saveFloor.Rooms {
 		saveRoom := saveFloor.Rooms[i]
-		room := &dungeon.Room{
+		level.Rooms = append(level.Rooms, &dungeon.Room{
 			X:         saveRoom.X,
 			Y:         saveRoom.Y,
 			Width:     saveRoom.Width,
 			Height:    saveRoom.Height,
 			IsSpecial: saveRoom.IsSpecial,
+			IsDark:    saveRoom.IsDark,
+			IsMaze:    saveRoom.IsMaze,
 			Connected: saveRoom.Connected,
-		}
-		level.Rooms = append(level.Rooms, room)
+		})
 	}
 
 	monsters, err := sc.convertSaveMonsters(saveFloor.Monsters, saveFloor.Width, saveFloor.Height)
@@ -422,7 +436,6 @@ func (sc *SaveConverter) convertSaveFloor(saveFloor *Floor) (*dungeon.Level, err
 	}
 	level.Monsters = monsters
 
-	// Convert items
 	for i := range saveFloor.Items {
 		saveItem := saveFloor.Items[i]
 		if err := validateSavePosition("item", saveItem.X, saveItem.Y, saveFloor.Width, saveFloor.Height); err != nil {
@@ -435,28 +448,33 @@ func (sc *SaveConverter) convertSaveFloor(saveFloor *Floor) (*dungeon.Level, err
 		level.Items = append(level.Items, floorItem)
 	}
 
+	for i := range saveFloor.Traps {
+		saveTrap := &saveFloor.Traps[i]
+		if err := validateSavePosition("trap", saveTrap.X, saveTrap.Y, saveFloor.Width, saveFloor.Height); err != nil {
+			return nil, fmt.Errorf("trap %d: %w", i, err)
+		}
+		trapType, err := convertTrapType(saveTrap.Type)
+		if err != nil {
+			return nil, fmt.Errorf("trap %d: %w", i, err)
+		}
+		level.Traps = append(level.Traps, &dungeon.Trap{
+			Type:       trapType,
+			Position:   dungeon.Position{X: saveTrap.X, Y: saveTrap.Y},
+			Discovered: saveTrap.Discovered,
+		})
+	}
+
 	return level, nil
 }
 
 func (sc *SaveConverter) convertSaveMonsters(saveMonsters []Monster, width, height int) ([]*actor.Monster, error) {
 	monsters := make([]*actor.Monster, 0, len(saveMonsters))
 	for i := range saveMonsters {
-		saveMonster := saveMonsters[i]
+		saveMonster := &saveMonsters[i]
 		if err := validateSavePosition("monster", saveMonster.X, saveMonster.Y, width, height); err != nil {
 			return nil, fmt.Errorf("monster %d: %w", i, err)
 		}
-		if err := validateOptionalSavePosition("last player", saveMonster.LastPlayerPosX, saveMonster.LastPlayerPosY, width, height); err != nil {
-			return nil, fmt.Errorf("monster %d: %w", i, err)
-		}
-		if err := validateSavePosition("original", saveMonster.OriginalPosX, saveMonster.OriginalPosY, width, height); err != nil {
-			return nil, fmt.Errorf("monster %d: %w", i, err)
-		}
-		for patrolIndex, position := range saveMonster.PatrolPath {
-			if err := validateSavePosition("patrol", position.X, position.Y, width, height); err != nil {
-				return nil, fmt.Errorf("monster %d patrol %d: %w", i, patrolIndex, err)
-			}
-		}
-		monster, err := sc.convertSaveMonster(saveMonster)
+		monster, err := sc.convertSaveMonster(*saveMonster)
 		if err != nil {
 			return nil, fmt.Errorf("monster %d: %w", i, err)
 		}
@@ -472,6 +490,10 @@ func (sc *SaveConverter) convertStringToTileType(tileTypeStr string) (dungeon.Ti
 		return dungeon.TileWall, nil
 	case saveFloorKey:
 		return dungeon.TileFloor, nil
+	case "passage":
+		return dungeon.TilePassage, nil
+	case "secret_passage":
+		return dungeon.TileSecretPassage, nil
 	case "door":
 		return dungeon.TileDoor, nil
 	case "secret_door":
@@ -493,7 +515,7 @@ func (sc *SaveConverter) convertStringToTileType(tileTypeStr string) (dungeon.Ti
 	}
 }
 
-// convertSaveMonster converts save monster to monster
+// convertSaveMonster converts save monster to monster.
 //
 //nolint:gocritic // Conversion accepts the decoded value and does not retain it.
 func (sc *SaveConverter) convertSaveMonster(saveMonster Monster) (*actor.Monster, error) {
@@ -501,62 +523,36 @@ func (sc *SaveConverter) convertSaveMonster(saveMonster Monster) (*actor.Monster
 	if err != nil {
 		return nil, err
 	}
+	monsterType.Level = saveMonster.MonsterLevel
+	monsterType.Experience = saveMonster.Experience
 
-	// Create monster
 	monster := &actor.Monster{
-		Actor:          actor.NewActor(saveMonster.X, saveMonster.Y, saveMonster.Symbol, gruid.Color(saveMonster.Color), saveMonster.HP, saveMonster.Attack, saveMonster.Defense), //nolint:gosec // saved colors are uint32 gruid values
+		Actor:          actor.NewActor(saveMonster.X, saveMonster.Y, saveMonster.HP, saveMonster.Attack, saveMonster.Defense),
 		Type:           monsterType,
 		TurnCount:      saveMonster.TurnCount,
 		IsActive:       saveMonster.IsActive,
-		PatrolIndex:    saveMonster.PatrolIndex,
-		AlertLevel:     saveMonster.AlertLevel,
-		SearchTurns:    saveMonster.SearchTurns,
-		ViewRange:      saveMonster.ViewRange,
-		DetectionRange: saveMonster.DetectionRange,
+		IsRunning:      saveMonster.IsRunning,
+		IsHeld:         saveMonster.IsHeld,
+		WasAdjacent:    saveMonster.WasAdjacent,
+		IsFound:        saveMonster.IsFound,
+		IsConfused:     saveMonster.IsConfused,
+		IsCancelled:    saveMonster.IsCancelled,
+		IsInvisible:    saveMonster.IsInvisible,
+		IsHasted:       saveMonster.IsHasted,
+		IsSlowed:       saveMonster.IsSlowed,
+		FlytrapHits:    saveMonster.FlytrapHits,
+		GoldValue:      saveMonster.GoldValue,
+		GreedTarget:    entity.Position{X: saveMonster.GreedTargetX, Y: saveMonster.GreedTargetY},
+		HasGreedTarget: saveMonster.HasGreedTarget,
+		Carry:          saveMonster.Carry,
+		Mean:           saveMonster.Mean,
+		Flying:         saveMonster.Flying,
+		Greedy:         saveMonster.Greedy,
+		Regenerates:    saveMonster.Regenerates,
+		Floor:          saveMonster.Floor,
 	}
-
-	// Set HP and MaxHP
-	monster.HP = saveMonster.HP
 	monster.MaxHP = saveMonster.MaxHP
-
-	// Convert AI state
-	aiState, err := sc.convertStringToAIState(saveMonster.AIState)
-	if err != nil {
-		return nil, fmt.Errorf("invalid AI state: %w", err)
-	}
-	monster.AIState = aiState
-
-	// Convert positions
-	monster.LastPlayerPos = entity.Position{X: saveMonster.LastPlayerPosX, Y: saveMonster.LastPlayerPosY}
-	monster.OriginalPos = entity.Position{X: saveMonster.OriginalPosX, Y: saveMonster.OriginalPosY}
-
-	// Convert patrol path
-	monster.PatrolPath = make([]entity.Position, len(saveMonster.PatrolPath))
-	for i, pos := range saveMonster.PatrolPath {
-		monster.PatrolPath[i] = entity.Position{X: pos.X, Y: pos.Y}
-	}
-
 	return monster, nil
-}
-
-// convertStringToAIState converts string to AI state
-func (sc *SaveConverter) convertStringToAIState(aiStateStr string) (actor.AIState, error) {
-	switch aiStateStr {
-	case "idle":
-		return actor.StateIdle, nil
-	case "patrol":
-		return actor.StatePatrol, nil
-	case "chase":
-		return actor.StateChase, nil
-	case "attack":
-		return actor.StateAttack, nil
-	case "search":
-		return actor.StateSearch, nil
-	case "flee":
-		return actor.StateFlee, nil
-	default:
-		return 0, fmt.Errorf("unknown AI state: %s", aiStateStr)
-	}
 }
 
 // validatePlayer validates player data

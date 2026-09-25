@@ -254,9 +254,9 @@ func TestSaveManagerImportRejectsUnrestorableSaveWithoutReplacingMainSave(t *tes
 			},
 		},
 		{
-			name: "invalid monster AI state",
+			name: "invalid monster type",
 			mutate: func(saveData *SaveData) {
-				saveData.DungeonData.Floors[1].Monsters = []Monster{{Type: "A", AIState: "invalid"}}
+				saveData.DungeonData.Floors[1].Monsters = []Monster{{Type: "?"}}
 			},
 		},
 		{
@@ -410,7 +410,7 @@ func TestSaveGameIntegrationRejectsMalformedSaveWithoutReplacingState(t *testing
 			expectedError: "floor 1: item 0",
 		},
 		{
-			name: "invalid monster AI state",
+			name: "invalid monster type",
 			mutate: func(saveData *SaveData) {
 				saveData.DungeonData.Floors = map[int]*Floor{
 					1: {
@@ -418,11 +418,11 @@ func TestSaveGameIntegrationRejectsMalformedSaveWithoutReplacingState(t *testing
 						Width:       1,
 						Height:      1,
 						Tiles:       [][]Tile{{{Type: "floor"}}},
-						Monsters:    []Monster{{Type: "A", AIState: "invalid"}},
+						Monsters:    []Monster{{Type: "?"}},
 					},
 				}
 			},
-			expectedError: "floor 1: monster 0",
+			expectedError: "floor 1 monster 0",
 		},
 		{
 			name: "multi-character monster type",
@@ -433,7 +433,7 @@ func TestSaveGameIntegrationRejectsMalformedSaveWithoutReplacingState(t *testing
 						Width:       1,
 						Height:      1,
 						Tiles:       [][]Tile{{{Type: "floor"}}},
-						Monsters:    []Monster{{Type: "BLAH", AIState: ConvertAIStateToString(actor.StateIdle)}},
+						Monsters:    []Monster{{Type: "BLAH"}},
 					},
 				}
 			},
@@ -461,7 +461,7 @@ func TestSaveGameIntegrationRejectsMalformedSaveWithoutReplacingState(t *testing
 			expectedError: "current floor 1 is missing",
 		},
 		{
-			name: "invalid monster original position",
+			name: "out of bounds monster position",
 			mutate: func(saveData *SaveData) {
 				saveData.DungeonData.Floors = map[int]*Floor{
 					1: {
@@ -469,11 +469,11 @@ func TestSaveGameIntegrationRejectsMalformedSaveWithoutReplacingState(t *testing
 						Width:       1,
 						Height:      1,
 						Tiles:       [][]Tile{{{Type: "floor"}}},
-						Monsters:    []Monster{{Type: "A", AIState: "idle", OriginalPosX: 1}},
+						Monsters:    []Monster{{Type: "A", X: 1}},
 					},
 				}
 			},
-			expectedError: "floor 1: monster 0: original position",
+			expectedError: "failed to convert floor 1: monster 0: monster position",
 		},
 	}
 
