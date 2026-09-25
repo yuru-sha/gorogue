@@ -191,6 +191,70 @@ func TestCLIModeExecuteCommand(t *testing.T) {
 		})
 	}
 }
+func TestCLISpawnCommandCreatesRequestedMonsterAtRequestedCoordinates(t *testing.T) {
+	level := &dungeon.Level{Width: 12, Height: 12, FloorNumber: 3, Seed: 811}
+	if err := level.SetRandomDraws(0); err != nil {
+		t.Fatal(err)
+	}
+	level.Tiles = make([][]*dungeon.Tile, level.Height)
+	for y := range level.Tiles {
+		level.Tiles[y] = make([]*dungeon.Tile, level.Width)
+		for x := range level.Tiles[y] {
+			level.Tiles[y][x] = dungeon.NewTile(dungeon.TileFloor)
+		}
+	}
+	player := actor.NewPlayerWithSeed(4, 6, 811)
+	level.UpdateVisibilityForPlayer(player.Position.X, player.Position.Y, false)
+	cli := NewCLIMode(level, player)
+	cli.IsActive = true
+
+	result := cli.ExecuteCommand("spawn B 5 6 2")
+
+	if len(level.Monsters) != 2 {
+		t.Fatalf("spawned %d monsters, want 2: %s", len(level.Monsters), result)
+	}
+	if got := level.GetMonsterAt(5, 6); got == nil || got.Type.Code != 'B' {
+		t.Fatalf("requested monster at (5, 6) = %v", got)
+	}
+	if !level.GetTile(5, 6).Visible {
+		t.Fatal("spawned monster was placed outside the player's visible area")
+	}
+	if level.GetMonsterAt(6, 6) == nil {
+		t.Fatalf("second monster was not placed near requested coordinates: %s", result)
+	}
+	target := level.GetMonsterAt(5, 6)
+	result = cli.ExecuteCommand("attack 5 6")
+	if !target.IsRunning || (!strings.Contains(result, "Attacked") && !strings.Contains(result, "miss") && !strings.Contains(result, "Killed")) {
+		t.Fatalf("spawned monster did not participate in combat: result=%q monster=%+v", result, target)
+	}
+	if level.RandomDraws() == 0 {
+		t.Fatal("spawn did not consume the level's game-managed random source")
+	}
+}
+
+func TestCLISpawnRejectsInvalidArgumentsWithoutChangingLevel(t *testing.T) {
+	level := &dungeon.Level{Width: 12, Height: 12, FloorNumber: 3, Seed: 811}
+	if err := level.SetRandomDraws(0); err != nil {
+		t.Fatal(err)
+	}
+	level.Tiles = make([][]*dungeon.Tile, level.Height)
+	for y := range level.Tiles {
+		level.Tiles[y] = make([]*dungeon.Tile, level.Width)
+		for x := range level.Tiles[y] {
+			level.Tiles[y][x] = dungeon.NewTile(dungeon.TileFloor)
+		}
+	}
+	cli := NewCLIMode(level, actor.NewPlayerWithSeed(1, 1, 811))
+	cli.IsActive = true
+	beforeDraws := level.RandomDraws()
+
+	for _, input := range []string{"spawn ?", "spawn B 5 6 0", "spawn B 12 6", "spawn B nope 6", "spawn B 1 1"} {
+		cli.ExecuteCommand(input)
+		if len(level.Monsters) != 0 || level.RandomDraws() != beforeDraws {
+			t.Fatalf("%q changed level: monsters=%d draws=%d", input, len(level.Monsters), level.RandomDraws())
+		}
+	}
+}
 
 func TestCLIModeHelpCommand(t *testing.T) {
 	player := actor.NewPlayer(5, 5)

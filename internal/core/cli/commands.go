@@ -14,11 +14,12 @@ import (
 )
 
 const (
-	equipmentWeapon = "weapon"
-	equipmentArmor  = "armor"
-	commandAll      = "all"
-	commandSave     = "save"
-	commandLoad     = "load"
+	equipmentWeapon       = "weapon"
+	equipmentArmor        = "armor"
+	commandAll            = "all"
+	commandSave           = "save"
+	commandLoad           = "load"
+	cliInvalidCoordinates = "Invalid coordinates"
 )
 
 // CLIMode provides command-line interface for debugging and AI control
@@ -346,7 +347,7 @@ func (c *CLIMode) teleportCommand(args []string) string {
 	y, err2 := strconv.Atoi(args[1])
 
 	if err1 != nil || err2 != nil {
-		return "Invalid coordinates"
+		return cliInvalidCoordinates
 	}
 
 	if x < 0 || x >= c.Level.Width || y < 0 || y >= c.Level.Height {
@@ -423,7 +424,7 @@ func (c *CLIMode) killCommand(args []string) string {
 		x, err1 := strconv.Atoi(args[0])
 		y, err2 := strconv.Atoi(args[1])
 		if err1 != nil || err2 != nil {
-			return "Invalid coordinates"
+			return cliInvalidCoordinates
 		}
 
 		monster := c.Level.GetMonsterAt(x, y)
@@ -557,12 +558,64 @@ func (c *CLIMode) setCommand(args []string) string {
 
 // spawnCommand spawns monsters
 func (c *CLIMode) spawnCommand(args []string) string {
-	if len(args) == 0 {
+	if len(args) == 0 || len(args) > 4 || len(args) == 2 {
 		return "Usage: spawn <monster_type> [x] [y] [count]"
 	}
 
-	// TODO: Implement monster spawning
-	return fmt.Sprintf("Spawned %s (TODO: implement)", args[0])
+	monsterType, position, count, message := parseSpawnArgs(args, dungeon.Position{X: c.Player.Position.X, Y: c.Player.Position.Y})
+	if message != "" {
+		return message
+	}
+	if len(args) >= 3 && position.X == c.Player.Position.X && position.Y == c.Player.Position.Y {
+		return cliInvalidCoordinates
+	}
+
+	monsters, err := c.Level.SpawnMonsters(
+		monsterType,
+		position,
+		count,
+		dungeon.Position{X: c.Player.Position.X, Y: c.Player.Position.Y},
+	)
+	if err != nil {
+		message := err.Error()
+		return strings.ToUpper(message[:1]) + message[1:]
+	}
+	spawnedAt := monsters[0].Position
+	return fmt.Sprintf(
+		"Spawned %d %s at (%d, %d)",
+		len(monsters),
+		actor.MonsterTypes[monsterType].Name,
+		spawnedAt.X,
+		spawnedAt.Y,
+	)
+}
+
+func parseSpawnArgs(args []string, defaultPosition dungeon.Position) (monsterType rune, position dungeon.Position, count int, message string) {
+	monsterCode := []rune(strings.ToUpper(args[0]))
+	if len(monsterCode) != 1 {
+		return 0, dungeon.Position{}, 0, fmt.Sprintf("Unknown monster type: %s", args[0])
+	}
+	if _, ok := actor.MonsterTypes[monsterCode[0]]; !ok {
+		return 0, dungeon.Position{}, 0, fmt.Sprintf("Unknown monster type: %s", args[0])
+	}
+
+	position, count = defaultPosition, 1
+	if len(args) >= 3 {
+		x, errX := strconv.Atoi(args[1])
+		y, errY := strconv.Atoi(args[2])
+		if errX != nil || errY != nil {
+			return 0, dungeon.Position{}, 0, cliInvalidCoordinates
+		}
+		position = dungeon.Position{X: x, Y: y}
+	}
+	if len(args) == 4 {
+		value, err := strconv.Atoi(args[3])
+		if err != nil || value <= 0 {
+			return 0, dungeon.Position{}, 0, "Invalid monster count"
+		}
+		count = value
+	}
+	return monsterCode[0], position, count, ""
 }
 
 // debugCommand provides debug information
