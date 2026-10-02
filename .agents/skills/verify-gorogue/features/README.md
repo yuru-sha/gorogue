@@ -5,7 +5,7 @@ This map covers the terminal CLI's user-facing gameplay paths. Read the matching
 ## Baseline preconditions
 
 - Build `/tmp/gorogue-verify-cli` from the current checkout using `../SKILL.md`.
-- Use a fixed seed and save each run's input and transcript under `/tmp/gorogue-evidence/`.
+- Use a fixed seed and save each run's input and transcript under `artifacts/verify-gorogue/<RUN_ID>/` so concurrent runs do not collide.
 - Each CLI run is a fresh, short-lived process. End it with `quit` or EOF.
 - Do not run save/load concurrently. All sessions use shared `saves/` by default.
 
