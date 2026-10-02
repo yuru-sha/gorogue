@@ -4,7 +4,7 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/yuru-sha/gorogue)
 
-GoRogue is a Go and gruid implementation of the Rogue 5.4.4 text roguelike. [`SPEC.md`](SPEC.md) is the source of truth for requirements and acceptance criteria.
+GoRogue is a Go and gruid implementation of the Rogue 5.4.4 text roguelike. [`docs/SPEC.md`](docs/SPEC.md) is the source of truth for requirements and acceptance criteria.
 
 ## Current game
 
@@ -84,4 +84,7 @@ See [`docs/development.md`](docs/development.md) for development commands and [`
 
 MIT
 
-See [docs/agents/release.md](docs/agents/release.md) for the release note format and creation procedure. The shared body template is [.github/release-notes-template.md](.github/release-notes-template.md), and the generated-note categories are managed in [.github/release.yml](.github/release.yml).
+
+## GitHub workflow
+
+Shared Issue Forms and the default Pull Request template are inherited from `yuru-sha/.github`. Release-note categories are configured in `.github/release.yml`, and shared labels (including `orca:*`) are synchronized from `yuru-sha/project-template`.
