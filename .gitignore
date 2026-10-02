@@ -1,50 +1,39 @@
-# If you prefer the allow list template instead of the deny list, see community template:
-# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
-#
-# Binaries for programs and plugins
+# Go build and test artifacts
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
-
-# Project binaries in root directory
-gorogue
-gorogue-cli
-/main
-
-# Test binary, built with `go test -c`
 *.test
-
-# Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 coverage.html
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
+# Project binaries
+/gorogue
+/gorogue-cli
+/main
+bin/
 
-# Go workspace file
+# Go workspace files
 go.work
 go.work.sum
 
-# env file
+# Local environment and runtime data
 .env
-
-# APP directory and files
-bin/
+.env.*
+!.env.example
 data/
 logs/
 scores.json
 saves/
 
-# macOS
+# OS / editor / temporary files
 .DS_Store
-
-# Claude Code settings
-.claude/settings.local.json
-
-# Machine-local agent links; keep only project-owned skills versioned.
-.agents/agent-capabilities/
-.codex/agents/
-.agents/skills/*
-.codex/config.toml
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+tmp/
+temp/
