@@ -26,6 +26,7 @@ data/
 logs/
 scores.json
 saves/
+artifacts/
 
 # OS / editor / temporary files
 .DS_Store

@@ -51,11 +51,11 @@ Require the banner, `Player Status:`, `HP:`, `Position:`, `Available commands:`,
 
 ## Evidence
 
-Store exact input, full stdout/stderr transcript, exit code, seed, and source revision under `/tmp/gorogue-evidence/<feature-id>/`. Capture the action and its resulting state. For mutations, issue a later read-only command such as `inventory` or `status` to verify the effect. Check persistent side effects separately when testing persistence; command output alone is insufficient. The local CLI path needs no external-service mocks.
+Store exact input, full stdout/stderr transcript, exit code, seed, and source revision under `artifacts/verify-gorogue/<RUN_ID>/`. Each run gets its own `<RUN_ID>` (a timestamp or short random identifier) so concurrent drives do not overwrite each other. Capture the action and its resulting state. For mutations, issue a later read-only command such as `inventory` or `status` to verify the effect. Check persistent side effects separately when testing persistence; command output alone is insufficient. The local CLI path needs no external-service mocks.
 
 ## Cleanup
 
-The CLI exits on `quit` or EOF. For an interactive run, send `quit` only to the process/session started by this verification run. Never kill by process name. Remove the temporary binary and input files when no longer needed. Preserve `/tmp/gorogue-evidence/`; do not delete or alter shared `saves/` state.
+The CLI exits on `quit` or EOF. For an interactive run, send `quit` only to the process/session started by this verification run. Never kill by process name. Remove the temporary binary and input files when no longer needed. Preserve `artifacts/verify-gorogue/` evidence; do not delete or alter shared `saves/` state.
 
 ## Helpers
 
