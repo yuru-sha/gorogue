@@ -4,7 +4,7 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/yuru-sha/gorogue)
 
-GoRogue は Go と gruid で実装した、Rogue 5.4.4 を基準とする文字表示のローグライクゲームです。要件と受け入れ条件は [`SPEC.md`](SPEC.md) を参照してください。
+GoRogue は Go と gruid で実装した、Rogue 5.4.4 を基準とする文字表示のローグライクゲームです。要件と受け入れ条件は [`docs/SPEC.md`](docs/SPEC.md) を参照してください。
 
 ## 現行機能
 
@@ -58,3 +58,8 @@ go vet ./...
 ```
 
 Go バージョンとモジュール依存関係は [`go.mod`](go.mod) を正とします。開発コマンドの詳細は [`docs/development.md`](docs/development.md)、実装構成は [`docs/architecture.md`](docs/architecture.md) を参照してください。
+
+
+## GitHub運用
+
+Issue Form と既定の Pull Request テンプレートは `yuru-sha/.github` の共通設定を利用します。Release Notes のカテゴリは `.github/release.yml` で管理し、`orca:*` を含む共通ラベルは `yuru-sha/project-template` から同期します。
