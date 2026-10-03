@@ -36,10 +36,11 @@ GoRogue is a Go and gruid implementation of the Rogue 5.4.4 text roguelike. [`do
 | `a` | Repeat the last command |
 | `?` / `/` | Ask about a command key / explain a symbol |
 | `Q` / Escape | Quit / cancel |
+| `^L` | Load saved game |
 
 The game starts directly in the dungeon. The top row shows the latest message or prompt, the map occupies the center, and the bottom row shows `Level`, `Gold`, `Hp`, `Str`, `Arm`, and `Exp`. Hunger status is blank when satisfied and appears as `Hungry`, `Weak`, or `Faint` when applicable. Press `?`, then a command key to view its description; use `*` for the command list. Death and victory are modal sequences.
 
-GoRogue conveniences: `^W` toggles wizard mode and `:` enters the CLI debug prompt. Save/load commands are available from the CLI; SIGHUP saves the current game.
+GoRogue conveniences: `^W` toggles wizard mode, `^L` loads the saved game, and `:` enters the CLI debug prompt. Save/load commands are available from the CLI; SIGHUP saves the current game.
 
 ## Build and run
 

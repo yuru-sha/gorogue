@@ -83,6 +83,7 @@ func TestParser_OriginalActionBindings(t *testing.T) {
 		{"?", CmdHelp},
 		{"/", CmdSymbol},
 		{gruid.KeyEscape, CmdEscape},
+		{"^L", CmdLoad},
 	}
 
 	for _, tt := range tests {
@@ -118,6 +119,7 @@ func TestParser_GetKeyBindingsReportsOriginalActions(t *testing.T) {
 		"R": "Remove a ring",
 		"@": "Show character information",
 		"c": "Name an unidentified item",
+		"^L": "Load saved game",
 	} {
 		if got := bindings[key]; got != want {
 			t.Errorf("binding %q = %q, want %q", key, got, want)

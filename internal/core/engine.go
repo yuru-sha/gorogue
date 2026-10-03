@@ -108,8 +108,42 @@ func NewEngineWithSeed(seed int64) *Engine {
 		saveIntegration: saveIntegration,
 		runActive:       true,
 	}
+	engine.bindScreenLoader()
 
 	return engine
+}
+
+// bindScreenLoader exposes SyncLoadedState to the game screen so a GUI load
+// action can mirror the state produced by the shared command executor into
+// the engine and dependent subsystems.
+func (e *Engine) bindScreenLoader() {
+	if e.gameScreen == nil {
+		return
+	}
+	e.gameScreen.SetEngineLoad(e.SyncLoadedState)
+}
+
+// SyncLoadedState mirrors the state held by the save integration into the
+// engine and game screen after the shared command executor has validated,
+// converted, and consumed the save. It performs no save I/O itself.
+func (e *Engine) SyncLoadedState() error {
+	if e.saveIntegration == nil {
+		return fmt.Errorf("save integration is unavailable")
+	}
+	player, dm := e.saveIntegration.GetGameState()
+	if player == nil || dm == nil {
+		return fmt.Errorf("loaded game state is unavailable")
+	}
+	e.player = player
+	e.dungeonManager = dm
+	if e.gameScreen != nil {
+		e.gameScreen.ApplyLoadedState(player, dm)
+	}
+	e.runActive = true
+	logger.Info("Engine synced loaded state",
+		"floor", dm.GetCurrentFloor(),
+	)
+	return nil
 }
 
 // Update implements gruid.Model.Update

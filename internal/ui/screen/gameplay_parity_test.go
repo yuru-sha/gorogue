@@ -1,6 +1,9 @@
 package screen
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -734,6 +737,133 @@ func TestGameScreenCLISaveEndsRun(t *testing.T) {
 
 	if got := screen.HandleInput(gruid.MsgKeyDown{Key: gruid.KeyEnter}); got != state.StateQuit {
 		t.Fatalf("embedded CLI save state = %v, want StateQuit", got)
+	}
+}
+
+func TestGameScreenLoadRestoresSavedState(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	if err := logger.Setup(); err != nil {
+		t.Fatal(err)
+	}
+	player := actor.NewPlayerWithSeed(1, 1, 42)
+	manager := dungeon.NewDungeonManagerWithSeed(player, 42)
+	player.Position.X = 3
+	player.Position.Y = 4
+	integration := save.NewSaveGameIntegration()
+	if err := integration.Initialize(); err != nil {
+		t.Fatal(err)
+	}
+	integration.SetGameState(player, manager)
+	if err := integration.SaveGame(); err != nil {
+		t.Fatalf("SaveGame() error = %v", err)
+	}
+
+	screen := NewGameScreen(80, 50, actor.NewPlayerWithSeed(9, 9, 42))
+	screen.SetLevel(newTestFloor(5, 5))
+	liveManager := dungeon.NewDungeonManagerWithSeed(screen.player, 42)
+	screen.SetDungeonManager(liveManager)
+	screen.SetSaveIntegration(integration)
+
+	screen.SetEngineLoad(func() error {
+		loaded, dm := integration.GetGameState()
+		if loaded == nil || dm == nil {
+			return fmt.Errorf("loaded state is unavailable")
+		}
+		screen.player = loaded
+		screen.dungeonManager = dm
+		screen.level = dm.GetCurrentLevel()
+		return nil
+	})
+
+	if got := screen.HandleInput(gruid.MsgKeyDown{Key: "^L"}); got != state.StateGame {
+		t.Fatalf("^L state = %v, want StateGame", got)
+	}
+	if screen.player.Position.X != 3 || screen.player.Position.Y != 4 {
+		t.Fatalf("loaded position = (%d, %d), want (3, 4)", screen.player.Position.X, screen.player.Position.Y)
+	}
+	if !strings.Contains(strings.Join(screen.messages, " "), "Game loaded.") {
+		t.Fatalf("success message missing: %v", screen.messages)
+	}
+	if integration.HasSave() {
+		t.Fatal("successful load did not consume the save")
+	}
+}
+
+func TestGameScreenLoadFailsWhenSaveMissing(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	if err := logger.Setup(); err != nil {
+		t.Fatal(err)
+	}
+	player := actor.NewPlayerWithSeed(1, 1, 42)
+	manager := dungeon.NewDungeonManagerWithSeed(player, 42)
+	integration := save.NewSaveGameIntegration()
+	if err := integration.Initialize(); err != nil {
+		t.Fatal(err)
+	}
+	integration.SetGameState(player, manager)
+
+	screen := NewGameScreen(80, 50, player)
+	screen.SetLevel(newTestFloor(5, 5))
+	screen.SetDungeonManager(manager)
+	screen.SetSaveIntegration(integration)
+	screen.SetEngineLoad(func() error {
+		return fmt.Errorf("save integration did not consume the save on error")
+	})
+
+	if got := screen.HandleInput(gruid.MsgKeyDown{Key: "^L"}); got != state.StateGame {
+		t.Fatalf("^L state = %v, want StateGame", got)
+	}
+	if !strings.Contains(strings.Join(screen.messages, " "), "Load failed:") {
+		t.Fatalf("expected failure message, got %v", screen.messages)
+	}
+	if !strings.Contains(strings.Join(screen.messages, " "), "does not exist") {
+		t.Fatalf("expected missing-save error, got %v", screen.messages)
+	}
+	if screen.player != player {
+		t.Fatal("failed load replaced the active player")
+	}
+	if integration.HasSave() {
+		t.Fatal("missing-save branch reported a save file")
+	}
+}
+
+func TestGameScreenLoadFailsOnInvalidSave(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	if err := logger.Setup(); err != nil {
+		t.Fatal(err)
+	}
+	player := actor.NewPlayerWithSeed(1, 1, 42)
+	manager := dungeon.NewDungeonManagerWithSeed(player, 42)
+	integration := save.NewSaveGameIntegration()
+	if err := integration.Initialize(); err != nil {
+		t.Fatal(err)
+	}
+	integration.SetGameState(player, manager)
+
+	saveDir := filepath.Join(t.TempDir(), ".gorogue", save.SaveDirectory)
+	if err := os.MkdirAll(saveDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(saveDir, save.SaveFileName), []byte(`{"Version":"0.0.0"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := NewGameScreen(80, 50, player)
+	screen.SetLevel(newTestFloor(5, 5))
+	screen.SetDungeonManager(manager)
+	screen.SetSaveIntegration(integration)
+	screen.SetEngineLoad(func() error {
+		return fmt.Errorf("save integration did not consume the save on error")
+	})
+
+	if got := screen.HandleInput(gruid.MsgKeyDown{Key: "^L"}); got != state.StateGame {
+		t.Fatalf("^L state = %v, want StateGame", got)
+	}
+	if !strings.Contains(strings.Join(screen.messages, " "), "Load failed:") {
+		t.Fatalf("expected failure message, got %v", screen.messages)
+	}
+	if screen.player != player {
+		t.Fatal("failed load replaced the active player")
 	}
 }
 
