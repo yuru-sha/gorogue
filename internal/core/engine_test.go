@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/anaseto/gruid"
+	"github.com/yuru-sha/gorogue/internal/core/command"
 	"github.com/yuru-sha/gorogue/internal/core/state"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
@@ -163,6 +164,65 @@ func TestEngineShowsVictorySequenceAfterSurfaceExit(t *testing.T) {
 	}
 	if effect := engine.Update(gruid.MsgKeyDown{Key: gruid.KeySpace}); effect == nil {
 		t.Fatal("final victory acknowledgement did not end the run")
+	}
+}
+
+func TestEngineSyncLoadedStateAfterSharedExecutor(t *testing.T) {
+	logger.Setup()
+	t.Setenv("HOME", t.TempDir())
+	engine := NewEngineWithSeed(12345)
+	engine.player.Position.X = 3
+	engine.player.Position.Y = 4
+	engine.saveIntegration.SetGameState(engine.player, engine.dungeonManager)
+	if err := engine.saveIntegration.SaveGame(); err != nil {
+		t.Fatalf("SaveGame() error = %v", err)
+	}
+	engine.player.Position.X = 0
+	engine.player.Position.Y = 0
+
+	result := command.Execute(&command.Context{
+		Player:  engine.player,
+		Level:   engine.dungeonManager.GetCurrentLevel(),
+		Dungeon: engine.dungeonManager,
+		Save:    engine.saveIntegration,
+	}, command.Command{Type: command.CmdLoad})
+	if result.Error {
+		t.Fatalf("shared CmdLoad reported error: %s", result.Message)
+	}
+
+	if err := engine.SyncLoadedState(); err != nil {
+		t.Fatalf("SyncLoadedState() error = %v", err)
+	}
+	if engine.player.Position.X != 3 || engine.player.Position.Y != 4 {
+		t.Fatalf("engine player position = (%d, %d), want (3, 4)", engine.player.Position.X, engine.player.Position.Y)
+	}
+	if !engine.runActive {
+		t.Fatal("engine did not remain active after successful load")
+	}
+	if engine.saveIntegration.HasSave() {
+		t.Fatal("successful engine load did not consume the save")
+	}
+}
+
+func TestEngineSyncLoadedStateFailsWhenSaveMissing(t *testing.T) {
+	logger.Setup()
+	t.Setenv("HOME", t.TempDir())
+	engine := NewEngineWithSeed(12345)
+	original := engine.player
+	result := command.Execute(&command.Context{
+		Player:  engine.player,
+		Level:   engine.dungeonManager.GetCurrentLevel(),
+		Dungeon: engine.dungeonManager,
+		Save:    engine.saveIntegration,
+	}, command.Command{Type: command.CmdLoad})
+	if !result.Error {
+		t.Fatal("shared CmdLoad without a save should report an error")
+	}
+	if !strings.Contains(result.Message, "Load failed:") {
+		t.Fatalf("missing-save result = %q, want Load failed prefix", result.Message)
+	}
+	if engine.player != original {
+		t.Fatal("failed load replaced the active player")
 	}
 }
 

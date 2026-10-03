@@ -47,6 +47,7 @@ type GameScreen struct {
 	wizardMode        *wizard.WizardMode
 	cliMode           *cli.CLIMode
 	saveIntegration   *save.SaveGameIntegration
+	engineLoad        func() error
 	inputMode         InputMode
 	equippableItems   []*gameitem.Item
 	cliBuffer         string
@@ -154,6 +155,42 @@ func (s *GameScreen) SetSaveIntegration(integration *save.SaveGameIntegration) {
 	s.saveIntegration = integration
 	if s.cliMode != nil {
 		s.cliMode.SetSaveIntegration(integration)
+	}
+}
+
+// SetEngineLoad binds the engine-side loader that the GUI invokes when the
+// player requests a load from normal input. The callback is responsible for
+// the consume-on-success semantics and mirroring the new state into both
+// the engine and the game screen.
+func (s *GameScreen) SetEngineLoad(loader func() error) {
+	s.engineLoad = loader
+}
+
+// ApplyLoadedState mirrors a state returned from the save integration so the
+// game screen, command session, and wizard mode track the restored player
+// and dungeon after a successful load.
+func (s *GameScreen) ApplyLoadedState(player *actor.Player, dm *dungeon.DungeonManager) {
+	if player != nil {
+		s.player = player
+	}
+	if dm != nil {
+		s.dungeonManager = dm
+		s.level = dm.GetCurrentLevel()
+	}
+	if s.wizardMode != nil && s.level != nil {
+		s.wizardMode.Player = s.player
+		s.wizardMode.SetLevel(s.level)
+	}
+	if s.cliMode != nil {
+		s.cliMode.Player = s.player
+		s.cliMode.Dungeon = s.dungeonManager
+		if s.level != nil {
+			s.cliMode.SetLevel(s.level)
+		}
+		s.cliMode.SetSaveIntegration(s.saveIntegration)
+	}
+	if s.level != nil && s.player != nil {
+		s.level.UpdateVisibility(s.player.Position.X, s.player.Position.Y)
 	}
 }
 

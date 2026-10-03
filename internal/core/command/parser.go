@@ -75,11 +75,14 @@ func (p *Parser) initializeKeyMap() {
 	p.keyMap["/"] = Command{Type: CmdSymbol}
 	p.keyMap[gruid.KeyEscape] = Command{Type: CmdEscape}
 	p.keyMap["^W"] = Command{Type: CmdWizard}
+	p.keyMap["^L"] = Command{Type: CmdLoad}
 	p.keyMap[":"] = Command{Type: CmdCLI}
 }
 
 // Only command keys from Rogue are assigned gameplay meanings here;
 // nonconflicting frontend conveniences remain available through named CLI commands.
+// GUI conveniences ^W (wizard) and ^L (load) follow the same Ctrl binding pattern
+// and remain distinct from any Rogue key.
 
 // Parse converts a key input to a command
 func (p *Parser) Parse(key gruid.Key) Command {
@@ -127,6 +130,7 @@ func (p *Parser) GetKeyBindings() map[string]string {
 	bindings["/"] = "Show symbol explanation"
 	bindings["ESC"] = "Cancel command"
 	bindings["^W"] = "Toggle wizard mode"
+	bindings["^L"] = "Load saved game"
 	bindings[":"] = "Enter CLI debug mode"
 
 	return bindings

@@ -221,6 +221,8 @@ func (s *GameScreen) handleNormalInput(key gruid.Key) state.GameState {
 			status = "ON"
 		}
 		s.AddMessage(fmt.Sprintf("ウィザードモード: %s", status))
+	case command.CmdLoad:
+		s.handleLoad()
 	case command.CmdCLI:
 		s.enterCLIMode()
 
@@ -234,6 +236,30 @@ func (s *GameScreen) handleNormalInput(key gruid.Key) state.GameState {
 		}
 	}
 	return state.StateGame
+}
+
+// handleLoad replaces the active game with the persisted save. It delegates
+// to the shared command executor so the GUI uses the same validation,
+// conversion, and consume-on-success contract as the CLI. When the engine
+// has bound a sync callback, the loaded state is also mirrored into the
+// engine and dependent subsystems.
+func (s *GameScreen) handleLoad() {
+	if s.saveIntegration == nil {
+		s.AddMessage("Save/load is unavailable.")
+		return
+	}
+	result := s.executeCommand(command.Command{Type: command.CmdLoad})
+	if result.Error {
+		s.AddMessage(result.Message)
+		return
+	}
+	if s.engineLoad != nil {
+		if err := s.engineLoad(); err != nil {
+			s.AddMessage("Load failed: " + err.Error())
+			return
+		}
+	}
+	s.AddMessage(result.Message)
 }
 
 func (s *GameScreen) handleCall() {
