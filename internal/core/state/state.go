@@ -6,12 +6,10 @@ import "github.com/anaseto/gruid"
 type GameState int
 
 const (
-	StateMenu GameState = iota
-	StateGame
+	StateGame GameState = iota
 	StateInventory
 	StateHelp
 	StateGameOver
-	StateSaveLoad
 	StateVictory
 	StateSymbol
 	StateQuit
@@ -32,7 +30,7 @@ type StateManager struct {
 // NewStateManager creates a new state manager
 func NewStateManager() *StateManager {
 	return &StateManager{
-		currentState: StateMenu,
+		currentState: StateGame,
 		states:       make(map[GameState]State),
 	}
 }

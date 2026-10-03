@@ -144,38 +144,38 @@ func TestHallucinationRenderRestoresVisibleUnseenStairs(t *testing.T) {
 
 	screen.drawDisplayCells(&grid)
 
-	if got := grid.At(gruid.Point{X: 0, Y: 2}).Rune; got == '>' {
+	if got := grid.At(gruid.Point{X: 0, Y: 1}).Rune; got == '>' {
 		t.Fatal("unseen stairs retained their normal glyph during hallucination")
 	}
-	if got := grid.At(gruid.Point{X: 2, Y: 2}).Rune; got != '<' {
+	if got := grid.At(gruid.Point{X: 2, Y: 1}).Rune; got != '<' {
 		t.Fatalf("previously known stairs rendered as %q, want '<'", got)
 	}
 	level.Tiles[0][0].Visible = false
 	level.Tiles[0][0].Explored = true
 	screen.drawDisplayCells(&grid)
-	if got := grid.At(gruid.Point{X: 0, Y: 2}).Rune; got == '>' {
+	if got := grid.At(gruid.Point{X: 0, Y: 1}).Rune; got == '>' {
 		t.Fatal("stairs first seen during hallucination were revealed after leaving view")
 	}
 	itemGlyph, _ := itemAppearance(gameitem.ItemPotion)
-	if got := grid.At(gruid.Point{X: 3, Y: 2}).Rune; got == itemGlyph {
+	if got := grid.At(gruid.Point{X: 3, Y: 1}).Rune; got == itemGlyph {
 		t.Fatal("visible item retained its normal glyph during hallucination")
 	}
-	if got := grid.At(gruid.Point{X: 4, Y: 2}).Rune; got == 'B' {
+	if got := grid.At(gruid.Point{X: 4, Y: 1}).Rune; got == 'B' {
 		t.Fatal("visible monster retained its normal glyph during hallucination")
 	}
 
 	player.HallucinationTurns = 0
 	screen.drawDisplayCells(&grid)
-	if got := grid.At(gruid.Point{X: 0, Y: 2}).Rune; got != '>' {
+	if got := grid.At(gruid.Point{X: 0, Y: 1}).Rune; got != '>' {
 		t.Fatalf("expired hallucination rendered stairs as %q, want '>'", got)
 	}
 	if level.Tiles[0][0].HallucinationKnown {
 		t.Fatal("display rendering mutated stair knowledge")
 	}
-	if got := grid.At(gruid.Point{X: 3, Y: 2}).Rune; got != itemGlyph {
+	if got := grid.At(gruid.Point{X: 3, Y: 1}).Rune; got != itemGlyph {
 		t.Fatalf("expired hallucination rendered item as %q, want %q", got, itemGlyph)
 	}
-	if got := grid.At(gruid.Point{X: 4, Y: 2}).Rune; got != 'B' {
+	if got := grid.At(gruid.Point{X: 4, Y: 1}).Rune; got != 'B' {
 		t.Fatalf("expired hallucination rendered monster as %q, want 'B'", got)
 	}
 }
@@ -240,11 +240,11 @@ func TestHallucinationRenderUsesRogueObjectPaletteAndVariedMonsters(t *testing.T
 	for turns := range 850 {
 		player.HallucinationTurns = turns + 1
 		screen.drawDisplayCells(&grid)
-		itemGlyph := grid.At(gruid.Point{X: 0, Y: 2}).Rune
+		itemGlyph := grid.At(gruid.Point{X: 0, Y: 1}).Rune
 		if !strings.ContainsRune(rogueObjectPalette, itemGlyph) {
 			t.Fatalf("hallucinated item glyph %q is outside Rogue's floor-one object palette", itemGlyph)
 		}
-		monsterGlyph := grid.At(gruid.Point{X: 1, Y: 2}).Rune
+		monsterGlyph := grid.At(gruid.Point{X: 1, Y: 1}).Rune
 		monsterGlyphs[monsterGlyph] = struct{}{}
 	}
 

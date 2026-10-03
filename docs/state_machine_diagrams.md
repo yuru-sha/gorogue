@@ -4,19 +4,18 @@
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Menu
-    Menu --> Game: start new game or load
-    Game --> Help: open help
-    Help --> Game: return
+    [*] --> Game
+    Game --> Help: request command help
+    Help --> Game: describe command or dismiss list
     Game --> Symbol: explain symbol
     Symbol --> Game: return
-    Game --> SaveLoad: open save/load
-    SaveLoad --> Game: resume or restore
-    Game --> Victory: return to surface with amulet
     Game --> GameOver: player dies
-    Victory --> [*]
-    GameOver --> Game: start a fresh game
-    GameOver --> [*]: quit
+    Game --> Victory: return to surface with amulet
+    GameOver --> GameOver: show score
+    GameOver --> [*]: acknowledge score
+    Victory --> Victory: show score
+    Victory --> [*]: acknowledge score
+    Game --> [*]: quit
 ```
 
 ## 行動のターン順

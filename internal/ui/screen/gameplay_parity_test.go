@@ -689,54 +689,25 @@ func fatalInventoryLevel() *dungeon.Level {
 	return level
 }
 
-func TestSaveLoadCommandsHaveGUICLIParity(t *testing.T) {
+func TestCLILoadFailsWhenSaveIsMissing(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	if err := logger.Setup(); err != nil {
 		t.Fatal(err)
 	}
-
 	player := actor.NewPlayerWithSeed(1, 1, 42)
 	manager := dungeon.NewDungeonManagerWithSeed(player, 42)
 	integration := save.NewSaveGameIntegration()
 	if err := integration.Initialize(); err != nil {
 		t.Fatal(err)
 	}
-	integration.SetGameState(player, manager)
-
 	cliMode := cli.NewCLIModeWithDungeonManager(manager, player)
 	cliMode.SetSaveIntegration(integration)
 	cliMode.IsActive = true
-	cliMissingLoad := cliMode.ExecuteCommand("load")
-	guiMissingLoad := NewSaveLoadScreenWithIntegration(80, 50, integration)
-	guiMissingLoad.SetOnLoad(func(*actor.Player, *dungeon.DungeonManager) {})
-	guiMissingLoad.SetSelectedOption(1)
-	guiMissingLoad.HandleInput(gruid.MsgKeyDown{Key: gruid.KeyEnter})
-	if guiMissingLoad.GetMessage() != cliMissingLoad {
-		t.Fatalf("missing save message mismatch: GUI=%q CLI=%q", guiMissingLoad.GetMessage(), cliMissingLoad)
+	if got := cliMode.ExecuteCommand("load"); !strings.HasPrefix(got, "Load failed:") {
+		t.Fatalf("missing-save result = %q, want load failure", got)
 	}
-
-	if got := cliMode.ExecuteCommand("save"); got != "Game saved." {
-		t.Fatalf("CLI save result = %q", got)
-	}
-	if !cliMode.RunEnded {
-		t.Fatal("CLI save did not end the run")
-	}
-
-	t.Setenv("HOME", t.TempDir())
-	guiPlayer := actor.NewPlayerWithSeed(1, 1, 42)
-	guiManager := dungeon.NewDungeonManagerWithSeed(guiPlayer, 42)
-	guiIntegration := save.NewSaveGameIntegration()
-	if err := guiIntegration.Initialize(); err != nil {
-		t.Fatal(err)
-	}
-	guiIntegration.SetGameState(guiPlayer, guiManager)
-	guiSave := NewSaveLoadScreenWithIntegration(80, 50, guiIntegration)
-	guiSave.SetSelectedOption(0)
-	if got := guiSave.HandleInput(gruid.MsgKeyDown{Key: gruid.KeyEnter}); got != state.StateQuit {
-		t.Fatalf("GUI save state = %v, want StateQuit", got)
-	}
-	if guiSave.GetMessage() != "Game saved." {
-		t.Fatalf("GUI save message = %q, want %q", guiSave.GetMessage(), "Game saved.")
+	if cliMode.RunEnded {
+		t.Fatal("failed load ended the run")
 	}
 }
 

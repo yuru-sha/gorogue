@@ -43,15 +43,15 @@ type GameScreen struct {
 	displayCells      []displayCell
 	dungeonManager    *dungeon.DungeonManager
 	messages          []string
-	lastStats         map[string]any     // 前回のステータス情報
-	wizardMode        *wizard.WizardMode // ウィザードモード
-	cliMode           *cli.CLIMode       // CLIデバッグモード
+	lastStats         map[string]any
+	wizardMode        *wizard.WizardMode
+	cliMode           *cli.CLIMode
 	saveIntegration   *save.SaveGameIntegration
-	inputMode         InputMode        // 現在の入力モード
-	equippableItems   []*gameitem.Item // 装備可能アイテムリスト
-	cliBuffer         string           // CLI入力バッファ
-	cliHistory        []string         // CLIコマンド履歴
-	cmdParser         *command.Parser  // Command parser
+	inputMode         InputMode
+	equippableItems   []*gameitem.Item
+	cliBuffer         string
+	cliHistory        []string
+	cmdParser         *command.Parser
 	commandSession    *command.Session
 	directionCallback func(dx, dy int)
 	pendingCommand    command.Type
@@ -61,7 +61,28 @@ type GameScreen struct {
 	callItemLetter    rune
 	pendingReadScroll rune
 	callNameBuffer    string
+	presentation      presentationMode
+	helpStage         helpStage
+	helpPage          int
+	sequencePages     [][]string
+	sequenceStage     int
 }
+
+type presentationMode uint8
+
+const (
+	presentationPlay presentationMode = iota
+	presentationHelp
+	presentationDeath
+	presentationVictory
+)
+
+type helpStage uint8
+
+const (
+	helpAwaitingKey helpStage = iota
+	helpShowingList
+)
 
 // NewGameScreen creates a new game screen
 func NewGameScreen(width, height int, player *actor.Player) *GameScreen {
@@ -78,15 +99,6 @@ func NewGameScreen(width, height int, player *actor.Player) *GameScreen {
 		cmdParser:       command.NewParser(),
 		commandSession:  command.NewSession(),
 	}
-
-	// PyRogue風の初期メッセージを追加
-	screen.AddMessage("Welcome to GoRogue!")
-	screen.AddMessage("Use vi keys (hjkl), arrow keys, or numpad (1-9) to move.")
-	screen.AddMessage("You are a skilled warrior.")
-	screen.AddMessage("You are equipped with a dagger and leather armor.")
-	screen.AddMessage("You start with no rings, potions, scrolls, food, and a scroll.")
-	screen.AddMessage("You see a lit room.")
-	screen.AddMessage("You enter the dungeon. Your quest begins!")
 
 	logger.Debug("Created game screen",
 		"width", width,

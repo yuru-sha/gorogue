@@ -2,6 +2,7 @@ package screen
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/command"
@@ -13,13 +14,99 @@ import (
 func (s *GameScreen) HandleInput(msg gruid.Msg) state.GameState {
 	keyMsg, ok := msg.(gruid.MsgKeyDown)
 	if !ok {
-		return state.StateGame
+		return s.currentState()
 	}
-	nextState := s.handleInputKey(keyMsg.Key)
+	key := keyMsg.Key
+	switch s.presentation {
+	case presentationHelp:
+		if s.helpStage == helpShowingList {
+			pageSize := s.helpPageSize()
+			pageCount := (len(s.messages) + pageSize - 1) / pageSize
+			if key == gruid.KeySpace && s.helpPage+1 < pageCount {
+				s.helpPage++
+				return state.StateHelp
+			}
+			s.helpStage = helpAwaitingKey
+			s.helpPage = 0
+			s.presentation = presentationPlay
+			s.messages = nil
+			return state.StateGame
+		}
+		if key == "*" {
+			s.helpStage = helpShowingList
+			s.helpPage = 0
+			bindings := s.cmdParser.GetKeyBindings()
+			keys := make([]string, 0, len(bindings))
+			for binding := range bindings {
+				keys = append(keys, binding)
+			}
+			sort.Strings(keys)
+			s.messages = make([]string, 0, len(keys))
+			for _, binding := range keys {
+				s.messages = append(s.messages, binding+": "+bindings[binding])
+			}
+			return state.StateHelp
+		}
+		s.presentation = presentationPlay
+		s.helpStage = helpAwaitingKey
+		s.messages = []string{fmt.Sprintf("%s: %s", key, s.cmdParser.GetCommandForKey(key).String())}
+		return state.StateGame
+	case presentationDeath, presentationVictory:
+		if s.sequenceStage+1 < len(s.sequencePages) {
+			s.sequenceStage++
+			return s.currentState()
+		}
+		s.presentation = presentationPlay
+		return state.StateQuit
+	}
+	nextState := s.handleInputKey(key)
 	if s.player != nil && !s.player.IsAlive() {
+		s.StartDeathSequence([]string{"You died."}, []string{"Press any key to continue."})
 		return state.StateGameOver
 	}
+	if nextState == state.StateHelp {
+		s.presentation = presentationHelp
+		s.helpStage = helpAwaitingKey
+		s.messages = []string{"What command? (* for all commands)"}
+		return state.StateHelp
+	}
+	if nextState == state.StateVictory {
+		s.StartVictorySequence([]string{"Congratulations, you have defeated the dungeon!"}, []string{"Press any key to continue."})
+		return state.StateVictory
+	}
 	return nextState
+}
+
+func (s *GameScreen) currentState() state.GameState {
+	switch s.presentation {
+	case presentationHelp:
+		return state.StateHelp
+	case presentationDeath:
+		return state.StateGameOver
+	case presentationVictory:
+		return state.StateVictory
+	default:
+		return state.StateGame
+	}
+}
+
+func (s *GameScreen) StartDeathSequence(pages ...[]string) {
+	s.presentation = presentationDeath
+	s.sequencePages = pages
+	s.sequenceStage = 0
+}
+
+func (s *GameScreen) StartVictorySequence(pages ...[]string) {
+	s.presentation = presentationVictory
+	s.sequencePages = pages
+	s.sequenceStage = 0
+}
+
+func (s *GameScreen) helpPageSize() int {
+	if s.height <= 2 {
+		return 1
+	}
+	return s.height - 2
 }
 
 func (s *GameScreen) handleInputKey(key gruid.Key) state.GameState {
@@ -119,7 +206,7 @@ func (s *GameScreen) handleNormalInput(key gruid.Key) state.GameState {
 	// System commands
 	case command.CmdQuit:
 		logger.Info("Quit requested")
-		return state.StateMenu
+		return state.StateQuit
 	case command.CmdHelp:
 		return state.StateHelp
 	case command.CmdSymbol:

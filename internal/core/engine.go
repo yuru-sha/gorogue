@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -31,10 +32,6 @@ type Engine struct {
 	dungeonManager  *dungeon.DungeonManager
 	player          *actor.Player
 	gameScreen      *uiscreen.GameScreen
-	menuScreen      *uiscreen.MenuScreen
-	helpScreen      *uiscreen.HelpScreen
-	gameOverScreen  *uiscreen.GameOverScreen
-	victoryScreen   *uiscreen.VictoryScreen
 	symbolScreen    *uiscreen.SymbolScreen
 	saveIntegration *save.SaveGameIntegration
 	msgs            []gruid.Msg
@@ -87,29 +84,19 @@ func NewEngineWithSeed(seed int64) *Engine {
 	gameScreen.SetLevel(level)                   // ダンジョンレベルを設定
 	gameScreen.SetDungeonManager(dungeonManager) // ダンジョンマネージャーを設定
 	gameScreen.SetSaveIntegration(saveIntegration)
-	menuScreen := uiscreen.NewMenuScreen(screenWidth, screenHeight)
-	helpScreen := uiscreen.NewHelpScreen(screenWidth, screenHeight)
 	symbolScreen := uiscreen.NewSymbolScreen(screenWidth, screenHeight)
-	saveLoadScreen := uiscreen.NewSaveLoadScreenWithIntegration(screenWidth, screenHeight, saveIntegration)
-
-	// ゲームオーバー・勝利画面（初期は空のスコアエントリーで作成）
-	gameOverScreen := uiscreen.NewGameOverScreen(screenWidth, screenHeight, nil)
-	victoryScreen := uiscreen.NewVictoryScreen(screenWidth, screenHeight, nil)
 
 	logger.Debug("Created screens")
 
-	// ステートマネージャーの初期化
 	stateManager := state.NewStateManager()
-	stateManager.RegisterState(state.StateMenu, menuScreen)
 	stateManager.RegisterState(state.StateGame, gameScreen)
-	stateManager.RegisterState(state.StateHelp, helpScreen)
-	stateManager.RegisterState(state.StateGameOver, gameOverScreen)
-	stateManager.RegisterState(state.StateVictory, victoryScreen)
+	stateManager.RegisterState(state.StateHelp, gameScreen)
+	stateManager.RegisterState(state.StateGameOver, gameScreen)
+	stateManager.RegisterState(state.StateVictory, gameScreen)
 	stateManager.RegisterState(state.StateSymbol, symbolScreen)
-	stateManager.RegisterState(state.StateSaveLoad, saveLoadScreen)
 
-	// メニュー状態で開始
-	stateManager.SetState(state.StateMenu)
+	// Start directly in the already initialized dungeon.
+	stateManager.SetState(state.StateGame)
 
 	engine := &Engine{
 		renderer:        renderer,
@@ -117,27 +104,12 @@ func NewEngineWithSeed(seed int64) *Engine {
 		dungeonManager:  dungeonManager,
 		player:          player,
 		gameScreen:      gameScreen,
-		menuScreen:      menuScreen,
-		helpScreen:      helpScreen,
-		gameOverScreen:  gameOverScreen,
-		victoryScreen:   victoryScreen,
 		symbolScreen:    symbolScreen,
 		saveIntegration: saveIntegration,
-		msgs:            make([]gruid.Msg, 0),
+		runActive:       true,
 	}
-	saveLoadScreen.SetOnLoad(engine.restoreLoadedGame)
 
 	return engine
-}
-
-func (e *Engine) restoreLoadedGame(player *actor.Player, dungeonManager *dungeon.DungeonManager) {
-	e.player = player
-	e.dungeonManager = dungeonManager
-	e.gameScreen = uiscreen.NewGameScreen(screenWidth, screenHeight, player)
-	e.gameScreen.SetLevel(dungeonManager.GetCurrentLevel())
-	e.gameScreen.SetDungeonManager(dungeonManager)
-	e.gameScreen.SetSaveIntegration(e.saveIntegration)
-	e.stateManager.RegisterState(state.StateGame, e.gameScreen)
 }
 
 // Update implements gruid.Model.Update
@@ -156,10 +128,8 @@ func (e *Engine) Update(msg gruid.Msg) gruid.Effect {
 		switch {
 		case previousState == state.StateGame && e.stateManager.GetCurrentState() == state.StateGameOver:
 			e.showGameOver()
-		case previousState == state.StateGameOver && e.stateManager.GetCurrentState() == state.StateGame:
-			e.restartGame()
-		case previousState == state.StateMenu && e.stateManager.GetCurrentState() == state.StateGame:
-			e.restartGame()
+		case previousState == state.StateGame && e.stateManager.GetCurrentState() == state.StateVictory:
+			e.showVictory()
 		}
 		e.updateRunActive()
 		return effect
@@ -195,7 +165,7 @@ func (e *Engine) updateRunActive() {
 	switch e.stateManager.GetCurrentState() {
 	case state.StateGame:
 		e.runActive = true
-	case state.StateMenu, state.StateGameOver, state.StateVictory:
+	case state.StateGameOver, state.StateVictory, state.StateQuit:
 		e.runActive = false
 	}
 }
@@ -245,21 +215,6 @@ func (e *Engine) showGameOver() {
 	e.ShowGameOver(&scoreEntry)
 }
 
-func (e *Engine) restartGame() {
-	if err := e.saveIntegration.CreateNewGame("", e.saveIntegration.GetGameInfo().Seed); err != nil {
-		logger.Error("Failed to restart game", "error", err)
-		e.stateManager.SetState(state.StateGameOver)
-		return
-	}
-
-	e.player, e.dungeonManager = e.saveIntegration.GetGameState()
-	e.gameScreen = uiscreen.NewGameScreen(screenWidth, screenHeight, e.player)
-	e.gameScreen.SetLevel(e.dungeonManager.GetCurrentLevel())
-	e.gameScreen.SetDungeonManager(e.dungeonManager)
-	e.gameScreen.SetSaveIntegration(e.saveIntegration)
-	e.stateManager.RegisterState(state.StateGame, e.gameScreen)
-}
-
 // Draw implements gruid.Model.Draw
 func (e *Engine) Draw() gruid.Grid {
 	// グリッドをクリア
@@ -271,16 +226,41 @@ func (e *Engine) Model() gruid.Model {
 	return e
 }
 
-// ShowGameOver transitions to the game over screen with the given score entry
+// ShowGameOver transitions to the game-over sequence.
 func (e *Engine) ShowGameOver(scoreEntry *score.ScoreEntry) {
-	e.gameOverScreen = uiscreen.NewGameOverScreen(screenWidth, screenHeight, scoreEntry)
-	e.stateManager.RegisterState(state.StateGameOver, e.gameOverScreen)
+	deathLines := []string{"You died."}
+	scoreLines := []string{"Press any key to continue."}
+	if scoreEntry != nil {
+		if scoreEntry.DeathReason != "" {
+			deathLines = append(deathLines, "Death: "+scoreEntry.DeathReason)
+		}
+		scoreLines = append([]string{fmt.Sprintf("Score: %d", scoreEntry.Score)}, scoreLines...)
+	}
+	e.gameScreen.StartDeathSequence(deathLines, scoreLines)
 	e.stateManager.SetState(state.StateGameOver)
 }
 
-// ShowVictory transitions to the victory screen with the given score entry
+func (e *Engine) showVictory() {
+	if e.saveIntegration == nil || e.player == nil {
+		e.ShowVictory(nil)
+		return
+	}
+	statsManager := e.saveIntegration.GetGameStats()
+	stats := statsManager.GetStats()
+	gameInfo := e.saveIntegration.GetGameInfo()
+	gameInfo.PlayTime = statsManager.GetPlayTime()
+	entry := score.NewScoreCalculator().CreateScoreEntry(gameInfo.CharName, e.player, &stats, &gameInfo, true, "")
+	e.ShowVictory(&entry)
+}
+
+// ShowVictory transitions to the victory sequence.
 func (e *Engine) ShowVictory(scoreEntry *score.ScoreEntry) {
-	e.victoryScreen = uiscreen.NewVictoryScreen(screenWidth, screenHeight, scoreEntry)
-	e.stateManager.RegisterState(state.StateVictory, e.victoryScreen)
+	victoryLines := []string{"Congratulations, you have made it to the light of day!"}
+	scoreLines := []string{"You have joined the elite ranks of those who escaped alive."}
+	if scoreEntry != nil {
+		scoreLines = append(scoreLines, fmt.Sprintf("Score: %d", scoreEntry.Score))
+	}
+	scoreLines = append(scoreLines, "Press any key to continue.")
+	e.gameScreen.StartVictorySequence(victoryLines, scoreLines)
 	e.stateManager.SetState(state.StateVictory)
 }

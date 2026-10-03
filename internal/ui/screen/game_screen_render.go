@@ -5,6 +5,7 @@ import (
 	"reflect"
 
 	"github.com/anaseto/gruid"
+	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
 	gameitem "github.com/yuru-sha/gorogue/internal/game/item"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
@@ -27,19 +28,43 @@ func (s *GameScreen) Draw(grid *gruid.Grid) {
 	// Clear grid - consistent black background with proper alpha
 	blackCell := gruid.Cell{Rune: ' ', Style: gruid.Style{Fg: 0x000000, Bg: 0x000000}}
 	grid.Fill(blackCell)
+	if s.presentation == presentationHelp && s.helpStage == helpShowingList {
+		pageSize := s.helpPageSize()
+		start := s.helpPage * pageSize
+		end := min(start+pageSize, len(s.messages))
+		for i, line := range s.messages[start:end] {
+			s.drawText(grid, 0, i, line, gruid.Style{Fg: 0xFFFFFF, Bg: 0x000000})
+		}
+		footer := "Press any key to return."
+		if end < len(s.messages) {
+			footer = "Press space for the next page."
+		}
+		s.drawText(grid, 0, s.height-1, footer, gruid.Style{Fg: 0xFFFFFF, Bg: 0x000000})
+		return
+	}
 
-	// Draw status lines (top 2 rows)
-	s.drawStatusLines(grid)
-
+	if s.presentation == presentationDeath || s.presentation == presentationVictory {
+		if s.sequenceStage < len(s.sequencePages) {
+			for i, line := range s.sequencePages[s.sequenceStage] {
+				s.drawText(grid, 0, i, line, gruid.Style{Fg: 0xFFFFFF, Bg: 0x000000})
+			}
+			s.drawText(grid, 0, len(s.sequencePages[s.sequenceStage])+1, "Press any key to continue.", gruid.Style{Fg: 0xFFFFFF, Bg: 0x000000})
+		}
+		return
+	}
+	s.drawText(grid, 0, 0, s.lastMessage(), gruid.Style{Fg: 0xFFFFFF, Bg: 0x000000})
 	s.drawDisplayCells(grid)
-
-	// Draw message log (bottom 7 rows)
-	s.drawMessageLog(grid)
-
-	// CLIモードの表示
+	s.drawStatusLines(grid)
 	if s.inputMode == ModeCLI {
 		s.drawCLIPrompt(grid)
 	}
+
+}
+func (s *GameScreen) lastMessage() string {
+	if len(s.messages) == 0 {
+		return ""
+	}
+	return s.messages[len(s.messages)-1]
 }
 
 // collectCurrentStats collects current player stats for change detection
@@ -70,82 +95,31 @@ func (s *GameScreen) logStatsChange() {
 	)
 }
 
-// drawStatusLines draws the status information at the top
 func (s *GameScreen) drawStatusLines(grid *gruid.Grid) {
-	currentFloor := 1
-	floorInfo := map[string]any{}
-
+	if s.player == nil || s.height < 2 {
+		return
+	}
+	floor := 1
 	if s.dungeonManager != nil {
-		currentFloor = s.dungeonManager.GetCurrentFloor()
-		floorInfo = s.dungeonManager.GetFloorInfo()
+		floor = s.dungeonManager.GetCurrentFloor()
 	}
-
-	// 第1行: プレイヤーステータス
-	statusLine1 := fmt.Sprintf(
-		"Lv:%d  HP:%d/%d  Atk:%d  Def:%d  Hunger:%d%%  Exp:%d  Gold:%d",
-		s.player.Level,
-		s.player.HP,
-		s.player.MaxHP,
-		s.player.Attack,
-		s.player.Defense,
-		s.player.Hunger,
-		s.player.Exp,
-		s.player.Gold,
-	)
-	s.drawText(grid, 0, 0, statusLine1, gruid.Style{Fg: 0xFFFFFF, Bg: 0x000000})
-
-	// 右上に詳細階層表示を追加
-	floorDisplay := s.formatFloorDisplay(currentFloor, floorInfo)
-	s.drawText(grid, s.width-len(floorDisplay), 0, floorDisplay, gruid.Style{Fg: 0xFFFFFF, Bg: 0x000000})
-
-	// 第2行: 装備情報
-	s.drawEquipmentLine(grid)
+	status := fmt.Sprintf("Level: %d Gold: %d Hp: %d(%d) Str: %d(%d) Arm: %d Exp: %d/%d%s",
+		floor, s.player.Gold, s.player.HP, s.player.MaxHP, s.player.Strength, s.player.MaxStrength,
+		10-s.player.GetTotalDefense(), s.player.Level, s.player.Exp, hungerLabel(s.player.HungerState))
+	s.drawText(grid, 0, s.height-1, status, gruid.Style{Fg: 0xFFFFFF, Bg: 0x000000})
 }
 
-// formatFloorDisplay formats the floor display with additional information
-func (s *GameScreen) formatFloorDisplay(currentFloor int, floorInfo map[string]any) string {
-	baseDisplay := fmt.Sprintf("B%dF/26", currentFloor)
-
-	// 特別な階層の場合はマーカーを追加
-	if isSpecial, ok := floorInfo["is_special"].(bool); ok && isSpecial {
-		baseDisplay += " [MAZE]"
+func hungerLabel(hunger int) string {
+	switch hunger {
+	case actor.HungerHungry:
+		return " Hungry"
+	case actor.HungerWeak:
+		return " Weak"
+	case actor.HungerFainting:
+		return " Faint"
+	default:
+		return ""
 	}
-
-	// 最終階層の場合
-	if isFinal, ok := floorInfo["is_final"].(bool); ok && isFinal {
-		baseDisplay += " [FINAL]"
-	}
-
-	// 魔除けを持っている場合
-	if hasAmulet, ok := floorInfo["player_has_amulet"].(bool); ok && hasAmulet {
-		baseDisplay += " [AMULET]"
-	}
-
-	// 勝利可能な場合
-	if canEscape, ok := floorInfo["can_escape"].(bool); ok && canEscape {
-		baseDisplay += " [ESCAPE!]"
-	}
-
-	return baseDisplay
-}
-
-// drawEquipmentLine draws the equipment status line
-func (s *GameScreen) drawEquipmentLine(grid *gruid.Grid) {
-	weapon, armor, ringLeft, ringRight := s.player.Equipment.GetEquippedNames()
-	statusLine2 := fmt.Sprintf(
-		"Weapon: %-15s  Armor: %-15s  Ring: (L): %-10s  Ring: (R): %-10s",
-		weapon,
-		armor,
-		ringLeft,
-		ringRight,
-	)
-
-	// ウィザードモードの表示を追加
-	if s.wizardMode != nil && s.wizardMode.IsActive {
-		statusLine2 += "  [WIZARD MODE]"
-	}
-
-	s.drawText(grid, 0, 1, statusLine2, gruid.Style{Fg: 0xFFFFFF, Bg: 0x000000})
 }
 
 // drawDisplayCells converts game state into logical display cells, then maps
@@ -173,7 +147,7 @@ func (s *GameScreen) drawDisplayCells(grid *gruid.Grid) {
 		if cell.Hallucinated {
 			glyph = hallucinationGlyph(cell.X, cell.Y, s.player.HallucinationTurns, cell.Entity == displayEntityMonster, s.level.FloorNumber)
 		}
-		grid.Set(gruid.Point{X: cell.X, Y: cell.Y + 2}, gruid.Cell{
+		grid.Set(gruid.Point{X: cell.X, Y: cell.Y + 1}, gruid.Cell{
 			Rune:  glyph,
 			Style: gruid.Style{Fg: color, Bg: 0x000000},
 		})
@@ -247,17 +221,9 @@ func itemAppearance(itemType gameitem.ItemType) (rune, gruid.Color) {
 	}
 }
 
-// drawMessageLog draws the message log at the bottom
-func (s *GameScreen) drawMessageLog(grid *gruid.Grid) {
-	for i, msg := range s.messages {
-		s.drawText(grid, 0, s.height-7+i, msg, gruid.Style{Fg: 0xFFFFFF, Bg: 0x000000})
-	}
-}
-
-// drawCLIPrompt draws the CLI prompt when in CLI mode
+// drawCLIPrompt draws the CLI prompt in the message row.
 func (s *GameScreen) drawCLIPrompt(grid *gruid.Grid) {
-	cliPrompt := fmt.Sprintf("CLI> %s_", s.cliBuffer)
-	s.drawText(grid, 0, s.height-1, cliPrompt, gruid.Style{Fg: 0x00FF00, Bg: 0x000000}) // 緑色で表示
+	s.drawText(grid, 0, 0, fmt.Sprintf("CLI> %s_", s.cliBuffer), gruid.Style{Fg: 0x00FF00, Bg: 0x000000})
 }
 
 // drawText draws text at the specified position with the given style
