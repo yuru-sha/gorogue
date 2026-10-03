@@ -110,15 +110,15 @@ func TestParser_RunBindingsDoNotMoveOneTile(t *testing.T) {
 func TestParser_GetKeyBindingsReportsOriginalActions(t *testing.T) {
 	bindings := NewParser().GetKeyBindings()
 	for key, want := range map[string]string{
-		"a": "Repeat last command",
-		"t": "Throw an item",
-		"z": "Zap a wand or staff",
-		"W": "Wear armor",
-		"T": "Take off armor",
-		"P": "Put on a ring",
-		"R": "Remove a ring",
-		"@": "Show character information",
-		"c": "Name an unidentified item",
+		"a":  "Repeat last command",
+		"t":  "Throw an item",
+		"z":  "Zap a wand or staff",
+		"W":  "Wear armor",
+		"T":  "Take off armor",
+		"P":  "Put on a ring",
+		"R":  "Remove a ring",
+		"@":  "Show character information",
+		"c":  "Name an unidentified item",
 		"^L": "Load saved game",
 	} {
 		if got := bindings[key]; got != want {
