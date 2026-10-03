@@ -240,8 +240,9 @@ func (s *GameScreen) handleNormalInput(key gruid.Key) state.GameState {
 
 // handleLoad replaces the active game with the persisted save. It delegates
 // to the shared command executor so the GUI uses the same validation,
-// conversion, and consume-on-success contract as the CLI. The engine and
-// game screen are then synchronized with the loaded state.
+// conversion, and consume-on-success contract as the CLI. When the engine
+// has bound a sync callback, the loaded state is also mirrored into the
+// engine and dependent subsystems.
 func (s *GameScreen) handleLoad() {
 	if s.saveIntegration == nil {
 		s.AddMessage("Save/load is unavailable.")
@@ -252,13 +253,11 @@ func (s *GameScreen) handleLoad() {
 		s.AddMessage(result.Message)
 		return
 	}
-	if s.engineLoad == nil {
-		s.AddMessage("Load failed: engine loader is unavailable.")
-		return
-	}
-	if err := s.engineLoad(); err != nil {
-		s.AddMessage("Load failed: " + err.Error())
-		return
+	if s.engineLoad != nil {
+		if err := s.engineLoad(); err != nil {
+			s.AddMessage("Load failed: " + err.Error())
+			return
+		}
 	}
 	s.AddMessage(result.Message)
 }

@@ -789,6 +789,45 @@ func TestGameScreenLoadRestoresSavedState(t *testing.T) {
 	}
 }
 
+func TestGameScreenLoadSucceedsWithoutEngineCallback(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	if err := logger.Setup(); err != nil {
+		t.Fatal(err)
+	}
+	player := actor.NewPlayerWithSeed(1, 1, 42)
+	manager := dungeon.NewDungeonManagerWithSeed(player, 42)
+	player.Position.X = 3
+	player.Position.Y = 4
+	integration := save.NewSaveGameIntegration()
+	if err := integration.Initialize(); err != nil {
+		t.Fatal(err)
+	}
+	integration.SetGameState(player, manager)
+	if err := integration.SaveGame(); err != nil {
+		t.Fatalf("SaveGame() error = %v", err)
+	}
+
+	screen := NewGameScreen(80, 50, actor.NewPlayerWithSeed(9, 9, 42))
+	screen.SetLevel(newTestFloor(5, 5))
+	screen.SetDungeonManager(dungeon.NewDungeonManagerWithSeed(screen.player, 42))
+	screen.SetSaveIntegration(integration)
+	// Intentionally do NOT call SetEngineLoad: the screen must still report
+	// a successful load when no engine callback is bound.
+
+	if got := screen.HandleInput(gruid.MsgKeyDown{Key: "^L"}); got != state.StateGame {
+		t.Fatalf("^L state = %v, want StateGame", got)
+	}
+	if screen.player.Position.X != 3 || screen.player.Position.Y != 4 {
+		t.Fatalf("loaded position = (%d, %d), want (3, 4)", screen.player.Position.X, screen.player.Position.Y)
+	}
+	if !strings.Contains(strings.Join(screen.messages, " "), "Game loaded.") {
+		t.Fatalf("success message missing: %v", screen.messages)
+	}
+	if integration.HasSave() {
+		t.Fatal("successful load did not consume the save")
+	}
+}
+
 func TestGameScreenLoadFailsWhenSaveMissing(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	if err := logger.Setup(); err != nil {
