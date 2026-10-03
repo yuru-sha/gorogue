@@ -867,7 +867,8 @@ func TestGameScreenLoadFailsWhenSaveMissing(t *testing.T) {
 }
 
 func TestGameScreenLoadFailsOnInvalidSave(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	home := t.TempDir()
+	t.Setenv("HOME", home)
 	if err := logger.Setup(); err != nil {
 		t.Fatal(err)
 	}
@@ -879,11 +880,12 @@ func TestGameScreenLoadFailsOnInvalidSave(t *testing.T) {
 	}
 	integration.SetGameState(player, manager)
 
-	saveDir := filepath.Join(t.TempDir(), ".gorogue", save.SaveDirectory)
+	saveDir := filepath.Join(home, ".gorogue", save.SaveDirectory)
 	if err := os.MkdirAll(saveDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(saveDir, save.SaveFileName), []byte(`{"Version":"0.0.0"}`), 0o600); err != nil {
+	savePath := filepath.Join(saveDir, save.SaveFileName)
+	if err := os.WriteFile(savePath, []byte(`{"Version":"0.0.0"}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -900,6 +902,12 @@ func TestGameScreenLoadFailsOnInvalidSave(t *testing.T) {
 	}
 	if !strings.Contains(strings.Join(screen.messages, " "), "Load failed:") {
 		t.Fatalf("expected failure message, got %v", screen.messages)
+	}
+	if !integration.HasSave() {
+		t.Fatal("invalid-save branch removed the save file; expected it to be preserved")
+	}
+	if _, err := os.Stat(savePath); err != nil {
+		t.Fatalf("save file should still exist after failed validation: %v", err)
 	}
 	if screen.player != player {
 		t.Fatal("failed load replaced the active player")
