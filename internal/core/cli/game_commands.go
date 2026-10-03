@@ -37,7 +37,7 @@ func (c *CLIMode) registerGameCommands() {
 		{Name: "close", Description: "Close door at direction", Usage: "close <direction>", Handler: c.closeCommand},
 		{Name: "stairs", Description: "Use stairs (up/down)", Usage: "stairs <up|down>", Handler: c.stairsCommand},
 		{Name: "repeat", Description: "Repeat the last turn-consuming command", Usage: "repeat", Handler: c.repeatCommand},
-		{Name: "game", Description: "Save or load game", Usage: "game <save|load|quit>", Handler: c.gameCommand},
+		{Name: "game", Description: "Save and end the run, or load a saved run", Usage: "game <save|load|quit>", Handler: c.gameCommand},
 	}
 
 	for _, cmd := range gameCommands {

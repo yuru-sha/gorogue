@@ -5,6 +5,8 @@ import (
 
 	"github.com/anaseto/gruid"
 	"github.com/yuru-sha/gorogue/internal/core/state"
+	"github.com/yuru-sha/gorogue/internal/game/actor"
+	"github.com/yuru-sha/gorogue/internal/game/dungeon"
 	"github.com/yuru-sha/gorogue/internal/game/save"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
@@ -34,6 +36,29 @@ func TestSaveLoadScreen_NewSaveLoadScreen(t *testing.T) {
 	}
 	if len(screen.menuOptions) != 3 {
 		t.Errorf("Expected 3 menu options, got %d", len(screen.menuOptions))
+	}
+}
+
+func TestSaveLoadScreenSaveEndsRunOnlyOnSuccess(t *testing.T) {
+	logger.Setup()
+	t.Setenv("HOME", t.TempDir())
+	integration := save.NewSaveGameIntegration()
+	if err := integration.Initialize(); err != nil {
+		t.Fatalf("Initialize() error = %v", err)
+	}
+	player := actor.NewPlayerWithSeed(1, 1, 42)
+	manager := dungeon.NewDungeonManagerWithSeed(player, 42)
+	integration.SetGameState(player, manager)
+	screen := NewSaveLoadScreenWithIntegration(80, 50, integration)
+
+	if got := screen.performSave(); got != state.StateQuit {
+		t.Fatalf("successful save state = %v, want StateQuit", got)
+	}
+
+	failedIntegration := save.NewSaveGameIntegration()
+	failedScreen := NewSaveLoadScreenWithIntegration(80, 50, failedIntegration)
+	if got := failedScreen.performSave(); got != state.StateGame {
+		t.Fatalf("failed save state = %v, want StateGame", got)
 	}
 }
 
@@ -178,8 +203,8 @@ func TestSaveLoadScreen_ActionDescription(t *testing.T) {
 	// Test Save Game
 	screen.selected = 0
 	description := screen.GetActionDescription()
-	if description != "Save game" {
-		t.Errorf("Expected 'Save game', got '%s'", description)
+	if description != "Save game and exit run" {
+		t.Errorf("Expected 'Save game and exit run', got '%s'", description)
 	}
 
 	// Test Load Game

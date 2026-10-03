@@ -239,6 +239,12 @@ func TestSaveGameIntegrationPreservesExploredState(t *testing.T) {
 	if err := integration.LoadGame(); err != nil {
 		t.Fatalf("LoadGame() error = %v", err)
 	}
+	if integration.HasSave() {
+		t.Fatal("successful restore did not consume the save")
+	}
+	if err := integration.LoadGame(); err == nil {
+		t.Fatal("repeated restore succeeded after save consumption")
+	}
 
 	_, loadedManager := integration.GetGameState()
 	loadedTile := loadedManager.GetCurrentLevel().GetTile(4, 2)

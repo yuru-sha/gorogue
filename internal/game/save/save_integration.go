@@ -82,27 +82,27 @@ func (sgi *SaveGameIntegration) SaveGame() error {
 	return nil
 }
 
-// LoadGame loads the game state (PyRogue style - single save)
+// LoadGame loads and validates a save before consuming it and publishing its state.
 func (sgi *SaveGameIntegration) LoadGame() error {
-	// Load save data
-	saveData, err := sgi.saveManager.LoadGame()
-	if err != nil {
-		return fmt.Errorf("failed to load game: %w", err)
+	var saveData *SaveData
+	var player *actor.Player
+	var dungeonManager *dungeon.DungeonManager
+	if err := sgi.saveManager.consumeSave(func(data *SaveData) error {
+		var err error
+		player, dungeonManager, err = sgi.saveConverter.FromSaveData(data)
+		if err != nil {
+			return err
+		}
+		saveData = data
+		return nil
+	}); err != nil {
+		return err
 	}
 
-	// Convert save data to game objects
-	player, dungeonManager, err := sgi.saveConverter.FromSaveData(saveData)
-	if err != nil {
-		return fmt.Errorf("failed to convert save data: %w", err)
-	}
-
-	// Set game state
 	sgi.player = player
 	sgi.dungeonManager = dungeonManager
 	sgi.gameInfo = saveData.GameInfo
 	sgi.settings = saveData.Settings
-
-	// Update game stats
 	sgi.gameStats.LoadStats(saveData.GameStats)
 
 	logger.Info("Game loaded successfully",
@@ -113,16 +113,6 @@ func (sgi *SaveGameIntegration) LoadGame() error {
 	)
 
 	return nil
-}
-
-// QuickSave performs a quick save (PyRogue style - same as normal save)
-func (sgi *SaveGameIntegration) QuickSave() error {
-	return sgi.SaveGame()
-}
-
-// QuickLoad performs a quick load (PyRogue style - same as normal load)
-func (sgi *SaveGameIntegration) QuickLoad() error {
-	return sgi.LoadGame()
 }
 
 // AutoSave performs an automatic save
@@ -490,8 +480,6 @@ func GetDefaultKeyBindings() map[string]string {
 		"read":           "r",
 		"save":           "S",
 		"load":           "L",
-		"quick_save":     "ctrl+s",
-		"quick_load":     "ctrl+l",
 		"help":           "?",
 		"quit":           "Q",
 	}

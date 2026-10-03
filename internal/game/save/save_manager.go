@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
@@ -77,6 +78,11 @@ func (sm *SaveManager) Initialize() error {
 
 // SaveGame saves the game state (PyRogue style - single save file)
 func (sm *SaveManager) SaveGame(saveData *SaveData) error {
+	unlock, err := sm.lockSaveFile()
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	// Update save data
 	saveData.SavedAt = time.Now()
 
@@ -115,22 +121,27 @@ func (sm *SaveManager) SaveGame(saveData *SaveData) error {
 
 // LoadGame loads the game state (PyRogue style - single save file)
 func (sm *SaveManager) LoadGame() (*SaveData, error) {
+	unlock, err := sm.lockSaveFile()
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
+	return sm.loadGameUnlocked()
+}
+
+func (sm *SaveManager) loadGameUnlocked() (*SaveData, error) {
 	if !sm.FileExists() {
 		return nil, fmt.Errorf("save file does not exist")
 	}
 
 	saveFile := sm.getSaveFilePath()
-
-	// Read save data
 	saveData, err := sm.readSaveData(saveFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read save data: %w", err)
 	}
-
 	if err := sm.validateSaveData(saveData); err != nil {
 		return nil, err
 	}
-
 	logger.Info("Game loaded successfully",
 		"file", saveFile,
 		"char_name", saveData.GameInfo.CharName,
@@ -138,30 +149,48 @@ func (sm *SaveManager) LoadGame() (*SaveData, error) {
 		"floor", saveData.DungeonData.CurrentFloor,
 		"version", saveData.Version,
 	)
-
 	return saveData, nil
+}
+
+func (sm *SaveManager) consumeSave(prepare func(*SaveData) error) error {
+	unlock, err := sm.lockSaveFile()
+	if err != nil {
+		return fmt.Errorf("failed to load game: %w", err)
+	}
+	defer unlock()
+	saveData, err := sm.loadGameUnlocked()
+	if err != nil {
+		return fmt.Errorf("failed to load game: %w", err)
+	}
+	if err := prepare(saveData); err != nil {
+		return fmt.Errorf("failed to convert save data: %w", err)
+	}
+	if err := sm.deleteSaveUnlocked(); err != nil {
+		return fmt.Errorf("failed to consume save: %w", err)
+	}
+	return nil
 }
 
 // DeleteSave deletes the save file (PyRogue style - single save file)
 func (sm *SaveManager) DeleteSave() error {
+	unlock, err := sm.lockSaveFile()
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	return sm.deleteSaveUnlocked()
+}
+
+func (sm *SaveManager) deleteSaveUnlocked() error {
 	if !sm.FileExists() {
 		return fmt.Errorf("save file does not exist")
 	}
-
 	saveFile := sm.getSaveFilePath()
-
-	// Delete save file
 	if err := os.Remove(saveFile); err != nil {
 		return fmt.Errorf("failed to delete save file: %w", err)
 	}
-
-	// Delete backup files
 	sm.cleanupAllBackups()
-
-	logger.Info("Save deleted successfully",
-		"file", saveFile,
-	)
-
+	logger.Info("Save deleted successfully", "file", saveFile)
 	return nil
 }
 
@@ -297,7 +326,24 @@ func (sm *SaveManager) ImportSave(importPath string) error {
 
 // Private methods
 
-// getSaveFilePath returns the full path to the save file
+func (sm *SaveManager) lockSaveFile() (func(), error) {
+	if err := os.MkdirAll(sm.saveDir, 0o755); err != nil {
+		return nil, fmt.Errorf("failed to create save directory: %w", err)
+	}
+	lockFile, err := os.OpenFile(sm.getSaveFilePath()+".lock", os.O_CREATE|os.O_RDWR, 0o600)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open save lock: %w", err)
+	}
+	if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX); err != nil {
+		_ = lockFile.Close()
+		return nil, fmt.Errorf("failed to acquire save lock: %w", err)
+	}
+	return func() {
+		_ = syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN)
+		_ = lockFile.Close()
+	}, nil
+}
+
 func (sm *SaveManager) getSaveFilePath() string {
 	return filepath.Join(sm.saveDir, SaveFileName)
 }
@@ -598,6 +644,11 @@ func (sm *SaveManager) GetDetailedSaveInfo() (map[string]any, error) {
 
 // RepairSave attempts to repair a corrupted save file using backup
 func (sm *SaveManager) RepairSave() error {
+	unlock, err := sm.lockSaveFile()
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	if !sm.backupEnabled {
 		return fmt.Errorf("backup is disabled, cannot repair save")
 	}

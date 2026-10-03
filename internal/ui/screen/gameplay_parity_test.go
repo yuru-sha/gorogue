@@ -702,7 +702,6 @@ func TestSaveLoadCommandsHaveGUICLIParity(t *testing.T) {
 		t.Fatal(err)
 	}
 	integration.SetGameState(player, manager)
-	savedX, savedY := player.Position.X, player.Position.Y
 
 	cliMode := cli.NewCLIModeWithDungeonManager(manager, player)
 	cliMode.SetSaveIntegration(integration)
@@ -716,38 +715,54 @@ func TestSaveLoadCommandsHaveGUICLIParity(t *testing.T) {
 		t.Fatalf("missing save message mismatch: GUI=%q CLI=%q", guiMissingLoad.GetMessage(), cliMissingLoad)
 	}
 
-	cliSaveMessage := cliMode.ExecuteCommand("save")
-	if cliSaveMessage != "Game saved." {
-		t.Fatalf("CLI save result = %q", cliSaveMessage)
+	if got := cliMode.ExecuteCommand("save"); got != "Game saved." {
+		t.Fatalf("CLI save result = %q", got)
+	}
+	if !cliMode.RunEnded {
+		t.Fatal("CLI save did not end the run")
 	}
 
-	guiSave := NewSaveLoadScreenWithIntegration(80, 50, integration)
+	t.Setenv("HOME", t.TempDir())
+	guiPlayer := actor.NewPlayerWithSeed(1, 1, 42)
+	guiManager := dungeon.NewDungeonManagerWithSeed(guiPlayer, 42)
+	guiIntegration := save.NewSaveGameIntegration()
+	if err := guiIntegration.Initialize(); err != nil {
+		t.Fatal(err)
+	}
+	guiIntegration.SetGameState(guiPlayer, guiManager)
+	guiSave := NewSaveLoadScreenWithIntegration(80, 50, guiIntegration)
 	guiSave.SetSelectedOption(0)
-	guiSave.HandleInput(gruid.MsgKeyDown{Key: gruid.KeyEnter})
-	if guiSave.GetMessage() != cliSaveMessage {
-		t.Fatalf("save message mismatch: GUI=%q CLI=%q", guiSave.GetMessage(), cliSaveMessage)
+	if got := guiSave.HandleInput(gruid.MsgKeyDown{Key: gruid.KeyEnter}); got != state.StateQuit {
+		t.Fatalf("GUI save state = %v, want StateQuit", got)
 	}
+	if guiSave.GetMessage() != "Game saved." {
+		t.Fatalf("GUI save message = %q, want %q", guiSave.GetMessage(), "Game saved.")
+	}
+}
 
-	player.Position.X = 9
-	if got := cliMode.ExecuteCommand("load"); got != "Game loaded." {
-		t.Fatalf("CLI load result = %q", got)
+func TestGameScreenCLISaveEndsRun(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	if err := logger.Setup(); err != nil {
+		t.Fatal(err)
 	}
-	if cliMode.Player.Position.X != savedX || cliMode.Player.Position.Y != savedY {
-		t.Fatalf("CLI load position = (%d, %d)", cliMode.Player.Position.X, cliMode.Player.Position.Y)
+	player := actor.NewPlayerWithSeed(1, 1, 42)
+	manager := dungeon.NewDungeonManagerWithSeed(player, 42)
+	integration := save.NewSaveGameIntegration()
+	if err := integration.Initialize(); err != nil {
+		t.Fatal(err)
 	}
+	integration.SetGameState(player, manager)
 
-	var loadedPlayer *actor.Player
-	guiLoad := NewSaveLoadScreenWithIntegration(80, 50, integration)
-	guiLoad.SetOnLoad(func(player *actor.Player, _ *dungeon.DungeonManager) {
-		loadedPlayer = player
-	})
-	guiLoad.SetSelectedOption(1)
-	guiLoad.HandleInput(gruid.MsgKeyDown{Key: gruid.KeyEnter})
-	if guiLoad.GetMessage() != "Game loaded." {
-		t.Fatalf("GUI load result = %q", guiLoad.GetMessage())
-	}
-	if loadedPlayer == nil || loadedPlayer.Position.X != savedX || loadedPlayer.Position.Y != savedY {
-		t.Fatalf("GUI load position = %+v", loadedPlayer)
+	screen := NewGameScreen(80, 50, player)
+	screen.SetLevel(manager.GetCurrentLevel())
+	screen.SetDungeonManager(manager)
+	screen.SetSaveIntegration(integration)
+	screen.cliMode.IsActive = true
+	screen.inputMode = ModeCLI
+	screen.cliBuffer = "save"
+
+	if got := screen.HandleInput(gruid.MsgKeyDown{Key: gruid.KeyEnter}); got != state.StateQuit {
+		t.Fatalf("embedded CLI save state = %v, want StateQuit", got)
 	}
 }
 

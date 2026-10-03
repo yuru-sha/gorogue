@@ -136,12 +136,6 @@ func (s *SaveLoadScreen) handleKeyDown(key string) state.GameState {
 	case "h", "H", "?":
 		s.showHelp()
 
-	// Quick save/load
-	case "F5":
-		return s.performSave()
-
-	case "F9":
-		return s.performLoad()
 	}
 
 	return state.StateGame
@@ -173,6 +167,9 @@ func (s *SaveLoadScreen) performSave() state.GameState {
 		return state.StateGame
 	}
 	s.setMessage(result.Message, s.colorSuccess)
+	if result.EndRun {
+		return state.StateQuit
+	}
 	return state.StateGame
 }
 
@@ -215,8 +212,7 @@ func (s *SaveLoadScreen) setMessage(message string, color gruid.Color) {
 
 // showHelp shows help message
 func (s *SaveLoadScreen) showHelp() {
-	help := "Save/Load Help: ↑↓:Navigate Enter:Select s:Save l:Load F5:Save F9:Load Esc:Back"
-	s.setMessage(help, s.colorHighlight)
+	s.setMessage("Save/Load Help: ↑↓:Navigate Enter:Select s:Save & exit l:Load Esc:Back", s.colorHighlight)
 }
 
 // Draw draws the save/load screen
@@ -297,10 +293,8 @@ func (s *SaveLoadScreen) drawControls(grid *gruid.Grid) {
 	controls := []string{
 		"↑↓: Navigate",
 		"Enter: Select",
-		"s: Save",
+		"s: Save & exit",
 		"l: Load",
-		"F5: Save",
-		"F9: Load",
 		"Esc: Back",
 	}
 
@@ -430,9 +424,9 @@ func (s *SaveLoadScreen) GetActionDescription() string {
 	switch s.selected {
 	case 0: // Save Game
 		if s.saveManager.FileExists() {
-			return "Overwrite save file"
+			return "Overwrite save and exit run"
 		}
-		return "Save game"
+		return "Save game and exit run"
 	case 1: // Load Game
 		if s.saveManager.FileExists() {
 			return "Load game"

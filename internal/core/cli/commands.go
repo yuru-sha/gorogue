@@ -25,6 +25,7 @@ const (
 // CLIMode provides command-line interface for debugging and AI control
 type CLIMode struct {
 	IsActive       bool
+	RunEnded       bool
 	Level          *dungeon.Level
 	Player         *actor.Player
 	Dungeon        *dungeon.DungeonManager
@@ -143,7 +144,7 @@ func (c *CLIMode) registerCommands() {
 		},
 		{
 			Name:        commandSave,
-			Description: "Save game state",
+			Description: "Save the game and end the run",
 			Usage:       commandSave,
 			Handler:     c.saveCommand,
 		},
@@ -241,6 +242,9 @@ func (c *CLIMode) executeGameplay(cmd gamecommand.Command, args ...string) strin
 	}
 	if result.Level != nil {
 		c.Level = result.Level
+	}
+	if result.EndRun {
+		c.RunEnded = true
 	}
 	return result.Message
 }

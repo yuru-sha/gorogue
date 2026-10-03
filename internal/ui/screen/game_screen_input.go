@@ -429,6 +429,9 @@ func (s *GameScreen) handleCLIInput(key gruid.Key) state.GameState {
 			result := s.cliMode.ExecuteCommand(s.cliBuffer)
 			s.AddMessage(fmt.Sprintf("> %s", s.cliBuffer))
 			s.AddMessage(result)
+			if s.cliMode.RunEnded {
+				return state.StateQuit
+			}
 			s.player = s.cliMode.Player
 			s.dungeonManager = s.cliMode.Dungeon
 			s.level = s.cliMode.Level

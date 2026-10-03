@@ -1,6 +1,10 @@
 package core
 
 import (
+	"context"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/anaseto/gruid"
@@ -12,6 +16,8 @@ import (
 	uiscreen "github.com/yuru-sha/gorogue/internal/ui/screen"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
+
+type hangupMessage struct{}
 
 const (
 	screenWidth  = 80
@@ -32,6 +38,7 @@ type Engine struct {
 	symbolScreen    *uiscreen.SymbolScreen
 	saveIntegration *save.SaveGameIntegration
 	msgs            []gruid.Msg
+	runActive       bool
 }
 
 // NewEngine creates and initializes a new game engine
@@ -139,8 +146,9 @@ func (e *Engine) Update(msg gruid.Msg) gruid.Effect {
 
 	switch msg := msg.(type) {
 	case gruid.MsgInit:
-		// 初期化時の処理
-		return nil
+		return gruid.Sub(subscribeForHangup)
+	case hangupMessage:
+		return e.handleHangup()
 	case gruid.MsgKeyDown:
 		// キー入力の処理
 		previousState := e.stateManager.GetCurrentState()
@@ -153,6 +161,7 @@ func (e *Engine) Update(msg gruid.Msg) gruid.Effect {
 		case previousState == state.StateMenu && e.stateManager.GetCurrentState() == state.StateGame:
 			e.restartGame()
 		}
+		e.updateRunActive()
 		return effect
 	case gruid.MsgQuit:
 		// 終了処理
@@ -160,6 +169,59 @@ func (e *Engine) Update(msg gruid.Msg) gruid.Effect {
 	}
 
 	return nil
+}
+
+func subscribeForHangup(ctx context.Context, msgs chan<- gruid.Msg) {
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGHUP)
+	defer signal.Stop(signals)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-signals:
+			select {
+			case <-ctx.Done():
+				return
+			case msgs <- hangupMessage{}:
+			}
+			<-ctx.Done()
+			return
+		}
+	}
+}
+
+func (e *Engine) updateRunActive() {
+	switch e.stateManager.GetCurrentState() {
+	case state.StateGame:
+		e.runActive = true
+	case state.StateMenu, state.StateGameOver, state.StateVictory:
+		e.runActive = false
+	}
+}
+
+func (e *Engine) handleHangup() gruid.Effect {
+	if !e.runActive {
+		return gruid.End()
+	}
+	if e.saveIntegration == nil {
+		logger.Error("SIGHUP recovery save unavailable")
+		return gruid.End()
+	}
+	player, dungeonManager := e.saveIntegration.GetGameState()
+	if player == nil || dungeonManager == nil {
+		logger.Error("SIGHUP recovery save unavailable")
+		return gruid.End()
+	}
+	e.player, e.dungeonManager = player, dungeonManager
+	e.saveIntegration.SetGameState(player, dungeonManager)
+	if err := e.saveIntegration.SaveGame(); err != nil {
+		logger.Error("SIGHUP recovery save failed", "error", err)
+		e.gameScreen.AddMessage("SIGHUP recovery save failed: " + err.Error())
+	} else {
+		logger.Info("SIGHUP recovery save completed")
+	}
+	return gruid.End()
 }
 
 func (e *Engine) showGameOver() {
