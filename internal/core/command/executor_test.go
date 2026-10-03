@@ -1,12 +1,15 @@
 package command
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
 	gameitem "github.com/yuru-sha/gorogue/internal/game/item"
+	"github.com/yuru-sha/gorogue/internal/game/save"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
@@ -112,6 +115,46 @@ func TestSurfaceExitWithAmuletWins(t *testing.T) {
 	result := Execute(ctx, Command{Type: CmdGoUpstairs})
 	if result.Error || !result.Victory {
 		t.Fatalf("surface exit result = %+v, want victory", result)
+	}
+}
+
+func TestSaveEndsRunOnlyAfterPersistenceSucceeds(t *testing.T) {
+	tests := []struct {
+		name       string
+		saveFailed bool
+		wantEndRun bool
+	}{
+		{name: "successful persistence", wantEndRun: true},
+		{name: "persistence failure", saveFailed: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			home := t.TempDir()
+			t.Setenv("HOME", home)
+			integration := save.NewSaveGameIntegration()
+			if tt.saveFailed {
+				if err := os.WriteFile(filepath.Join(home, ".gorogue"), []byte("block"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			} else if err := integration.Initialize(); err != nil {
+				t.Fatalf("Initialize() error = %v", err)
+			}
+
+			player := actor.NewPlayerWithSeed(1, 1, 42)
+			manager := dungeon.NewDungeonManagerWithSeed(player, 42)
+			integration.SetGameState(player, manager)
+			result := Execute(&Context{
+				Player: player, Dungeon: manager, Level: manager.GetCurrentLevel(), Save: integration,
+			}, Command{Type: CmdSave})
+
+			if result.EndRun != tt.wantEndRun {
+				t.Fatalf("EndRun = %t, want %t (result: %+v)", result.EndRun, tt.wantEndRun, result)
+			}
+			if result.Error != tt.saveFailed {
+				t.Fatalf("Error = %t, want %t", result.Error, tt.saveFailed)
+			}
+		})
 	}
 }
 

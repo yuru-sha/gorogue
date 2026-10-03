@@ -29,6 +29,7 @@ type Result struct {
 	TurnConsumed       bool
 	PlayerDied         bool
 	Victory            bool
+	EndRun             bool
 	NeedsItemSelection bool
 	TargetTypes        []gameitem.ItemType
 	Player             *actor.Player
@@ -933,7 +934,9 @@ func executeSave(ctx *Context) Result {
 	if err := ctx.Save.SaveGame(); err != nil {
 		return failure(ctx, fmt.Sprintf("Save failed: %v", err))
 	}
-	return result(ctx, "Game saved.")
+	result := result(ctx, "Game saved.")
+	result.EndRun = true
+	return result
 }
 
 func executeLoad(ctx *Context) Result {

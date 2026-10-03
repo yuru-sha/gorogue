@@ -32,6 +32,74 @@ func TestNewEngineRegistersSaveLoadState(t *testing.T) {
 	}
 }
 
+func TestEngineHandlesHangupOnUpdateThreadWithoutAdvancingTurn(t *testing.T) {
+	logger.Setup()
+	t.Setenv("HOME", t.TempDir())
+	engine := NewEngineWithSeed(12345)
+	engine.stateManager.SetState(state.StateGame)
+	engine.runActive = true
+	beforeTurn := engine.saveIntegration.GetGameStats().GetTurnCount()
+
+	if effect := engine.Update(hangupMessage{}); effect == nil {
+		t.Fatal("SIGHUP update did not request application shutdown")
+	}
+	if !engine.saveIntegration.GetSaveManager().FileExists() {
+		t.Fatal("SIGHUP update did not persist recovery save")
+	}
+	if got := engine.saveIntegration.GetGameStats().GetTurnCount(); got != beforeTurn {
+		t.Fatalf("SIGHUP advanced turn count from %d to %d", beforeTurn, got)
+	}
+}
+
+func TestEngineHangupBeforeRunPreservesExistingSave(t *testing.T) {
+	logger.Setup()
+	t.Setenv("HOME", t.TempDir())
+	engine := NewEngineWithSeed(12345)
+	if err := engine.saveIntegration.SaveGame(); err != nil {
+		t.Fatalf("SaveGame() error = %v", err)
+	}
+	saveManager := engine.saveIntegration.GetSaveManager()
+	before, err := saveManager.LoadGame()
+	if err != nil {
+		t.Fatalf("LoadGame() error = %v", err)
+	}
+	engine.player.Position.X += 1
+
+	if effect := engine.Update(hangupMessage{}); effect == nil {
+		t.Fatal("SIGHUP update did not request application shutdown")
+	}
+	after, err := saveManager.LoadGame()
+	if err != nil {
+		t.Fatalf("LoadGame() after SIGHUP error = %v", err)
+	}
+	if after.PlayerData.X != before.PlayerData.X {
+		t.Fatalf("SIGHUP overwrote saved player position: got %d, want %d", after.PlayerData.X, before.PlayerData.X)
+	}
+}
+
+func TestEngineHangupSavesAuthoritativeRestoredState(t *testing.T) {
+	logger.Setup()
+	t.Setenv("HOME", t.TempDir())
+	engine := NewEngineWithSeed(12345)
+	engine.stateManager.SetState(state.StateHelp)
+	engine.runActive = true
+	player := actor.NewPlayerWithSeed(7, 8, 99)
+	dungeonManager := dungeon.NewDungeonManagerWithSeed(player, 99)
+	player.Position.X, player.Position.Y = 7, 8
+	engine.saveIntegration.SetGameState(player, dungeonManager)
+
+	if effect := engine.Update(hangupMessage{}); effect == nil {
+		t.Fatal("SIGHUP update did not request application shutdown")
+	}
+	saved, err := engine.saveIntegration.GetSaveManager().LoadGame()
+	if err != nil {
+		t.Fatalf("LoadGame() error = %v", err)
+	}
+	if saved.PlayerData.X != 7 || saved.PlayerData.Y != 8 {
+		t.Fatalf("SIGHUP saved stale player position (%d, %d)", saved.PlayerData.X, saved.PlayerData.Y)
+	}
+}
+
 func TestEngineRendersGameOverAfterFatalInventoryAction(t *testing.T) {
 	logger.Setup()
 	engine := NewEngineWithSeed(12345)

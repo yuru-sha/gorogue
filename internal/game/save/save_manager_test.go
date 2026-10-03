@@ -4,10 +4,13 @@ package save
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
@@ -489,6 +492,13 @@ func TestSaveGameIntegrationRejectsMalformedSaveWithoutReplacingState(t *testing
 			activeDungeon := dungeon.NewDungeonManagerWithSeed(activePlayer, 12345)
 			activeLevel := activeDungeon.GetCurrentLevel()
 			integration.SetGameState(activePlayer, activeDungeon)
+			activeInfo := GameInfo{CharName: "active run", TurnCount: 77}
+			integration.SetGameInfo(activeInfo)
+			activeSettings := integration.GetSettings()
+			activeSettings.AutoSave = !activeSettings.AutoSave
+			integration.SetSettings(activeSettings)
+			activeStats := Stats{TurnCount: 77, MonstersKilled: 3}
+			integration.GetGameStats().LoadStats(activeStats)
 
 			saveData := createTestSaveData(t)
 			testCase.mutate(saveData)
@@ -526,8 +536,20 @@ func TestSaveGameIntegrationRejectsMalformedSaveWithoutReplacingState(t *testing
 			if gotDungeon != activeDungeon {
 				t.Fatal("failed load replaced the active dungeon")
 			}
+			if !integration.saveManager.FileExists() {
+				t.Fatal("failed load consumed the save")
+			}
 			if gotDungeon.GetCurrentLevel() != activeLevel {
 				t.Fatal("failed load replaced the active level")
+			}
+			if got := integration.GetGameInfo(); got != activeInfo {
+				t.Fatalf("failed load changed game info: got %+v, want %+v", got, activeInfo)
+			}
+			if got := integration.GetSettings(); !reflect.DeepEqual(got, activeSettings) {
+				t.Fatalf("failed load changed settings: got %+v, want %+v", got, activeSettings)
+			}
+			if got := integration.GetGameStats().GetStats(); got != activeStats {
+				t.Fatalf("failed load changed stats: got %+v, want %+v", got, activeStats)
 			}
 		})
 	}
@@ -886,5 +908,83 @@ func TestSaveManager_GetDiskUsage(t *testing.T) {
 
 	if usage <= 0 {
 		t.Errorf("Expected positive disk usage, got %d", usage)
+	}
+}
+
+func TestRestoreConsumptionPreservesConcurrentSave(t *testing.T) {
+	logger.Setup()
+	saveDir := t.TempDir()
+	restoringManager := NewSaveManager()
+	restoringManager.saveDir = saveDir
+	if err := restoringManager.Initialize(); err != nil {
+		t.Fatalf("Initialize() restoring manager: %v", err)
+	}
+	savingManager := NewSaveManager()
+	savingManager.saveDir = saveDir
+	if err := savingManager.Initialize(); err != nil {
+		t.Fatalf("Initialize() saving manager: %v", err)
+	}
+
+	initialSave := createTestSaveData(t)
+	initialSave.PlayerData.X = 4
+	if err := restoringManager.SaveGame(initialSave); err != nil {
+		t.Fatalf("SaveGame() initial: %v", err)
+	}
+	replacementSave := createTestSaveData(t)
+	replacementSave.PlayerData.X = 8
+
+	restoreEntered := make(chan struct{})
+	releaseRestore := make(chan struct{})
+	defer func() {
+		select {
+		case <-releaseRestore:
+		default:
+			close(releaseRestore)
+		}
+	}()
+	restoreDone := make(chan error, 1)
+	go func() {
+		restoreDone <- restoringManager.consumeSave(func(data *SaveData) error {
+			if data.PlayerData.X != 4 {
+				return fmt.Errorf("restored x = %d, want 4", data.PlayerData.X)
+			}
+			close(restoreEntered)
+			<-releaseRestore
+			return nil
+		})
+	}()
+	select {
+	case <-restoreEntered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("restore did not reach the conversion step")
+	}
+
+	writerStarted := make(chan struct{})
+	writerDone := make(chan error, 1)
+	go func() {
+		close(writerStarted)
+		writerDone <- savingManager.SaveGame(replacementSave)
+	}()
+	<-writerStarted
+	select {
+	case err := <-writerDone:
+		t.Fatalf("concurrent SaveGame() completed before restore: %v", err)
+	case <-time.After(100 * time.Millisecond):
+	}
+
+	close(releaseRestore)
+	if err := <-restoreDone; err != nil {
+		t.Fatalf("consumeSave() error = %v", err)
+	}
+	if err := <-writerDone; err != nil {
+		t.Fatalf("concurrent SaveGame() error = %v", err)
+	}
+
+	loaded, err := savingManager.LoadGame()
+	if err != nil {
+		t.Fatalf("LoadGame() after concurrent save: %v", err)
+	}
+	if loaded.PlayerData.X != 8 {
+		t.Fatalf("saved x = %d, want concurrent save x 8", loaded.PlayerData.X)
 	}
 }

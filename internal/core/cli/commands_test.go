@@ -7,6 +7,7 @@ import (
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
 	"github.com/yuru-sha/gorogue/internal/game/item"
+	"github.com/yuru-sha/gorogue/internal/game/save"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
@@ -58,6 +59,29 @@ func TestCLIModeLevelCommandUsesDungeonManager(t *testing.T) {
 	}
 	if !strings.Contains(result, "Moved to floor 2") {
 		t.Fatalf("unexpected level command result: %s", result)
+	}
+}
+
+func TestCLISaveEndsRunAfterSuccessfulPersistence(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	player := actor.NewPlayerWithSeed(0, 0, 12345)
+	manager := dungeon.NewDungeonManagerWithSeed(player, 12345)
+	integration := save.NewSaveGameIntegration()
+	if err := integration.Initialize(); err != nil {
+		t.Fatalf("Initialize() error = %v", err)
+	}
+	integration.SetGameState(player, manager)
+
+	cli := NewCLIModeWithDungeonManager(manager, player)
+	cli.SetSaveIntegration(integration)
+	cli.IsActive = true
+	result := cli.ExecuteCommand("game save")
+
+	if !strings.Contains(result, "Game saved.") {
+		t.Fatalf("save command result = %q, want successful save message", result)
+	}
+	if !cli.RunEnded {
+		t.Fatal("CLI did not end the run after successful save")
 	}
 }
 

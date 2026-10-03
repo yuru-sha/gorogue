@@ -5,8 +5,11 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/yuru-sha/gorogue/internal/config"
@@ -108,6 +111,56 @@ func showHelp() {
 	fmt.Println("For full command list, run 'help' in interactive mode.")
 }
 
+type scannedInput struct {
+	line string
+	err  error
+	done bool
+}
+
+func scanInput(input io.Reader) <-chan scannedInput {
+	results := make(chan scannedInput)
+	go func() {
+		defer close(results)
+		scanner := bufio.NewScanner(input)
+		for scanner.Scan() {
+			results <- scannedInput{line: scanner.Text()}
+		}
+		results <- scannedInput{err: scanner.Err(), done: true}
+	}()
+	return results
+}
+
+func saveRecoveryState(cliMode *cli.CLIMode) error {
+	if cliMode == nil || cliMode.Save == nil || cliMode.Player == nil || cliMode.Dungeon == nil {
+		return fmt.Errorf("save integration or active game state is unavailable")
+	}
+	cliMode.Save.SetGameState(cliMode.Player, cliMode.Dungeon)
+	return cliMode.Save.SaveGame()
+}
+
+func receiveHangup() (signals chan os.Signal, stop func()) {
+	signals = make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGHUP)
+	stop = func() { signal.Stop(signals) }
+	return
+}
+
+func saveAfterHangup(cliMode *cli.CLIMode) {
+	if err := saveRecoveryState(cliMode); err != nil {
+		fmt.Fprintf(os.Stderr, "SIGHUP recovery save failed: %v\n", err)
+	}
+}
+
+func recoverPendingHangup(cliMode *cli.CLIMode, signals <-chan os.Signal) bool {
+	select {
+	case <-signals:
+		saveAfterHangup(cliMode)
+		return true
+	default:
+		return false
+	}
+}
+
 func runInteractiveMode(cliMode *cli.CLIMode) {
 	fmt.Println("╔══════════════════════════════════════════════════════════════════════════════╗")
 	fmt.Println("║                            GoRogue CLI Mode                                 ║")
@@ -117,38 +170,43 @@ func runInteractiveMode(cliMode *cli.CLIMode) {
 	fmt.Println("Welcome to GoRogue CLI! Type 'help' for commands, 'quit' to exit.")
 	fmt.Println()
 
-	scanner := bufio.NewScanner(os.Stdin)
-
+	signals, stopSignals := receiveHangup()
+	defer stopSignals()
+	input := scanInput(os.Stdin)
 	for {
 		fmt.Print("gorogue> ")
-
-		if !scanner.Scan() {
-			break
-		}
-
-		input := strings.TrimSpace(scanner.Text())
-		if input == "" {
-			continue
-		}
-
-		// Handle special commands
-		switch strings.ToLower(input) {
-		case "quit", "exit", "q":
-			fmt.Println("Goodbye!")
+		select {
+		case <-signals:
+			saveAfterHangup(cliMode)
 			return
-		case "clear", "cls":
-			fmt.Print("\033[2J\033[1;1H") // Clear screen
-			continue
+		case scanned, ok := <-input:
+			if recoverPendingHangup(cliMode, signals) {
+				return
+			}
+			if !ok || scanned.done {
+				if scanned.err != nil {
+					fmt.Printf("Error reading input: %v\n", scanned.err)
+				}
+				return
+			}
+			command := strings.TrimSpace(scanned.line)
+			if command == "" {
+				continue
+			}
+			switch strings.ToLower(command) {
+			case "quit", "exit", "q":
+				fmt.Println("Goodbye!")
+				return
+			case "clear", "cls":
+				fmt.Print("\033[2J\033[1;1H")
+				continue
+			}
+			fmt.Println(cliMode.ExecuteCommand(command))
+			if cliMode.RunEnded {
+				return
+			}
+			fmt.Println()
 		}
-
-		// Execute CLI command
-		result := cliMode.ExecuteCommand(input)
-		fmt.Println(result)
-		fmt.Println()
-	}
-
-	if err := scanner.Err(); err != nil {
-		fmt.Printf("Error reading input: %v\n", err)
 	}
 }
 
@@ -157,27 +215,46 @@ func runBatchMode(cliMode *cli.CLIMode) {
 	fmt.Println("Reading commands from stdin...")
 	fmt.Println()
 
-	scanner := bufio.NewScanner(os.Stdin)
+	signals, stopSignals := receiveHangup()
+	input := scanInput(os.Stdin)
 	commandCount := 0
-
-	for scanner.Scan() {
-		input := strings.TrimSpace(scanner.Text())
-		if input == "" {
-			continue
+	for {
+		select {
+		case <-signals:
+			saveAfterHangup(cliMode)
+			stopSignals()
+			return
+		case scanned, ok := <-input:
+			if recoverPendingHangup(cliMode, signals) {
+				stopSignals()
+				return
+			}
+			if !ok {
+				stopSignals()
+				return
+			}
+			if scanned.done {
+				if scanned.err != nil {
+					fmt.Printf("Error reading input: %v\n", scanned.err)
+					stopSignals()
+					os.Exit(1)
+				}
+				fmt.Printf("Batch mode completed. Executed %d commands.\n", commandCount)
+				stopSignals()
+				return
+			}
+			command := strings.TrimSpace(scanned.line)
+			if command == "" {
+				continue
+			}
+			commandCount++
+			fmt.Printf("[%d] Executing: %s\n", commandCount, command)
+			fmt.Println(cliMode.ExecuteCommand(command))
+			if cliMode.RunEnded {
+				stopSignals()
+				return
+			}
+			fmt.Println("---")
 		}
-
-		commandCount++
-		fmt.Printf("[%d] Executing: %s\n", commandCount, input)
-
-		result := cliMode.ExecuteCommand(input)
-		fmt.Println(result)
-		fmt.Println("---")
 	}
-
-	if err := scanner.Err(); err != nil {
-		fmt.Printf("Error reading input: %v\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("Batch mode completed. Executed %d commands.\n", commandCount)
 }
