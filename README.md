@@ -14,7 +14,7 @@ GoRogue is a Go and gruid implementation of the Rogue 5.4.4 text roguelike. [`do
 - Victory requires returning the Amulet of Yendor to the surface; death is permanent.
 - JSON save format `1.5.0` stores the state required to resume a game, including per-floor hallucination stair knowledge. Older save formats are not automatically migrated.
 
-## Controls
+## Controls and screen layout
 
 | Key | Action |
 | --- | --- |
@@ -34,10 +34,12 @@ GoRogue is a Go and gruid implementation of the Rogue 5.4.4 text roguelike. [`do
 | `D` / `c` | Discovered items / name an unidentified item |
 | `<` / `>` | Go up / down stairs |
 | `a` | Repeat the last command |
-| `?` / `/` | Help / explain a symbol |
+| `?` / `/` | Ask about a command key / explain a symbol |
 | `Q` / Escape | Quit / cancel |
 
-GoRogue conveniences: `^W` toggles wizard mode and `:` enters the CLI debug prompt.
+The game starts directly in the dungeon. The top row shows the latest message or prompt, the map occupies the center, and the bottom row shows `Level`, `Gold`, `Hp`, `Str`, `Arm`, and `Exp`. Hunger status is blank when satisfied and appears as `Hungry`, `Weak`, or `Faint` when applicable. Press `?`, then a command key to view its description; use `*` for the command list. Death and victory are modal sequences.
+
+GoRogue conveniences: `^W` toggles wizard mode and `:` enters the CLI debug prompt. Save/load commands are available from the CLI; SIGHUP saves the current game.
 
 ## Build and run
 

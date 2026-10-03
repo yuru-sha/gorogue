@@ -12,23 +12,14 @@ import (
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
-func TestNewEngineRegistersSaveLoadState(t *testing.T) {
+func TestNewEngineStartsInGame(t *testing.T) {
 	logger.Setup()
 	engine := NewEngineWithSeed(12345)
-	engine.stateManager.SetState(state.StateSaveLoad)
-	grid := gruid.NewGrid(80, 50)
-	engine.stateManager.Draw(&grid)
-
-	var rows []string
-	for y := 0; y < 50; y++ {
-		var row strings.Builder
-		for x := 0; x < 80; x++ {
-			row.WriteRune(grid.At(gruid.Point{X: x, Y: y}).Rune)
-		}
-		rows = append(rows, row.String())
+	if got := engine.stateManager.GetCurrentState(); got != state.StateGame {
+		t.Fatalf("initial state = %v, want StateGame", got)
 	}
-	if !strings.Contains(strings.Join(rows, "\n"), "SAVE/LOAD GAME") {
-		t.Fatal("save/load state is not registered")
+	if !engine.runActive {
+		t.Fatal("new game is not marked active for SIGHUP recovery")
 	}
 }
 
@@ -36,8 +27,6 @@ func TestEngineHandlesHangupOnUpdateThreadWithoutAdvancingTurn(t *testing.T) {
 	logger.Setup()
 	t.Setenv("HOME", t.TempDir())
 	engine := NewEngineWithSeed(12345)
-	engine.stateManager.SetState(state.StateGame)
-	engine.runActive = true
 	beforeTurn := engine.saveIntegration.GetGameStats().GetTurnCount()
 
 	if effect := engine.Update(hangupMessage{}); effect == nil {
@@ -51,12 +40,15 @@ func TestEngineHandlesHangupOnUpdateThreadWithoutAdvancingTurn(t *testing.T) {
 	}
 }
 
-func TestEngineHangupBeforeRunPreservesExistingSave(t *testing.T) {
+func TestEngineHangupAfterRunEndedPreservesExistingSave(t *testing.T) {
 	logger.Setup()
 	t.Setenv("HOME", t.TempDir())
 	engine := NewEngineWithSeed(12345)
 	if err := engine.saveIntegration.SaveGame(); err != nil {
 		t.Fatalf("SaveGame() error = %v", err)
+	}
+	if effect := engine.Update(gruid.MsgKeyDown{Key: "Q"}); effect == nil {
+		t.Fatal("quit did not end the active run")
 	}
 	saveManager := engine.saveIntegration.GetSaveManager()
 	before, err := saveManager.LoadGame()
@@ -131,84 +123,46 @@ func TestEngineRendersGameOverAfterFatalInventoryAction(t *testing.T) {
 			rendered.WriteRune(grid.At(gruid.Point{X: x, Y: y}).Rune)
 		}
 	}
-	if !strings.Contains(rendered.String(), "R) Restart") {
-		t.Fatal("game-over screen was not rendered after a fatal inventory action")
+	if !strings.Contains(rendered.String(), "You died.") {
+		t.Fatal("game-over sequence was not rendered after a fatal inventory action")
+	}
+	engine.Update(gruid.MsgKeyDown{Key: gruid.KeySpace})
+	if got := engine.stateManager.GetCurrentState(); got != state.StateGameOver {
+		t.Fatalf("state after death acknowledgement = %v, want StateGameOver", got)
+	}
+	if !strings.Contains(engine.Draw().String(), "Score:") {
+		t.Fatal("death score page was not rendered")
+	}
+	if effect := engine.Update(gruid.MsgKeyDown{Key: gruid.KeySpace}); effect == nil {
+		t.Fatal("final death acknowledgement did not end the run")
+	}
+	if got := engine.stateManager.GetCurrentState(); got != state.StateQuit {
+		t.Fatalf("state after death sequence = %v, want StateQuit", got)
 	}
 }
-
-func TestEngineRestartAfterFatalInventoryActionStartsFreshGame(t *testing.T) {
-	logger.Setup()
-	const seed int64 = 12345
-	engine := NewEngineWithSeed(seed)
-	engine.stateManager.SetState(state.StateGame)
-	engine.player.Position.X = 1
-	engine.player.Position.Y = 1
-	engine.player.HP = 1
-	engine.player.Inventory.AddItem(gameitem.NewItem(1, 1, gameitem.ItemFood, "ration", 1))
-	engine.gameScreen.SetLevel(fatalEngineLevel())
-
-	deadPlayer := engine.player
-	engine.Update(gruid.MsgKeyDown{Key: "d"})
-	engine.Update(gruid.MsgKeyDown{Key: "a"})
-
-	var rendered strings.Builder
-	grid := engine.Draw()
-	for y := 0; y < 50; y++ {
-		for x := 0; x < 80; x++ {
-			rendered.WriteRune(grid.At(gruid.Point{X: x, Y: y}).Rune)
-		}
-	}
-	if !strings.Contains(rendered.String(), "Death: Player died during a turn.") {
-		t.Fatal("game-over score entry has no death reason")
-	}
-
-	engine.Update(gruid.MsgKeyDown{Key: "R"})
-	if got := engine.stateManager.GetCurrentState(); got != state.StateGame {
-		t.Fatalf("current state after restart = %v, want StateGame", got)
-	}
-	if engine.player == deadPlayer {
-		t.Fatal("restart reused the dead player")
-	}
-	if !engine.player.IsAlive() {
-		t.Fatal("restarted player is dead")
-	}
-	if got := engine.saveIntegration.GetGameInfo().Seed; got != seed {
-		t.Fatalf("restart seed = %d, want %d", got, seed)
-	}
-
-	engine.Update(gruid.MsgKeyDown{Key: "."})
-	if got := engine.stateManager.GetCurrentState(); got != state.StateGame {
-		t.Fatalf("current state after first restarted input = %v, want StateGame", got)
-	}
-}
-
-func TestEngineNewGameAfterGameOverDoesNotResumeDeadPlayer(t *testing.T) {
+func TestEngineShowsVictorySequenceAfterSurfaceExit(t *testing.T) {
 	logger.Setup()
 	engine := NewEngineWithSeed(12345)
-	engine.stateManager.SetState(state.StateGame)
-	engine.player.Position.X = 1
-	engine.player.Position.Y = 1
-	engine.player.HP = 1
-	engine.player.Inventory.AddItem(gameitem.NewItem(1, 1, gameitem.ItemFood, "ration", 1))
-	engine.gameScreen.SetLevel(fatalEngineLevel())
+	upStairs, _ := dungeon.NewStairsManager(engine.dungeonManager.GetCurrentLevel()).GetStairPositions()
+	if len(upStairs) != 1 {
+		t.Fatalf("upstairs count = %d, want 1", len(upStairs))
+	}
+	engine.player.Position.X, engine.player.Position.Y = upStairs[0].X, upStairs[0].Y
+	engine.player.Inventory.AddItem(gameitem.NewAmulet(0, 0))
 
-	engine.Update(gruid.MsgKeyDown{Key: "d"})
-	engine.Update(gruid.MsgKeyDown{Key: "a"})
-	deadPlayer := engine.player
-	engine.Update(gruid.MsgKeyDown{Key: "M"})
-	if got := engine.stateManager.GetCurrentState(); got != state.StateMenu {
-		t.Fatalf("current state after game over menu selection = %v, want StateMenu", got)
+	engine.Update(gruid.MsgKeyDown{Key: "<"})
+	if got := engine.stateManager.GetCurrentState(); got != state.StateVictory {
+		t.Fatalf("state after surface exit = %v, want StateVictory", got)
 	}
-
-	engine.Update(gruid.MsgKeyDown{Key: "n"})
-	if got := engine.stateManager.GetCurrentState(); got != state.StateGame {
-		t.Fatalf("current state after new game selection = %v, want StateGame", got)
+	if !strings.Contains(engine.Draw().String(), "Congratulations") {
+		t.Fatal("victory message was not rendered")
 	}
-	if engine.player == deadPlayer {
-		t.Fatal("new game reused the dead player")
+	engine.Update(gruid.MsgKeyDown{Key: gruid.KeySpace})
+	if !strings.Contains(engine.Draw().String(), "Score:") {
+		t.Fatal("victory score stage was not rendered")
 	}
-	if !engine.player.IsAlive() {
-		t.Fatal("new game player is dead")
+	if effect := engine.Update(gruid.MsgKeyDown{Key: gruid.KeySpace}); effect == nil {
+		t.Fatal("final victory acknowledgement did not end the run")
 	}
 }
 

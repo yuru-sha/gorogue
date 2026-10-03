@@ -114,10 +114,10 @@ func TestDrawHidesUnexploredTerrainAndEntities(t *testing.T) {
 
 	screen.Draw(&grid)
 
-	if got := grid.At(gruid.Point{X: 4, Y: 4}).Rune; got != ' ' {
+	if got := grid.At(gruid.Point{X: 4, Y: 3}).Rune; got != ' ' {
 		t.Fatalf("unexplored tile was drawn as %q", got)
 	}
-	if got := grid.At(gruid.Point{X: 1, Y: 4}).Rune; got != '@' {
+	if got := grid.At(gruid.Point{X: 1, Y: 3}).Rune; got != '@' {
 		t.Fatalf("player was drawn as %q, want '@'", got)
 	}
 }
@@ -140,10 +140,10 @@ func TestDrawShowsExploredTerrainWithoutOutOfFOVEntities(t *testing.T) {
 		t.Fatalf("explored tile state = visible:%t explored:%t", farTile.Visible, farTile.Explored)
 	}
 	wantGlyph, _ := terrainAppearance(farTile.Type)
-	if got := grid.At(gruid.Point{X: 4, Y: 4}).Rune; got != wantGlyph {
+	if got := grid.At(gruid.Point{X: 4, Y: 3}).Rune; got != wantGlyph {
 		t.Fatalf("explored terrain was drawn as %q, want %q", got, wantGlyph)
 	}
-	if got := grid.At(gruid.Point{X: 4, Y: 4}).Rune; got == monster.Type.Code {
+	if got := grid.At(gruid.Point{X: 4, Y: 3}).Rune; got == monster.Type.Code {
 		t.Fatal("out-of-FOV monster was drawn")
 	}
 }
@@ -160,7 +160,7 @@ func TestInvisibleMonsterRequiresSeeInvisibleToRender(t *testing.T) {
 	grid := gruid.NewGrid(80, 50)
 
 	screen.Draw(&grid)
-	position := gruid.Point{X: monster.Position.X, Y: monster.Position.Y + 2}
+	position := gruid.Point{X: monster.Position.X, Y: monster.Position.Y + 1}
 	if got := grid.At(position).Rune; got == monster.Type.Code {
 		t.Fatal("invisible monster rendered without see-invisible")
 	}
@@ -229,7 +229,7 @@ func TestClosingDoorHidesEntitiesBehindIt(t *testing.T) {
 	}
 	grid := gruid.NewGrid(80, 50)
 	screen.Draw(&grid)
-	if got := grid.At(gruid.Point{X: 3, Y: 4}).Rune; got == monster.Type.Code {
+	if got := grid.At(gruid.Point{X: 3, Y: 3}).Rune; got == monster.Type.Code {
 		t.Fatal("monster behind a closed door was drawn")
 	}
 }
