@@ -154,6 +154,12 @@ func TestHighScoreListingCLIEntryPoint(t *testing.T) {
 		},
 	}
 
+	goPathOutput, err := exec.Command("go", "env", "GOPATH").Output()
+	if err != nil {
+		t.Fatalf("go env GOPATH failed: %v", err)
+	}
+	goPath := strings.TrimSpace(string(goPathOutput))
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			home := t.TempDir()
@@ -176,7 +182,7 @@ func TestHighScoreListingCLIEntryPoint(t *testing.T) {
 			}
 
 			cmd := exec.Command("go", "run", ".", "-s")
-			cmd.Env = append(os.Environ(), "HOME="+home)
+			cmd.Env = append(os.Environ(), "HOME="+home, "GOPATH="+goPath)
 			output, err := cmd.CombinedOutput()
 			if tt.wantFailure && err == nil {
 				t.Fatalf("gorogue-cli -s succeeded, want a read failure; output %q", output)
