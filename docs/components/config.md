@@ -8,5 +8,6 @@
 | `LOG_LEVEL` | `INFO` | ログレベル |
 | `SAVE_DIRECTORY` | `saves` | セーブディレクトリ |
 | `AUTO_SAVE_ENABLED` | `true` | オートセーブ設定 |
+| `ROGUEOPTS` | Rogue option defaults | GUI/CLI user options. See [`features.md`](../features.md#rogue-544-user-options). |
 
 設定の実際の値と読み込み順序は `internal/config/config.go` を正とします。ゲームルールや別のゲームモードを設定から切り替える仕組みはありません。

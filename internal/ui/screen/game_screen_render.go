@@ -42,6 +42,10 @@ func (s *GameScreen) Draw(grid *gruid.Grid) {
 		s.drawText(grid, 0, s.height-1, footer, gruid.Style{Fg: 0xFFFFFF, Bg: 0x000000})
 		return
 	}
+	if s.presentation == presentationSettings {
+		s.drawOptions(grid)
+		return
+	}
 
 	if s.presentation == presentationDeath || s.presentation == presentationVictory {
 		if s.sequenceStage < len(s.sequencePages) {

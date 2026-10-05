@@ -8,6 +8,8 @@ GoRogue は Go と gruid で実装した、Rogue 5.4.4 を基準とする文字�
 
 GUI と CLI は同じコマンド実行経路を利用します。CLI とゲーム API はシードを指定でき、同じバージョン、シード、入力列で再現できるゲーム乱数を使います。
 
+GUI と CLI は環境変数または `.env` の `ROGUEOPTS` から user options を読み込みます。GUI は `O` で設定を編集でき、`name` と `file` はセーブ連携へ適用されます。option の構文と GUI 対応は [`機能一覧`](features.md#rogue-544-user-options) を参照してください。
+
 ## 実行方法
 
 ```sh

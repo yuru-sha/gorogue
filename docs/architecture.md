@@ -31,6 +31,9 @@ GUI ドライバーまたは端末表示
 - `internal/game/save/`: JSON 保存、読込、検証、変換。現行 `SaveVersion` は `1.5.0`。
 - `internal/ui/screen/`: 入力画面、論理表示セルの生成、文字・色とグリッドへの描画。
 - `cmd/gorogue/`, `cmd/gorogue-cli/`: GUI と CLI の起動。
+- `internal/config/`: `ROGUEOPTS` を環境変数または `.env` から `Options` に変換し、GUI と CLI の起動時に渡します。
+
+`internal/ui/screen/` の設定画面は `config.Options` を更新し、セーブ連携へ保存先・プレイヤー名を渡します。端末専用表示 option の意味は GUI 表示へ流用せず、対応関係を [`features.md`](features.md#rogue-544-user-options) に記録します。
 
 ## ゲーム状態と表示
 

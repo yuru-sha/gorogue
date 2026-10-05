@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/anaseto/gruid"
+	"github.com/yuru-sha/gorogue/internal/config"
 	"github.com/yuru-sha/gorogue/internal/core/state"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
@@ -45,7 +46,12 @@ func NewEngine() *Engine {
 
 // NewEngineWithSeed creates an engine with reproducible game randomness.
 func NewEngineWithSeed(seed int64) *Engine {
-	// グリッドの初期化
+	options := config.DefaultOptions()
+	return NewEngineWithOptions(seed, &options)
+}
+
+// NewEngineWithOptions creates an engine with explicit Rogue options.
+func NewEngineWithOptions(seed int64, options *config.Options) *Engine {
 	renderer := uiscreen.NewTextRenderer(screenWidth, screenHeight)
 
 	// プレイヤーの生成（仮位置、後でダンジョンマネージャーが適切な位置に配置）
@@ -58,11 +64,12 @@ func NewEngineWithSeed(seed int64) *Engine {
 	// ダンジョンマネージャーの生成
 	dungeonManager := dungeon.NewDungeonManagerWithSeed(player, seed)
 	saveIntegration := save.NewSaveGameIntegration()
+	saveIntegration.SetOptions(options)
 	if err := saveIntegration.Initialize(); err != nil {
 		logger.Warn("Failed to initialize save integration", "error", err)
 	}
 	saveIntegration.SetGameState(player, dungeonManager)
-	saveIntegration.SetGameInfo(save.GameInfo{Seed: seed})
+	saveIntegration.SetGameInfo(save.GameInfo{Seed: seed, CharName: options.Name})
 
 	// プレイヤーを最初の部屋の中央に配置
 	level := dungeonManager.GetCurrentLevel()
@@ -84,6 +91,7 @@ func NewEngineWithSeed(seed int64) *Engine {
 	gameScreen.SetLevel(level)                   // ダンジョンレベルを設定
 	gameScreen.SetDungeonManager(dungeonManager) // ダンジョンマネージャーを設定
 	gameScreen.SetSaveIntegration(saveIntegration)
+	gameScreen.SetOptions(options)
 	symbolScreen := uiscreen.NewSymbolScreen(screenWidth, screenHeight)
 
 	logger.Debug("Created screens")
@@ -94,7 +102,7 @@ func NewEngineWithSeed(seed int64) *Engine {
 	stateManager.RegisterState(state.StateGameOver, gameScreen)
 	stateManager.RegisterState(state.StateVictory, gameScreen)
 	stateManager.RegisterState(state.StateSymbol, symbolScreen)
-
+	stateManager.RegisterState(state.StateSettings, gameScreen)
 	// Start directly in the already initialized dungeon.
 	stateManager.SetState(state.StateGame)
 

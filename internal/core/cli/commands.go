@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/yuru-sha/gorogue/internal/config"
 	gamecommand "github.com/yuru-sha/gorogue/internal/core/command"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
@@ -32,6 +33,7 @@ type CLIMode struct {
 	Save           *save.SaveGameIntegration
 	Commands       map[string]*Command
 	commandSession *gamecommand.Session
+	options        config.Options
 }
 
 // Command represents a CLI command
@@ -60,6 +62,7 @@ func newCLIMode(level *dungeon.Level, player *actor.Player, manager *dungeon.Dun
 		Dungeon:        manager,
 		Commands:       make(map[string]*Command),
 		commandSession: gamecommand.NewSession(),
+		options:        config.DefaultOptions(),
 	}
 
 	cli.registerCommands()
@@ -195,7 +198,11 @@ func (c *CLIMode) ExecuteCommand(input string) string {
 
 	if cmd, exists := c.Commands[commandName]; exists {
 		logger.Info("CLI command executed", "command", commandName, "args", args)
-		return cmd.Handler(args)
+		result := cmd.Handler(args)
+		if c.options.Fruit != "" && c.options.Fruit != "slime-mold" {
+			result = strings.ReplaceAll(result, "slime-mold", c.options.Fruit)
+		}
+		return result
 	}
 
 	return fmt.Sprintf("Unknown command: %s. Type 'help' for available commands.", commandName)
@@ -219,6 +226,9 @@ func (c *CLIMode) SetLevel(level *dungeon.Level) {
 // SetSaveIntegration binds save/load gameplay commands to the shared save state.
 func (c *CLIMode) SetSaveIntegration(integration *save.SaveGameIntegration) {
 	c.Save = integration
+}
+func (c *CLIMode) SetOptions(options *config.Options) {
+	c.options = *options
 }
 
 func (c *CLIMode) SetCommandSession(session *gamecommand.Session) {

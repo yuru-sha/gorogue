@@ -42,6 +42,10 @@ The game starts directly in the dungeon. The top row shows the latest message or
 
 GoRogue conveniences: `^W` toggles wizard mode, `^L` loads the saved game, and `:` enters the CLI debug prompt. Save/load commands are available from the CLI; SIGHUP saves the current game.
 
+## User options
+
+Set `ROGUEOPTS` in the environment or `.env` to configure Rogue options. Use comma-separated values such as `name=Ada,noflush,inven=clear,file=~/rogue.sav`. In the GUI, press `O` to view or change these values for the current run. See [`docs/features.md`](docs/features.md#rogue-544-user-options) for supported options and GUI equivalents.
+
 ## Build and run
 
 Requirements: Go version in [`go.mod`](go.mod), `make`, `pkg-config`, and SDL2 development libraries for the GUI. On macOS:

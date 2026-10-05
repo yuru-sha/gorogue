@@ -34,6 +34,8 @@ const (
 // SaveManager manages save file operations
 type SaveManager struct {
 	saveDir            string
+	defaultSaveDir     string
+	saveFilePath       string
 	compressionEnabled bool
 	backupEnabled      bool
 	maxBackups         int
@@ -50,7 +52,8 @@ func NewSaveManager() *SaveManager {
 
 	return &SaveManager{
 		saveDir:            saveDir,
-		compressionEnabled: false, // JSON is readable, no compression for now
+		defaultSaveDir:     saveDir,
+		compressionEnabled: false,
 		backupEnabled:      true,
 		maxBackups:         3,
 	}
@@ -345,14 +348,69 @@ func (sm *SaveManager) lockSaveFile() (func(), error) {
 }
 
 func (sm *SaveManager) getSaveFilePath() string {
+	if sm.saveFilePath != "" {
+		return sm.saveFilePath
+	}
 	return filepath.Join(sm.saveDir, SaveFileName)
 }
 
-// getBackupFilePath returns the full path to the backup file
+// SetSaveFilePath selects the save file used for saves, loads, locks, and backups.
+func (sm *SaveManager) SetSaveFilePath(path string) {
+	if path == "" {
+		sm.saveDir = sm.defaultSaveDir
+		sm.saveFilePath = ""
+		return
+	}
+	if path == "~" || strings.HasPrefix(path, "~/") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			home = "."
+		}
+		path = filepath.Join(home, strings.TrimLeft(strings.TrimPrefix(path, "~"), "/"))
+	}
+	sm.saveFilePath = filepath.Clean(path)
+	sm.saveDir = filepath.Dir(sm.saveFilePath)
+}
+
 func (sm *SaveManager) getBackupFilePath() string {
 	timestamp := time.Now().Format("20060102_150405")
-	filename := fmt.Sprintf("rogue_%s%s", timestamp, BackupExtension)
-	return filepath.Join(sm.saveDir, filename)
+	return filepath.Join(sm.saveDir, sm.backupPrefix()+timestamp+BackupExtension)
+}
+
+func (sm *SaveManager) backupPrefix() string {
+	path := sm.getSaveFilePath()
+	if absolute, err := filepath.Abs(path); err == nil {
+		path = absolute
+	}
+	defaultPath := filepath.Join(sm.defaultSaveDir, SaveFileName)
+	if absolute, err := filepath.Abs(defaultPath); err == nil {
+		defaultPath = absolute
+	}
+	if path == defaultPath {
+		return "rogue_"
+	}
+	digest := sha256.Sum256([]byte(path))
+	return fmt.Sprintf("gorogue_%x_", digest[:])
+}
+
+func (sm *SaveManager) listBackupFiles() ([]string, error) {
+	entries, err := os.ReadDir(sm.saveDir)
+	if err != nil {
+		return nil, err
+	}
+	prefix := sm.backupPrefix()
+	matches := make([]string, 0)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if strings.HasPrefix(name, prefix) && strings.HasSuffix(name, BackupExtension) {
+			matches = append(matches, filepath.Join(sm.saveDir, name))
+		}
+	}
+	return matches, nil
+
 }
 
 // writeSaveData writes save data to file
@@ -538,8 +596,7 @@ func (sm *SaveManager) copyFile(source, destination string) error {
 
 // cleanupBackups removes old backup files
 func (sm *SaveManager) cleanupBackups() {
-	pattern := fmt.Sprintf("rogue_*%s", BackupExtension)
-	matches, err := filepath.Glob(filepath.Join(sm.saveDir, pattern))
+	matches, err := sm.listBackupFiles()
 	if err != nil {
 		return
 	}
@@ -567,8 +624,7 @@ func (sm *SaveManager) cleanupBackups() {
 
 // cleanupAllBackups removes all backup files
 func (sm *SaveManager) cleanupAllBackups() {
-	pattern := fmt.Sprintf("rogue_*%s", BackupExtension)
-	matches, err := filepath.Glob(filepath.Join(sm.saveDir, pattern))
+	matches, err := sm.listBackupFiles()
 	if err != nil {
 		return
 	}
@@ -654,8 +710,7 @@ func (sm *SaveManager) RepairSave() error {
 	}
 
 	// Find the most recent backup
-	pattern := fmt.Sprintf("rogue_*%s", BackupExtension)
-	matches, err := filepath.Glob(filepath.Join(sm.saveDir, pattern))
+	matches, err := sm.listBackupFiles()
 	if err != nil || len(matches) == 0 {
 		return fmt.Errorf("no backup files found")
 	}
@@ -707,7 +762,7 @@ func (sm *SaveManager) GetDiskUsage() (int64, error) {
 		}
 
 		name := entry.Name()
-		if name == SaveFileName || strings.HasSuffix(name, BackupExtension) {
+		if name == filepath.Base(sm.getSaveFilePath()) || strings.HasPrefix(name, sm.backupPrefix()) && strings.HasSuffix(name, BackupExtension) {
 			info, err := entry.Info()
 			if err != nil {
 				continue

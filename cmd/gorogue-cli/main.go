@@ -50,6 +50,10 @@ func main() {
 	}
 	defer logger.Cleanup()
 
+	options, err := config.LoadOptions()
+	if err != nil {
+		logger.Fatal("Invalid ROGUEOPTS", "error", err)
+	}
 	// 環境変数で設定されていればそれを使用、フラグで上書き
 	debugEnabled := config.GetDebugMode() || *debugMode
 
@@ -74,6 +78,7 @@ func main() {
 	player := actor.NewPlayerWithSeed(1, 1, seed)
 	dungeonManager := dungeon.NewDungeonManagerWithSeed(player, seed)
 	saveIntegration := save.NewSaveGameIntegration()
+	saveIntegration.SetOptions(&options)
 	if err := saveIntegration.Initialize(); err != nil {
 		logger.Warn("Failed to initialize save integration", "error", err)
 	}
@@ -82,6 +87,7 @@ func main() {
 	// Initialize CLI mode
 	cliMode := cli.NewCLIModeWithDungeonManager(dungeonManager, player)
 	cliMode.SetSaveIntegration(saveIntegration)
+	cliMode.SetOptions(&options)
 	cliMode.IsActive = true
 
 	if *interactive {
@@ -102,6 +108,8 @@ func showHelp() {
 	fmt.Println("  -help          Show this help")
 	fmt.Println("  -interactive   Run in interactive mode (default: true)")
 	fmt.Println("  -seed          Set the random seed (0 selects one automatically)")
+	fmt.Println("  ROGUEOPTS      Configure Rogue options as comma-separated name or name=value tokens")
+	fmt.Println("                 Boolean options use name or noname. See docs/features.md for valid names.")
 	fmt.Println("  -s             Show persisted high scores and exit (read-only)")
 	fmt.Println()
 	fmt.Println("Examples:")

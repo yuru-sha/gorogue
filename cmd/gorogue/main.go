@@ -7,6 +7,7 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
+	"time"
 
 	"github.com/anaseto/gruid"
 	sdl "github.com/anaseto/gruid-sdl"
@@ -112,6 +113,11 @@ func main() {
 		config.PrintConfig()
 	}
 
+	options, err := config.LoadOptions()
+	if err != nil {
+		logger.Fatal("Invalid ROGUEOPTS", "error", err)
+	}
+
 	logger.Info("Starting GoRogue",
 		"render_mode", "sdl2_ascii",
 		"debug_mode", config.GetDebugMode(),
@@ -119,7 +125,7 @@ func main() {
 	)
 
 	// ゲームエンジンの初期化
-	engine := core.NewEngine()
+	engine := core.NewEngineWithOptions(time.Now().UnixNano(), &options)
 	if engine == nil {
 		logger.Fatal("Failed to initialize game engine")
 	}
