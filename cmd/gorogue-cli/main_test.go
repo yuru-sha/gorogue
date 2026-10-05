@@ -115,10 +115,12 @@ func TestCLIHandlesHangupWhileWaitingForInput(t *testing.T) {
 
 func TestHighScoreListingCLIEntryPoint(t *testing.T) {
 	tests := []struct {
-		name       string
-		entries    []score.ScoreEntry
-		writeFile  bool
-		wantOutput []string
+		name        string
+		entries     []score.ScoreEntry
+		rawScores   string
+		writeFile   bool
+		wantFailure bool
+		wantOutput  []string
 	}{
 		{
 			name:       "missing file",
@@ -129,6 +131,13 @@ func TestHighScoreListingCLIEntryPoint(t *testing.T) {
 			writeFile:  true,
 			entries:    []score.ScoreEntry{},
 			wantOutput: []string{"No high scores found", "list is empty"},
+		},
+		{
+			name:        "malformed file",
+			rawScores:   "{",
+			writeFile:   true,
+			wantFailure: true,
+			wantOutput:  []string{"Unable to read high scores"},
 		},
 		{
 			name:      "scores preserve persisted order",
@@ -153,9 +162,13 @@ func TestHighScoreListingCLIEntryPoint(t *testing.T) {
 				if err := os.MkdirAll(filepath.Dir(scorePath), 0o755); err != nil {
 					t.Fatal(err)
 				}
-				data, err := json.Marshal(score.ScoreFile{Entries: tt.entries})
-				if err != nil {
-					t.Fatal(err)
+				data := []byte(tt.rawScores)
+				if tt.rawScores == "" {
+					var err error
+					data, err = json.Marshal(score.ScoreFile{Entries: tt.entries})
+					if err != nil {
+						t.Fatal(err)
+					}
 				}
 				if err := os.WriteFile(scorePath, data, 0o600); err != nil {
 					t.Fatal(err)
@@ -165,7 +178,10 @@ func TestHighScoreListingCLIEntryPoint(t *testing.T) {
 			cmd := exec.Command("go", "run", ".", "-s")
 			cmd.Env = append(os.Environ(), "HOME="+home)
 			output, err := cmd.CombinedOutput()
-			if err != nil {
+			if tt.wantFailure && err == nil {
+				t.Fatalf("gorogue-cli -s succeeded, want a read failure; output %q", output)
+			}
+			if !tt.wantFailure && err != nil {
 				t.Fatalf("gorogue-cli -s failed: %v\n%s", err, output)
 			}
 			for _, want := range tt.wantOutput {

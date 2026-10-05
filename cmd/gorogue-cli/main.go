@@ -38,7 +38,10 @@ func main() {
 		return
 	}
 	if *showScores {
-		showHighScores(os.Stdout)
+		if err := showHighScores(os.Stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to read high scores: %v\n", err)
+			os.Exit(1)
+		}
 		return
 	}
 	// Initialize logger
@@ -123,19 +126,18 @@ func showHelp() {
 	fmt.Println("For full command list, run 'help' in interactive mode.")
 }
 
-func showHighScores(output io.Writer) {
+func showHighScores(output io.Writer) error {
 	entries, err := score.NewScoreManager().GetAllScores()
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			fmt.Fprintln(output, "No high scores found (score file does not exist).")
-			return
+			return nil
 		}
-		fmt.Fprintf(output, "Unable to read high scores: %v\n", err)
-		return
+		return err
 	}
 	if len(entries) == 0 {
 		fmt.Fprintln(output, "No high scores found (score list is empty).")
-		return
+		return nil
 	}
 
 	fmt.Fprintln(output, "Rank  Score  Player  Outcome/Cause  Floor")
@@ -149,6 +151,7 @@ func showHighScores(output io.Writer) {
 		}
 		fmt.Fprintf(output, "%d  %d  %s  %s  %d\n", rank+1, entry.Score, entry.PlayerName, outcome, entry.DeepestFloor)
 	}
+	return nil
 }
 
 type scannedInput struct {
