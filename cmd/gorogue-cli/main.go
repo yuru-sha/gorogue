@@ -3,6 +3,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -17,6 +18,7 @@ import (
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
 	"github.com/yuru-sha/gorogue/internal/game/save"
+	"github.com/yuru-sha/gorogue/internal/game/score"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
@@ -25,6 +27,7 @@ var (
 	helpFlag    = flag.Bool("help", false, "Show help information")
 	interactive = flag.Bool("interactive", true, "Run in interactive mode")
 	seedFlag    = flag.Int64("seed", 0, "Random seed (0 selects one automatically)")
+	showScores  = flag.Bool("s", false, "Show persisted high scores and exit")
 )
 
 func main() {
@@ -34,7 +37,13 @@ func main() {
 		showHelp()
 		return
 	}
-
+	if *showScores {
+		if err := showHighScores(os.Stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to read high scores: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
 	// Initialize logger
 	if err := logger.Setup(); err != nil {
 		panic(err)
@@ -93,11 +102,17 @@ func showHelp() {
 	fmt.Println("  -help          Show this help")
 	fmt.Println("  -interactive   Run in interactive mode (default: true)")
 	fmt.Println("  -seed          Set the random seed (0 selects one automatically)")
+	fmt.Println("  -s             Show persisted high scores and exit (read-only)")
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Println("  gorogue-cli                    # Start interactive CLI")
 	fmt.Println("  gorogue-cli -debug             # Start with debug mode")
+	fmt.Println("  gorogue-cli -s                 # List persisted high scores")
 	fmt.Println("  echo 'status' | gorogue-cli -interactive=false  # Batch mode")
+	fmt.Println()
+	fmt.Println("High scores:")
+	fmt.Println("  Displays rank, score, player, outcome/cause, and deepest reached floor.")
+	fmt.Println("  Missing score files are not created.")
 	fmt.Println()
 	fmt.Println("Interactive Commands:")
 	fmt.Println("  help           Show all available commands")
@@ -109,6 +124,34 @@ func showHelp() {
 	fmt.Println("  quit, exit     Exit CLI")
 	fmt.Println()
 	fmt.Println("For full command list, run 'help' in interactive mode.")
+}
+
+func showHighScores(output io.Writer) error {
+	entries, err := score.NewScoreManager().GetAllScores()
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			fmt.Fprintln(output, "No high scores found (score file does not exist).")
+			return nil
+		}
+		return err
+	}
+	if len(entries) == 0 {
+		fmt.Fprintln(output, "No high scores found (score list is empty).")
+		return nil
+	}
+
+	fmt.Fprintln(output, "Rank  Score  Player  Outcome/Cause  Floor")
+	for rank := range entries {
+		entry := &entries[rank]
+		outcome := entry.DeathReason
+		if entry.IsVictory {
+			outcome = "Victory"
+		} else if outcome == "" {
+			outcome = "Death"
+		}
+		fmt.Fprintf(output, "%d  %d  %s  %s  %d\n", rank+1, entry.Score, entry.PlayerName, outcome, entry.DeepestFloor)
+	}
+	return nil
 }
 
 type scannedInput struct {
