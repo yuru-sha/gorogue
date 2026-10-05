@@ -131,6 +131,7 @@ func (p *Parser) GetKeyBindings() map[string]string {
 	bindings["ESC"] = "Cancel command"
 	bindings["^W"] = "Toggle wizard mode"
 	bindings["^L"] = "Load saved game"
+	bindings["O"] = "Open user options"
 	bindings[":"] = "Enter CLI debug mode"
 
 	return bindings

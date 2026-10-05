@@ -29,6 +29,16 @@ go run ./cmd/gorogue-cli --help
 
 `make setup-dev` は開発用ツールをインストールし、SDL2 とツールのバージョンを検査します。`make setup` は Go module のダウンロードと tidy を実行します。依存関係の変更が必要でない限り、セットアップターゲットをむやみに再実行しないでください。
 
+## ユーザーオプション
+
+`ROGUEOPTS` は環境変数またはプロジェクトルートの `.env` で指定します。
+
+```sh
+ROGUEOPTS="terse,noflush,name=Ada,fruit=pear,file=~/rogue.sav"
+```
+
+option はカンマ区切りです。boolean は `name` で有効、`noname` で無効にします。文字列値は `name=value` 形式です。`file` の `~` はホームディレクトリへ展開し、相対パスは作業ディレクトリ基準で解決します。UI の変更は現在の実行にのみ適用し、`.env` は更新しません。全 option と GUI 対応は [`features.md`](features.md#rogue-544-user-options) を参照してください。
+
 ## 検証
 
 ```sh

@@ -12,6 +12,7 @@ const (
 	StateGameOver
 	StateVictory
 	StateSymbol
+	StateSettings
 	StateQuit
 )
 

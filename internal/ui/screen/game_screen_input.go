@@ -18,39 +18,10 @@ func (s *GameScreen) HandleInput(msg gruid.Msg) state.GameState {
 	}
 	key := keyMsg.Key
 	switch s.presentation {
+	case presentationSettings:
+		return s.handleOptionsInput(key)
 	case presentationHelp:
-		if s.helpStage == helpShowingList {
-			pageSize := s.helpPageSize()
-			pageCount := (len(s.messages) + pageSize - 1) / pageSize
-			if key == gruid.KeySpace && s.helpPage+1 < pageCount {
-				s.helpPage++
-				return state.StateHelp
-			}
-			s.helpStage = helpAwaitingKey
-			s.helpPage = 0
-			s.presentation = presentationPlay
-			s.messages = nil
-			return state.StateGame
-		}
-		if key == "*" {
-			s.helpStage = helpShowingList
-			s.helpPage = 0
-			bindings := s.cmdParser.GetKeyBindings()
-			keys := make([]string, 0, len(bindings))
-			for binding := range bindings {
-				keys = append(keys, binding)
-			}
-			sort.Strings(keys)
-			s.messages = make([]string, 0, len(keys))
-			for _, binding := range keys {
-				s.messages = append(s.messages, binding+": "+bindings[binding])
-			}
-			return state.StateHelp
-		}
-		s.presentation = presentationPlay
-		s.helpStage = helpAwaitingKey
-		s.messages = []string{fmt.Sprintf("%s: %s", key, s.cmdParser.GetCommandForKey(key).String())}
-		return state.StateGame
+		return s.handleHelpInput(key)
 	case presentationDeath, presentationVictory:
 		if s.sequenceStage+1 < len(s.sequencePages) {
 			s.sequenceStage++
@@ -77,6 +48,45 @@ func (s *GameScreen) HandleInput(msg gruid.Msg) state.GameState {
 	return nextState
 }
 
+func (s *GameScreen) handleHelpInput(key gruid.Key) state.GameState {
+	if s.helpStage == helpShowingList {
+		pageSize := s.helpPageSize()
+		pageCount := (len(s.messages) + pageSize - 1) / pageSize
+		if key == gruid.KeySpace && s.helpPage+1 < pageCount {
+			s.helpPage++
+			return state.StateHelp
+		}
+		s.helpStage = helpAwaitingKey
+		s.helpPage = 0
+		s.presentation = presentationPlay
+		s.messages = nil
+		return state.StateGame
+	}
+	if key == "*" {
+		s.helpStage = helpShowingList
+		s.helpPage = 0
+		bindings := s.cmdParser.GetKeyBindings()
+		keys := make([]string, 0, len(bindings))
+		for binding := range bindings {
+			keys = append(keys, binding)
+		}
+		sort.Strings(keys)
+		s.messages = make([]string, 0, len(keys))
+		for _, binding := range keys {
+			s.messages = append(s.messages, binding+": "+bindings[binding])
+		}
+		s.messages = append(s.messages, optionsHelpText()...)
+		return state.StateHelp
+	}
+	if key == "O" {
+		return s.openOptions()
+	}
+	s.presentation = presentationPlay
+	s.helpStage = helpAwaitingKey
+	s.messages = []string{fmt.Sprintf("%s: %s", key, s.cmdParser.GetCommandForKey(key).String())}
+	return state.StateGame
+}
+
 func (s *GameScreen) currentState() state.GameState {
 	switch s.presentation {
 	case presentationHelp:
@@ -85,6 +95,8 @@ func (s *GameScreen) currentState() state.GameState {
 		return state.StateGameOver
 	case presentationVictory:
 		return state.StateVictory
+	case presentationSettings:
+		return state.StateSettings
 	default:
 		return state.StateGame
 	}
@@ -145,6 +157,9 @@ func (s *GameScreen) handleInputKey(key gruid.Key) state.GameState {
 //nolint:gocyclo // Normal-mode input is the exhaustive mapping of gameplay commands.
 func (s *GameScreen) handleNormalInput(key gruid.Key) state.GameState {
 	// Parse the key into a command
+	if key == "O" {
+		return s.openOptions()
+	}
 	cmd := s.cmdParser.Parse(key)
 
 	switch cmd.Type {
@@ -541,7 +556,7 @@ func (s *GameScreen) handleCLIInput(key gruid.Key) state.GameState {
 			// Execute command
 			result := s.cliMode.ExecuteCommand(s.cliBuffer)
 			s.AddMessage(fmt.Sprintf("> %s", s.cliBuffer))
-			s.AddMessage(result)
+			s.addCLIMessage(result)
 			if s.cliMode.RunEnded {
 				return state.StateQuit
 			}
@@ -552,6 +567,7 @@ func (s *GameScreen) handleCLIInput(key gruid.Key) state.GameState {
 				s.wizardMode.Player = s.player
 				s.wizardMode.SetLevel(s.level)
 			}
+			s.syncLoadedIdentity()
 
 			// Add to history
 			s.cliHistory = append(s.cliHistory, s.cliBuffer)

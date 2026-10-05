@@ -5,6 +5,7 @@ package save
 import (
 	"fmt"
 
+	"github.com/yuru-sha/gorogue/internal/config"
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
@@ -22,6 +23,7 @@ type SaveGameIntegration struct {
 	dungeonManager *dungeon.DungeonManager
 	gameInfo       GameInfo
 	settings       Settings
+	options        config.Options
 }
 
 // NewSaveGameIntegration creates a new save game integration
@@ -32,6 +34,7 @@ func NewSaveGameIntegration() *SaveGameIntegration {
 		gameStats:     NewGameStats(),
 		autoSave:      NewAutoSaveManager(),
 		settings:      GetDefaultSettings(),
+		options:       config.DefaultOptions(),
 	}
 }
 
@@ -103,6 +106,9 @@ func (sgi *SaveGameIntegration) LoadGame() error {
 	sgi.dungeonManager = dungeonManager
 	sgi.gameInfo = saveData.GameInfo
 	sgi.settings = saveData.Settings
+	if sgi.options.NameConfigured {
+		sgi.gameInfo.CharName = sgi.options.Name
+	}
 	sgi.gameStats.LoadStats(saveData.GameStats)
 
 	logger.Info("Game loaded successfully",
@@ -164,6 +170,9 @@ func (sgi *SaveGameIntegration) LoadAutoSave() error {
 	sgi.player = player
 	sgi.dungeonManager = dungeonManager
 	sgi.gameInfo = saveData.GameInfo
+	if sgi.options.NameConfigured {
+		sgi.gameInfo.CharName = sgi.options.Name
+	}
 	sgi.settings = saveData.Settings
 
 	// Update game stats
@@ -209,6 +218,15 @@ func (sgi *SaveGameIntegration) GetSettings() Settings {
 // SetSettings sets the game settings
 func (sgi *SaveGameIntegration) SetSettings(settings Settings) {
 	sgi.settings = settings
+}
+
+// SetOptions applies startup and UI option changes to save identity and location.
+func (sgi *SaveGameIntegration) SetOptions(options *config.Options) {
+	sgi.options = *options
+	if options.NameConfigured || sgi.gameInfo.CharName == "" {
+		sgi.gameInfo.CharName = options.Name
+	}
+	sgi.saveManager.SetSaveFilePath(options.File)
 }
 
 // GetGameStats returns the game statistics manager

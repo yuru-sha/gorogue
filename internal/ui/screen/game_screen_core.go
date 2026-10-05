@@ -5,6 +5,7 @@ package screen
 import (
 	"strings"
 
+	"github.com/yuru-sha/gorogue/internal/config"
 	"github.com/yuru-sha/gorogue/internal/core/cli"
 	"github.com/yuru-sha/gorogue/internal/core/command"
 	"github.com/yuru-sha/gorogue/internal/core/wizard"
@@ -37,36 +38,42 @@ const (
 
 // GameScreen handles the main game display
 type GameScreen struct {
-	width, height     int
-	player            *actor.Player
-	level             *dungeon.Level
-	displayCells      []displayCell
-	dungeonManager    *dungeon.DungeonManager
-	messages          []string
-	lastStats         map[string]any
-	wizardMode        *wizard.WizardMode
-	cliMode           *cli.CLIMode
-	saveIntegration   *save.SaveGameIntegration
-	engineLoad        func() error
-	inputMode         InputMode
-	equippableItems   []*gameitem.Item
-	cliBuffer         string
-	cliHistory        []string
-	cmdParser         *command.Parser
-	commandSession    *command.Session
-	directionCallback func(dx, dy int)
-	pendingCommand    command.Type
-	pendingDirection  command.Direction
-	equipAction       command.Type
-	unequipAction     command.Type
-	callItemLetter    rune
-	pendingReadScroll rune
-	callNameBuffer    string
-	presentation      presentationMode
-	helpStage         helpStage
-	helpPage          int
-	sequencePages     [][]string
-	sequenceStage     int
+	width, height             int
+	player                    *actor.Player
+	level                     *dungeon.Level
+	displayCells              []displayCell
+	dungeonManager            *dungeon.DungeonManager
+	messages                  []string
+	lastStats                 map[string]any
+	wizardMode                *wizard.WizardMode
+	cliMode                   *cli.CLIMode
+	saveIntegration           *save.SaveGameIntegration
+	engineLoad                func() error
+	inputMode                 InputMode
+	equippableItems           []*gameitem.Item
+	cliBuffer                 string
+	cliHistory                []string
+	cmdParser                 *command.Parser
+	commandSession            *command.Session
+	directionCallback         func(dx, dy int)
+	pendingCommand            command.Type
+	pendingDirection          command.Direction
+	equipAction               command.Type
+	unequipAction             command.Type
+	callItemLetter            rune
+	pendingReadScroll         rune
+	callNameBuffer            string
+	presentation              presentationMode
+	helpStage                 helpStage
+	helpPage                  int
+	sequencePages             [][]string
+	sequenceStage             int
+	options                   config.Options
+	optionsCursor             int
+	optionsEditing            bool
+	optionsReplaceOnInput     bool
+	optionsEditOriginal       string
+	optionsEditOriginalConfig bool
 }
 
 type presentationMode uint8
@@ -76,6 +83,7 @@ const (
 	presentationHelp
 	presentationDeath
 	presentationVictory
+	presentationSettings
 )
 
 type helpStage uint8
@@ -99,6 +107,7 @@ func NewGameScreen(width, height int, player *actor.Player) *GameScreen {
 		cliHistory:      make([]string, 0),
 		cmdParser:       command.NewParser(),
 		commandSession:  command.NewSession(),
+		options:         config.DefaultOptions(),
 	}
 
 	logger.Debug("Created game screen",
@@ -118,6 +127,7 @@ func (s *GameScreen) SetLevel(level *dungeon.Level) {
 	} else {
 		s.cliMode = cli.NewCLIMode(level, s.player)
 	}
+	s.cliMode.SetOptions(&s.options)
 	s.cliMode.SetSaveIntegration(s.saveIntegration)
 	s.cliMode.SetCommandSession(s.commandSession)
 	logger.Debug("Set dungeon level for game screen",
@@ -145,6 +155,7 @@ func (s *GameScreen) SetDungeonManager(dm *dungeon.DungeonManager) {
 		if s.cliMode != nil {
 			s.cliMode.SetSaveIntegration(s.saveIntegration)
 			s.cliMode.SetCommandSession(s.commandSession)
+			s.cliMode.SetOptions(&s.options)
 		}
 	}
 	logger.Debug("Set dungeon manager for game screen")
@@ -153,6 +164,9 @@ func (s *GameScreen) SetDungeonManager(dm *dungeon.DungeonManager) {
 // SetSaveIntegration binds save/load commands to the shared save state.
 func (s *GameScreen) SetSaveIntegration(integration *save.SaveGameIntegration) {
 	s.saveIntegration = integration
+	if integration != nil {
+		integration.SetOptions(&s.options)
+	}
 	if s.cliMode != nil {
 		s.cliMode.SetSaveIntegration(integration)
 	}
@@ -191,6 +205,16 @@ func (s *GameScreen) ApplyLoadedState(player *actor.Player, dm *dungeon.DungeonM
 	}
 	if s.level != nil && s.player != nil {
 		s.level.UpdateVisibility(s.player.Position.X, s.player.Position.Y)
+	}
+	s.syncLoadedIdentity()
+}
+
+func (s *GameScreen) syncLoadedIdentity() {
+	if s.options.NameConfigured || s.saveIntegration == nil {
+		return
+	}
+	if name := s.saveIntegration.GetGameInfo().CharName; name != "" {
+		s.options.Name = name
 	}
 }
 
@@ -231,6 +255,17 @@ func (s *GameScreen) addCommandResult(result command.Result) {
 
 // AddMessage adds a message to the message log
 func (s *GameScreen) AddMessage(msg string) {
+	if s.options.Fruit != "" && s.options.Fruit != "slime-mold" {
+		msg = strings.ReplaceAll(msg, "slime-mold", s.options.Fruit)
+	}
+	s.appendMessage(msg)
+}
+
+func (s *GameScreen) addCLIMessage(msg string) {
+	s.appendMessage(msg)
+}
+
+func (s *GameScreen) appendMessage(msg string) {
 	for line := range strings.SplitSeq(msg, "\n") {
 		s.messages = append(s.messages, line)
 		if len(s.messages) > 7 {

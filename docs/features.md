@@ -38,3 +38,22 @@
 GoRogue 固有の補助操作: `^W` でウィザードモード、`:` で CLI デバッグ入力に切り替えます。
 
 GUI 固有のキー表記と名前付き CLI コマンドは `SPEC.md` を参照してください。原作キーの意味を別の意味で上書きしません。
+
+## Rogue 5.4.4 user options
+
+GUI と CLI は起動時に `ROGUEOPTS` を読み込みます。既存の `.env` が環境変数を供給するため、たとえば `.env` に `ROGUEOPTS=terse,noflush,name=Ada,fruit=pear,file=/tmp/rogue.sav` を設定できます。直接設定した環境変数は `.env` の値より優先されます。値はカンマ区切りで、boolean は `name` / `noname`、文字列は `name=value` 形式です。不明な option、誤った値、文字列値の欠落は起動エラーになります。標準値は Rogue の通常端末向け初期値を基本とし、端末能力依存の初期変更は適用しません: `terse=false, flush=false, jump=false, seefloor=true, passgo=false, tombstone=true, inven=overwrite, name=Player, fruit=slime-mold, file=<default>`。
+
+| Rogue option | GoRogue behavior |
+| --- | --- |
+| `terse` | GUI は最新メッセージだけを表示するため、端末の簡潔表示モードは別動作に置き換えません。 |
+| `flush` | GUI はイベント駆動で描画し、端末入力キューの flush はありません。 |
+| `jump` | 端末の移動中画面更新抑制に相当する挙動は導入せず、GUI の既存の移動・描画を維持します。 |
+| `seefloor` | 未探索領域の表示を変えず、GUI の視界・探索済み地形の制約を維持します。 |
+| `passgo` | 端末の通路分岐自動追従を上書きせず、GUI の方向指定ラン操作を維持します。 |
+| `tombstone` | 端末墓石画面の代わりに既存の GUI 死亡シーケンスを表示します。 |
+| `inven` | `overwrite`, `slow`, `clear` を受け付けます。GUI は固定の文字表示・選択形式を維持し、端末向け更新スタイルには切り替えません。 |
+| `name` | 保存データのプレイヤー名に適用します。 |
+| `fruit` | GUI/CLI メッセージ中の slime-mold 表示名に適用します。 |
+| `file` | セーブファイルのパスに適用します。`~` はホームディレクトリへ展開し、空値 (`file=`) は既定の `~/.gorogue/saves/rogue.sav` を使います。相対パスは作業ディレクトリ基準です。 |
+
+GUI は `O` で設定画面を開き、`j` / `k` または矢印キーで項目を選びます。Space は boolean を切り替えるか inventory style を巡回します。文字列項目は Enter で編集します。最初に入力した文字は現在値を置き換えます。Escape で編集を取り消して戻ります。UI での変更は現在の実行に適用され、設定ファイルへは自動保存されません。
