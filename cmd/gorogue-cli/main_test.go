@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 	"github.com/yuru-sha/gorogue/internal/game/actor"
 	"github.com/yuru-sha/gorogue/internal/game/dungeon"
 	"github.com/yuru-sha/gorogue/internal/game/save"
+	"github.com/yuru-sha/gorogue/internal/game/score"
 	"github.com/yuru-sha/gorogue/internal/utils/logger"
 )
 
@@ -108,5 +110,74 @@ func TestCLIHandlesHangupWhileWaitingForInput(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(home, ".gorogue", save.SaveDirectory, save.SaveFileName)); err != nil {
 		t.Fatalf("SIGHUP did not persist a recovery save: %v", err)
+	}
+}
+
+func TestHighScoreListingCLIEntryPoint(t *testing.T) {
+	tests := []struct {
+		name       string
+		entries    []score.ScoreEntry
+		writeFile  bool
+		wantOutput []string
+	}{
+		{
+			name:       "missing file",
+			wantOutput: []string{"No high scores found", "does not exist"},
+		},
+		{
+			name:       "empty list",
+			writeFile:  true,
+			entries:    []score.ScoreEntry{},
+			wantOutput: []string{"No high scores found", "list is empty"},
+		},
+		{
+			name:      "scores preserve persisted order",
+			writeFile: true,
+			entries: []score.ScoreEntry{
+				{PlayerName: "Ada", Score: 720, IsVictory: true, DeepestFloor: 12},
+				{PlayerName: "Lin", Score: 650, DeathReason: "slain by dragon", DeepestFloor: 9},
+			},
+			wantOutput: []string{
+				"Rank  Score  Player  Outcome/Cause  Floor",
+				"1  720  Ada  Victory  12",
+				"2  650  Lin  slain by dragon  9",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			home := t.TempDir()
+			scorePath := filepath.Join(home, ".gorogue", score.ScoreFileName)
+			if tt.writeFile {
+				if err := os.MkdirAll(filepath.Dir(scorePath), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				data, err := json.Marshal(score.ScoreFile{Entries: tt.entries})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(scorePath, data, 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			cmd := exec.Command("go", "run", ".", "-s")
+			cmd.Env = append(os.Environ(), "HOME="+home)
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				t.Fatalf("gorogue-cli -s failed: %v\n%s", err, output)
+			}
+			for _, want := range tt.wantOutput {
+				if !strings.Contains(string(output), want) {
+					t.Errorf("gorogue-cli -s output %q does not contain %q", output, want)
+				}
+			}
+			if !tt.writeFile {
+				if _, err := os.Stat(scorePath); !os.IsNotExist(err) {
+					t.Fatalf("listing created score file; stat error = %v", err)
+				}
+			}
+		})
 	}
 }
