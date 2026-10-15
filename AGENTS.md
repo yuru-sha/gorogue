@@ -26,6 +26,10 @@ Keep the game model independent of presentation: do not put gruid `Grid`/`Cell`,
 - `docs/`: specification, architecture, development, feature, and QA guidance.
 - `scripts/`: checks for CI workflow and development-tool version configuration.
 
+## Code and Comment Guidance
+
+Code should explain how behavior is implemented; tests, what behavior is expected; commit messages, why the change was made. Comments should explain why a non-obvious constraint, rejected alternative, or trade-off rules out a simpler approach. Do not restate clear code in comments.
+
 ## Development Commands
 
 Go version and module dependencies are declared in [`go.mod`](go.mod). Useful commands:
