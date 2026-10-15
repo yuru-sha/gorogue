@@ -28,7 +28,7 @@ Keep the game model independent of presentation: do not put gruid `Grid`/`Cell`,
 
 ## Code and Comment Guidance
 
-Code should explain how behavior is implemented; tests, what behavior is expected; commit messages, why the change was made. Comments should explain why a non-obvious constraint, rejected alternative, or trade-off rules out a simpler approach. Do not restate clear code in comments.
+コード・テスト・コメントの指針は [`docs/development.md`](docs/development.md#コードテストコメント) を参照してください。コミットログの指針は [`CONTRIBUTING.md`](CONTRIBUTING.md#commit-messages) を参照してください。
 
 ## Development Commands
 
