@@ -26,9 +26,12 @@ Keep the game model independent of presentation: do not put gruid `Grid`/`Cell`,
 - `docs/`: specification, architecture, development, feature, and QA guidance.
 - `scripts/`: checks for CI workflow and development-tool version configuration.
 
-## Code and Comment Guidance
+## Code, Tests, Commits, and Comments
 
-Code should explain How (the implementation); tests should describe What (the expected behavior). Code comments should explain Why not to choose an apparently simple alternative, including constraints and intent not evident from the code. Avoid comments that merely restate code behavior. See [`CONTRIBUTING.md`](CONTRIBUTING.md#commit-messages) for the commit-log rationale rule.
+- Code should make how the behavior is implemented clear.
+- Tests should make what behavior is expected clear.
+- Commit messages should explain why the change is needed.
+- Comments should explain why not an apparently reasonable alternative was chosen, including relevant constraints or non-obvious intent. Do not use comments to paraphrase the code's behavior.
 
 ## Development Commands
 

@@ -34,7 +34,7 @@ Do not claim checks passed when they were not run.
 
 Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/ja/v1.0.0/) for commit messages.
 
-コミットログは Why（変更が必要な理由）を説明してください。description と必要に応じた body で、変更内容だけでなくその背景・目的が分かるようにします。
+For the Why rule, see the repository guidance in [`AGENTS.md`](AGENTS.md#code-tests-commits-and-comments).
 
 The commit message format is:
 
