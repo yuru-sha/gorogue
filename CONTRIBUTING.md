@@ -34,8 +34,6 @@ Do not claim checks passed when they were not run.
 
 Use [Conventional Commits 1.0.0](https://www.conventionalcommits.org/ja/v1.0.0/) for commit messages.
 
-For the Why rule, see the repository guidance in [`AGENTS.md`](AGENTS.md#code-tests-commits-and-comments).
-
 The commit message format is:
 
 ```text
