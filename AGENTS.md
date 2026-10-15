@@ -1,93 +1,92 @@
-# AGENTS.md
+# Repository Guidelines
 
-Operational guidelines for agents working on GoRogue. Game requirements are defined in [docs/SPEC.md](docs/SPEC.md); refer to the code and related documentation for implementation details.
+## Project Overview
 
-## Sources of truth
+GoRogue is a Go and gruid implementation of the Rogue 5.4.4 text roguelike. Requirements and acceptance criteria are defined in [`docs/SPEC.md`](docs/SPEC.md); it describes a seeded, 26-floor game with permanent death and victory by returning the Amulet of Yendor to the surface. Read the relevant specification before changing game behavior. When current behavior is unclear, use code and tests as evidence; update the specification first if the requirement itself must change.
 
-At the start of a task, read the following as relevant:
+## Architecture & Data Flow
 
-- Requirements, scope, exclusions, and acceptance criteria: [docs/SPEC.md](docs/SPEC.md)
-- Current architecture: [docs/architecture.md](docs/architecture.md)
-- Development commands: [docs/development.md](docs/development.md), [Makefile](Makefile), and [go.mod](go.mod)
-- Actual behavior: `cmd/`, `internal/`, and `*_test.go`
+GUI and CLI inputs converge on shared command representations and execution. The GUI flow is `core.Engine` → `state.StateManager` → active screen; the screen parses Rogue key inputs and executes through `internal/core/command/`. CLI gameplay commands also use the shared command/session path. Commands invoke game rules in `internal/game/`; results carry state changes, messages, and turn/death/victory outcomes.
 
-Treat `docs/SPEC.md` as the source of truth for game requirements. If the documentation under `docs/` differs from the implementation or tests, use the code and tests as the authority for current behavior. If the requirements need to change, update `docs/SPEC.md` and the acceptance criteria before changing the implementation.
+Keep the game model independent of presentation: do not put gruid `Grid`/`Cell`, glyph, or color data in game-state types. `internal/ui/screen/` converts game state into prioritized logical display cells and renders text. Do not duplicate game rules in GUI, CLI, or screen code. Use the game-managed random source so identical versions, seeds, and input sequences remain reproducible.
 
-## Workflow
+## Key Directories
 
-1. Check `rtk git status --short --branch` and the diff, preserving existing user changes.
-2. Read the relevant sections of `docs/SPEC.md`, callers, and related tests.
-3. Reuse existing types, helpers, and dependencies; make only the smallest change required by the specification.
-4. After making changes, run the target tests and `rtk go test ./...`. If the development tools are available, also run `rtk make ci-checks`.
-5. Check the final diff, worktree, verification results, and remaining risks before reporting completion.
+- `cmd/gorogue/`: SDL2 GUI entry point.
+- `cmd/gorogue-cli/`: interactive and batch CLI entry point.
+- `internal/core/`: engine and screen-state coordination.
+- `internal/core/command/`: shared key parsing, command/session state, and execution.
+- `internal/core/cli/`: CLI command interface using shared game commands.
+- `internal/game/actor/`: player, monsters, combat, and actor state.
+- `internal/game/dungeon/`: seeded dungeon generation, levels, visibility, traps, stairs, and transitions.
+- `internal/game/item/`, `inventory/`, `identification/`, `magic/`: items and their lifecycle/effects.
+- `internal/game/save/`: JSON save/load, validation, conversion, and recovery.
+- `internal/ui/screen/`: screens, display-cell conversion, and text renderer.
+- `internal/config/`: `ROGUEOPTS` parsing and runtime options.
+- `docs/`: specification, architecture, development, feature, and QA guidance.
+- `scripts/`: checks for CI workflow and development-tool version configuration.
 
-## Code and comment guidance
+## Code and Comment Guidance
 
-Use each artifact to communicate a different kind of intent:
+Code should explain how behavior is implemented; tests, what behavior is expected; commit messages, why the change was made. Comments should explain why a non-obvious constraint, rejected alternative, or trade-off rules out a simpler approach. Do not restate clear code in comments.
 
-- Code should explain **How** the behavior is implemented.
-- Test code should explain **What** behavior is expected.
-- Commit messages should explain **Why** the change was made.
-- Code comments should explain **Why not**: document non-obvious constraints, rejected alternatives, trade-offs, or reasons the seemingly simpler approach is incorrect.
+## Development Commands
 
-Do not use comments to restate what the code already makes clear.
+Go version and module dependencies are declared in [`go.mod`](go.mod). Useful commands:
 
-## Branch And Pull Request Workflow
+```sh
+# CLI (no SDL2 window); fixed seed for reproducible play
+rtk go run ./cmd/gorogue-cli --seed 12345
 
-- Do not edit, commit, or push directly to `main`. Make changes on a feature branch and merge them through a pull request.
-- Direct work on `main` is allowed only when the user explicitly authorizes it.
+# SDL2 GUI setup and run
+rtk make setup-dev
+rtk make run
 
-## GitHub workflow
-
-- GitHub Issues are the canonical work tracker.
-- Shared Bug / Feature / Question forms and the default Pull Request template are inherited from `yuru-sha/.github`.
-- Shared non-default labels, including `orca:*`, are synchronized from `yuru-sha/project-template`.
-- Use `orca:*` labels only for ORCA execution state; do not treat them as release categories.
-
-## Safety boundaries
-
-- Keep changes within this repository. Operate external services, GitHub, credentials, browsers, or physical devices only when explicitly requested.
-- Do not merge pull requests, publish releases, rewrite history, or change repository settings unless explicitly requested.
-- Do not perform difficult-to-recover operations such as `rm -rf`, force-pushing, rewriting history, or resetting a database.
-- Do not print, commit, or transmit secrets, tokens, credentials, or personal information. `.env` may be used without displaying its values.
-- Confirm the intended scope before modifying generated files, binaries, coverage data, lockfiles, or untracked files.
-- Run shell commands through `rtk` and use `apply_patch` for file edits.
-
-## Project constraints
-
-- Follow the Go version and existing Go Modules dependencies specified by `go.mod`. Explain the need and alternatives before adding a new dependency or framework.
-- Follow the GoRogue requirements and exclusions in `docs/SPEC.md`; do not add adjacent features that were not requested.
-- Keep game rules in `internal/core/` and `internal/game/`. Do not duplicate CLI- or GUI-specific rules in `cmd/` or `internal/ui/`; prefer the existing shared command path in `internal/core/command/`.
-- Use the game-managed random source for dungeon generation, combat, and placement, preserving reproducibility for the same seed and input sequence.
-- When changing the save format, update `SaveVersion`, compatibility checks, conversion logic, and tests in `internal/game/save/` together.
-- Follow `gofmt` and the existing Go package structure. Do not break public APIs unless necessary.
-
-## Definition of done
-
-Do not report completion until all of the following are satisfied:
-
-- The diff meets the requirements and exclusions in `docs/SPEC.md`.
-- The target tests and, where possible, `rtk go test ./...`, `rtk go vet ./...`, and `rtk make ci-checks` pass.
-- The affected seed, save/load, win/loss, and shared CLI/GUI rule boundaries have been checked.
-- Related documentation is updated when code, commands, configuration, or public APIs change.
-- `rtk git diff --check` passes, with no secrets, unintended changes, or untracked files.
-- Any unverified GUI, SDL2, OS-specific, or external CI behavior is explicitly reported.
-
-## Verification entry point
-
-```bash
+# Checks
 rtk go test ./...
 rtk go vet ./...
-rtk make ci-checks  # when the development tools are installed
+rtk make ci-checks
 ```
 
-`make ci-checks` runs `make lint` and `make test`. Run `make setup` or `make setup-dev` only when necessary, because they change dependencies, development tools, or the SDL2 environment.
+GUI builds/runs require SDL2 development libraries and `pkg-config`; on macOS, `brew install pkg-config sdl2` provides them. `make setup` downloads modules and runs `go mod tidy`; `make setup-dev` installs/checks development tools and SDL2, so avoid setup targets unless needed. `make lint` runs `go fmt ./...` (which may modify Go files), `go vet`, golangci-lint, and staticcheck. `make ci-checks` runs lint and tests. The CI workflow is `.github/workflows/quality.yml`; headless CI does not verify launching the GUI.
 
-## Commit Messages
+Run shell commands through `rtk`. Do not run setup targets unless dependencies or development tools need setup; `make setup` runs `go mod tidy`. Use `rtk make lint` cautiously because its `go fmt ./...` step can modify Go files.
 
-- Follow the commit-message policy in `CONTRIBUTING.md`.
-- Do not create commits unless the user explicitly requests it.
+## Repository Operations
 
-## Git
+- Work on a feature branch; do not edit, commit, or push directly to `main`.
+- Preserve existing staged, unstaged, and untracked user changes. Do not reset, stash, or remove them.
+- Do not create commits, tags, branches, or pull requests unless explicitly requested. Do not merge, publish releases, rewrite history, or change repository settings unless explicitly requested.
+- Keep changes within this repository. External services, credentials, browsers, and physical devices require an explicit request. Never expose secrets or personal data.
+- Use surgical edits; do not modify generated files, lockfiles, migrations, vendored code, binaries, coverage artifacts, or untracked files without confirming they are intended to change.
 
-Do not reorganize, delete, or stash staged, unstaged, or untracked user changes. Add permanent fixes for review comments or verification failures to the smallest appropriate place among the tests, verification commands, and documentation.
+## Code Conventions & Common Patterns
+
+- Follow existing Go package boundaries and `gofmt`; keep changes focused and use standard library/existing dependencies unless a new dependency is justified.
+- Keep Rogue rules in `internal/game/` and the shared command path in `internal/core/command/`, not in interface-specific code.
+- Maintain seeded random-stream determinism for dungeon generation, placement, combat, and item effects.
+- Save format version is defined by `SaveVersion` in `internal/game/save/`. A format change requires coordinated updates to versioning, compatibility checks, conversion, and save/load tests.
+- Configuration comes from `ROGUEOPTS` in the environment or project-root `.env`; see `docs/development.md` and `docs/features.md` for syntax and options.
+- Do not add adjacent game features beyond `docs/SPEC.md` requirements. Update relevant docs when behavior, commands, configuration, or public APIs change.
+
+## Important Files
+
+- `docs/SPEC.md`: authoritative game requirements and exclusions.
+- `docs/architecture.md`: package responsibilities and input/rendering flow.
+- `docs/development.md`: setup, commands, options, and save lifecycle.
+- `docs/quality_assurance.md`: expected verification and boundaries.
+- `Makefile`: build, run, setup, lint, and test targets.
+- `go.mod`: Go toolchain version and dependencies.
+- `.github/workflows/quality.yml`: CI checks.
+- `internal/game/save/save_data.go`: save schema and `SaveVersion`.
+- `internal/core/engine.go`, `cmd/gorogue/main.go`, `cmd/gorogue-cli/main.go`: engine and application entrypoints.
+
+## Runtime/Tooling Preferences
+
+Use the Go toolchain from `go.mod`; this is not a Node/Bun project. Use Go modules and the existing Make targets. GUI-specific development needs SDL2 and `pkg-config`; CLI development does not require launching the GUI. `make setup-dev` pins golangci-lint and staticcheck versions in the Makefile and installs goimports. Use the game-owned seeded RNG rather than introducing other random sources into gameplay.
+
+## Testing & QA
+
+Tests use Go's standard `testing` package and live beside implementation as `*_test.go`. Follow local table-driven `t.Run` patterns, direct `t.Fatalf`/`t.Errorf` assertions, `t.TempDir` for filesystem isolation, `t.Setenv` for environment overrides, and explicit seeds for deterministic gameplay tests. Coverage includes gameplay rules, dungeon generation, save/load and recovery, shared command behavior, and screen flow/parity.
+
+Run the relevant package test first, then `go test ./...` and `go vet ./...`; run `make ci-checks` when its tools are available. `make test-coverage` generates coverage artifacts. Check seeded behavior, save/load, win/loss, and shared GUI/CLI command boundaries when affected. Report SDL2/GUI, OS-specific, or external-CI behavior that was not exercised. `scripts/test-quality-workflow.sh` and `scripts/test-golangci-lint-version.sh` validate workflow/tool-version assumptions; consult `docs/cli_test_scenarios.md` for manual CLI scenarios.
